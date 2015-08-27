@@ -44,19 +44,14 @@ function init_kubernetes_release {
     local RELEASE_DIR=/opt/kubernetes_release/$K8S_VER
     mkdir -p $RELEASE_DIR
 
-    [ -f $RELEASE_DIR/kubernetes.tar.gz ] || {
+    [ -f $RELEASE_DIR/kubernetes-server-linux-amd64.tar.gz ] || {
         echo "K8S: downloading release: $K8S_VER"
-        curl --silent -o $RELEASE_DIR/kubernetes.tar.gz https://storage.googleapis.com/kubernetes-release/release/$K8S_VER/kubernetes.tar.gz
+        curl --silent -o $RELEASE_DIR/kubernetes-server-linux-amd64.tar.gz  https://storage.googleapis.com/kubernetes-release/release/$K8S_VER/kubernetes-server-linux-amd64.tar.gz
     }
 
-    [ -d $RELEASE_DIR/kubernetes ] || {
+    [ -d $RELEASE_DIR/kubernetes/server ] || {
         echo "K8S: extracting release: $K8S_VER"
-        tar xzf $RELEASE_DIR/kubernetes.tar.gz -C $RELEASE_DIR
-    }
-
-    [ -d $RELEASE_DIR/kubernetes/server/kubernetes ] || {
-        echo "K8S: extracting server components: $K8S_VER"
-        tar xzf $RELEASE_DIR/kubernetes/server/kubernetes-server-linux-amd64.tar.gz -C $RELEASE_DIR/kubernetes/server
+        tar xzf $RELEASE_DIR/kubernetes-server-linux-amd64.tar.gz -C $RELEASE_DIR
     }
 
     mkdir -p /opt/bin
@@ -64,7 +59,7 @@ function init_kubernetes_release {
     for BIN in "${BINS[@]}"; do
       [ -x /opt/bin/$BIN ] || {
         echo "K8S BIN: $BIN"
-        cp $RELEASE_DIR/kubernetes/server/kubernetes/server/bin/$BIN /opt/bin/$BIN
+        cp $RELEASE_DIR/kubernetes/server/bin/$BIN /opt/bin/$BIN
         chown core:core /opt/bin/$BIN
       }
     done

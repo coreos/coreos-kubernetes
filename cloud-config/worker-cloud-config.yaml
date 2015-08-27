@@ -38,7 +38,7 @@ write_files:
 - path: /tmp/bootstrap.sh
   content: |
     #TODO(aaron): currently just a gist copy of ../deploy/worker.sh. Update to tagged version in repo once public
-    curl --silent -o /tmp/worker.sh https://gist.githubusercontent.com/aaronlevy/931d198a62e59e9caf3d/raw/77d2b40705ed2f24fb726bf7e5838ed078d57f7c
+    curl --silent -o /tmp/worker.sh https://gist.githubusercontent.com/aaronlevy/931d198a62e59e9caf3d/raw/303a2ddd9c616b0a0d659facc5f49245f8f25b02/worker.sh
     /bin/bash /tmp/worker.sh init
     /bin/bash /tmp/worker.sh start
 

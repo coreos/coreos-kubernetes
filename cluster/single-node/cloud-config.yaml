@@ -25,7 +25,7 @@ coreos:
 write_files:
 - path: /tmp/bootstrap.sh
   content: |
-    curl --silent -o /tmp/controller.sh https://gist.githubusercontent.com/aaronlevy/77fbd531a83b3e5f0515/raw/875e8566231e4095846c10e7bad403ba7a43755a
+    curl --silent -o /tmp/controller.sh https://gist.githubusercontent.com/aaronlevy/77fbd531a83b3e5f0515/raw/83d8ca8489d484cecf0116ac12e69548fce27ca8/controller.sh
     /bin/bash /tmp/controller.sh init
     /bin/bash /tmp/controller.sh start
 

@@ -17,7 +17,7 @@ cd coreos-vagrant
 
 ### Step 2: Create the cloud-config
 
-Copy the provided single-node [cloud-config](../../cloud-config/single-node-cloud-config.yaml) into the `user-data` file in the coreos-vagrant directory.
+Copy the provided single-node [cloud-config](../../cluster/single-node/cloud-config.yaml) into the `user-data` file in the coreos-vagrant directory.
 
 ### Step 3: Start the Vagrant node
 

@@ -1,12 +1,13 @@
 ## Vagrant Cluster
 
-The default cluster size is set to 1-controller, 1-worker, and 1-etcd server. However, you can modify the cluster settings by copying `kube-up/vagrant/config.rb.sample` to `
-kube-up/vagrant/config.rb` and modifying configuration values.
+The default cluster size is set to 1-controller, 1-worker, and 1-etcd server.
+
+ However, you can modify the cluster settings by copying `cluster/vagrant/config.rb.sample` to `cluster/vagrant/config.rb` and modifying configuration values.
 
 ### Step 1: Launch Cluster
 
 ```
-cd kube-up/vagrant
+cd cluster/vagrant
 vagrant up
 
 # This will launch servers with hostnames:

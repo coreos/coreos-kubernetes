@@ -21,12 +21,12 @@ cwd = File.dirname(__FILE__)
 
 CONFIG = File.join(cwd, "config.rb")
 
-ETCD_CLOUD_CONFIG_PATH = File.expand_path("./cloud-config/etcd-cloud-config.yaml", cwd)
+ETCD_CLOUD_CONFIG_PATH = File.join(cwd, "etcd-cloud-config.yaml")
 
-CONTROLLER_CLOUD_CONFIG_PATH = File.expand_path("./cloud-config/controller-cloud-config.yaml", cwd)
+CONTROLLER_CLOUD_CONFIG_PATH = File.join(cwd, "controller-cloud-config.yaml")
 CONTROLLER_DEPLOYER_PATH = File.expand_path("../../deploy/controller.sh", cwd)
 
-WORKER_CLOUD_CONFIG_PATH = File.expand_path("./cloud-config/worker-cloud-config.yaml", cwd)
+WORKER_CLOUD_CONFIG_PATH = File.join(cwd, "worker-cloud-config.yaml")
 WORKER_DEPLOYER_PATH = File.expand_path("../../deploy/worker.sh", cwd)
 
 def etcdIP(num)

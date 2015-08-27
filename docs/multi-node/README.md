@@ -15,14 +15,14 @@ Use the [official etcd clustering guide](https://coreos.com/etcd/docs/latest/clu
 
 ### Step 1: Prepare Controller cloud-config
 
-It is suggested that a deployer start from the sample [controller cloud-config](../../cloud-config/controller-cloud-config.yaml) provided alongside this guide.
+It is suggested that a deployer start from the sample [controller cloud-config](../../cluster/generic/controller-cloud-config.yaml) provided alongside this guide.
 
 * Replace the `{{ETCD_ENDPOINTS}}` with comma separated list of etcd servers (http://ip:port)
 * The remaining configurable items are documented in the sample, and can be left as their defaults if IP ranges do not conflict with any existing network infrastructure.
 
 ### Step 2: Prepare Worker Configuration
 
-It is suggested that a deployer start from the sample [worker cloud-config](../../cloud-config/worker-cloud-config.yaml) provided alongside this guide.
+It is suggested that a deployer start from the sample [worker cloud-config](../../cluster/generic/worker-cloud-config.yaml) provided alongside this guide.
 
 * Replace the `{{ETCD_ENDPOINTS}}` with comma separated list of etcd servers (http://ip:port)
 * Replace `{{CONTROLLER_ENDPOINT}}` with the endpoint where the controller nodes can be contacted (https://ip:port). In HA configurations this will typically be an external DNS record, or loadbalancer in front of the cluster control nodes.

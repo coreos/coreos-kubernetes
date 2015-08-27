@@ -15,7 +15,6 @@ $worker_count = 1
 $worker_vm_memory = 512
 $etcd_count = 1
 $etcd_vm_memory = 512
-$use_nfs = true
 
 cwd = File.dirname(__FILE__)
 

@@ -2,7 +2,7 @@
 
 The default cluster size is set to 1-controller, 1-worker, and 1-etcd server.
 
- However, you can modify the cluster settings by copying `cluster/vagrant/config.rb.sample` to `cluster/vagrant/config.rb` and modifying configuration values.
+However, you can modify the cluster settings by copying `cluster/vagrant/config.rb.sample` to `cluster/vagrant/config.rb` and modifying configuration values.
 
 ### Step 1: Launch Cluster
 
@@ -39,7 +39,20 @@ kube-system   kube-podmaster-172.17.8.101            2/2       Running   0      
 kube-system   kube-scheduler-172.17.8.101            1/1       Running   0          2m
 ```
 
-### Next Steps: Deploy Sample Application
+## Next Steps:
+
+### Remote kubectl
+
+The kubenetes API can be accessed from outside the cluster using `kubectl` and the provided (kubeconfig)[../../cluster/vagrant/kubeconfig]
+
+```
+# Change ARCH to "darwin" for OSX
+ARCH=linux wget https://storage.googleapis.com/kubernetes-release/release/v1.0.3/bin/$ARCH/amd64/kubectl
+
+kubectl --kubeconfig=cluster/vagrant/kubeconfig get pods --all-namespaces
+```
+
+### Deploy Sample Application
 
 Simple multi-tier web application: [Guestbook Example](http://kubernetes.io/v1.0/examples/guestbook-go/README.html)
 

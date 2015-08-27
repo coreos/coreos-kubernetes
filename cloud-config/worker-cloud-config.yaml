@@ -1,0 +1,44 @@
+#cloud-config
+
+coreos:
+  update:
+    reboot-strategy: "off"
+
+  flannel:
+    interface: $private_ipv4
+    etcd_endpoints: {{ETCD_ENDPOINTS}}
+
+  units:
+  - name: flanneld.service
+    command: start
+
+  - name: bootstrap.service
+    command: start
+    content: |
+      [Service]
+      ExecStart=/bin/bash -e /tmp/bootstrap.sh
+      Type=oneshot
+
+      # List of etcd servers (http://ip:port), comma separated
+      Environment=ETCD_ENDPOINTS={{ETCD_ENDPOINTS}}
+
+      # The endpoint the worker node should use to contact controller nodes (https://ip:port)
+      # In HA configurations this should be an external DNS record or loadbalancer in front of the control nodes.
+      # However, it is also possible to point directly to a single control node.
+      Environment=CONTROLLER_ENDPOINT={{CONTROLLER_ENDPOINT}}
+
+      # The IP address of the cluster DNS service.
+      # This must be the same DNS_SERVICE_IP used when configuring the controller nodes.
+      #Environment=DNS_SERVICE_IP=10.3.0.10
+
+      # The above settings can optionally be overridden using an environment file:
+      EnvironmentFile=-/tmp/kube-bootstrap-env
+
+write_files:
+- path: /tmp/bootstrap.sh
+  content: |
+    #TODO(aaron): currently just a gist copy of ../deploy/worker.sh. Update to tagged version in repo once public
+    curl --silent -o /tmp/worker.sh https://gist.githubusercontent.com/aaronlevy/931d198a62e59e9caf3d/raw/77d2b40705ed2f24fb726bf7e5838ed078d57f7c
+    /bin/bash /tmp/worker.sh init
+    /bin/bash /tmp/worker.sh start
+

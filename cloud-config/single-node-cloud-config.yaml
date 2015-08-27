@@ -1,0 +1,31 @@
+#cloud-config
+
+coreos:
+  update:
+    reboot-strategy: "off"
+
+  flannel:
+    interface: $private_ipv4
+
+  units:
+  - name: etcd2.service
+    command: start
+
+  - name: flanneld.service
+    command: start
+
+  - name: bootstrap.service
+    command: start
+    content: |
+      [Service]
+      ExecStart=/bin/bash -e /tmp/bootstrap.sh
+      Type=oneshot
+      Environment=REGISTER_NODE=true
+
+write_files:
+- path: /tmp/bootstrap.sh
+  content: |
+    curl --silent -o /tmp/controller.sh https://gist.githubusercontent.com/aaronlevy/77fbd531a83b3e5f0515/raw/875e8566231e4095846c10e7bad403ba7a43755a
+    /bin/bash /tmp/controller.sh init
+    /bin/bash /tmp/controller.sh start
+

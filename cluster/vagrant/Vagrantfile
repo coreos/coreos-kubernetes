@@ -21,9 +21,13 @@ cwd = File.dirname(__FILE__)
 
 CONFIG = File.join(cwd, "config.rb")
 
-CONTROLLER_CLOUD_CONFIG_PATH = File.expand_path("../cloud-config/controller-cloud-config.yaml", cwd)
-WORKER_CLOUD_CONFIG_PATH = File.expand_path("../cloud-config/worker-cloud-config.yaml", cwd)
-ETCD_CLOUD_CONFIG_PATH = File.expand_path("../cloud-config/etcd-cloud-config.yaml", cwd)
+ETCD_CLOUD_CONFIG_PATH = File.expand_path("./cloud-config/etcd-cloud-config.yaml", cwd)
+
+CONTROLLER_CLOUD_CONFIG_PATH = File.expand_path("./cloud-config/controller-cloud-config.yaml", cwd)
+CONTROLLER_DEPLOYER_PATH = File.expand_path("../../deploy/controller.sh", cwd)
+
+WORKER_CLOUD_CONFIG_PATH = File.expand_path("./cloud-config/worker-cloud-config.yaml", cwd)
+WORKER_DEPLOYER_PATH = File.expand_path("../../deploy/worker.sh", cwd)
 
 def etcdIP(num)
   return "172.17.4.#{num+50}"
@@ -138,7 +142,12 @@ Vagrant.configure("2") do |config|
 
       controller.vm.network :private_network, ip: controllerIP(i)
 
-      controller.vm.provision :file, :source => env_file, :destination => "/tmp/kube-bootstrap-env" #TODO(aaron): move
+      controller.vm.provision :file, :source => CONTROLLER_DEPLOYER_PATH, :destination => "/tmp/controller.sh"
+      controller.vm.provision :shell, :inline => "mkdir -p /opt; mv /tmp/controller.sh /opt/controller.sh", :privileged => true
+
+      controller.vm.provision :file, :source => env_file, :destination => "/tmp/kube-bootstrap-env"
+      controller.vm.provision :shell, :inline => "mv /tmp/kube-bootstrap-env /etc/kube-bootstrap-env", :privileged => true
+
       controller.vm.provision :file, :source => controller_config_file.path, :destination => "/tmp/vagrantfile-user-data"
       controller.vm.provision :shell, :inline => "mv /tmp/vagrantfile-user-data /var/lib/coreos-vagrant/", :privileged => true
     end
@@ -171,7 +180,12 @@ Vagrant.configure("2") do |config|
 
       worker.vm.network :private_network, ip: workerIP(i)
 
-      worker.vm.provision :file, :source => env_file, :destination => "/tmp/kube-bootstrap-env" #TODO(aaron): move
+      worker.vm.provision :file, :source => WORKER_DEPLOYER_PATH, :destination => "/tmp/worker.sh"
+      worker.vm.provision :shell, :inline => "mkdir -p /opt; mv /tmp/worker.sh /opt/worker.sh", :privileged => true
+
+      worker.vm.provision :file, :source => env_file, :destination => "/tmp/kube-bootstrap-env"
+      worker.vm.provision :shell, :inline => "mv /tmp/kube-bootstrap-env /etc/kube-bootstrap-env", :privileged => true
+
       worker.vm.provision :file, :source => worker_config_file.path, :destination => "/tmp/vagrantfile-user-data"
       worker.vm.provision :shell, :inline => "mv /tmp/vagrantfile-user-data /var/lib/coreos-vagrant/", :privileged => true
     end

@@ -19,6 +19,9 @@ $etcd_vm_memory = 512
 cwd = File.dirname(__FILE__)
 
 CONFIG = File.join(cwd, "config.rb")
+if File.exist?(CONFIG)
+  require CONFIG
+end
 
 ETCD_CLOUD_CONFIG_PATH = File.join(cwd, "etcd-cloud-config.yaml")
 

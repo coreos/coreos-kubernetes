@@ -1,0 +1,52 @@
+#cloud-config
+
+coreos:
+  update:
+    reboot-strategy: "off"
+
+  flannel:
+    interface: $private_ipv4
+    etcd_endpoints: {{ETCD_ENDPOINTS}}
+
+  units:
+  - name: flanneld.service
+    command: start
+
+  - name: bootstrap.service
+    command: start
+    content: |
+      [Service]
+      ExecStart=/bin/bash -e /tmp/bootstrap.sh
+      Type=oneshot
+
+      # List of etcd servers (http://ip:port), comma separated
+      Environment=ETCD_ENDPOINTS={{ETCD_ENDPOINTS}}
+
+      # The CIDR network to use for pod IPs.
+      # Each pod launched in the cluster will be assigned an IP out of this range.
+      # Each node will be configured such that these IPs will be routable using the flannel overlay network.
+      #Environment=POD_NETWORK=10.2.0.0/16
+
+      # The CIDR network to use for service cluster IPs.
+      # Each service will be assigned a cluster IP out of this range.
+      # This must not overlap with any IP ranges assigned to the POD_NETWORK, or other existing network infrastructure.
+      # Routing to these IPs is handled by a proxy service local to each node, and are not required to be routable between nodes.
+      #Environment=SERVICE_IP_RANGE=10.3.0.0/24
+
+      # The IP address of the Kubernetes API Service
+      # If the SERVICE_IP_RANGE is changed above, this must be set to the first IP in that range.
+      #Environment=K8S_SERVICE_IP=10.3.0.1
+
+      # The IP address of the cluster DNS service.
+      # This IP must be in the range of the SERVICE_IP_RANGE and cannot be the first IP in the range.
+      # This same IP must be configured on all worker nodes to enable DNS service discovery.
+      #Environment=DNS_SERVICE_IP=10.3.0.10
+
+      # The above settings can optionally be overridden using an environment file:
+      EnvironmentFile=-/etc/kube-bootstrap-env
+
+write_files:
+- path: /tmp/bootstrap.sh
+  content: |
+    /bin/bash /opt/controller.sh init
+    /bin/bash /opt/controller.sh start

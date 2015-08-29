@@ -73,6 +73,23 @@ function init_flannel {
     fi
 }
 
+function init_docker {
+    local TEMPLATE=/etc/systemd/system/docker.service.d/40-flannel.conf
+    [ -f $TEMPLATE ] || {
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+[Unit]
+Requires=flanneld.service
+After=flanneld.service
+EOF
+    }
+
+	# reload now before docker commands are run in later
+	# init steps or dockerd will start before flanneld
+	systemctl daemon-reload
+}
+
 function init_kubernetes_release {
     local RELEASE_DIR=/opt/kubernetes_release/$K8S_VER
     mkdir -p $RELEASE_DIR
@@ -97,15 +114,6 @@ function init_kubernetes_release {
       }
     done
 
-    # Wait for flannel before running docker commands so networking is configured properly
-    echo "Waiting for flanneld..."
-    local STATUS="unknown"
-    until [ "$STATUS" == "active" ]; do
-        local STATUS=$(systemctl is-active flanneld)
-        echo "flanneld status: $STATUS"
-        sleep 5
-    done
-
     local REPO="gcr.io/google_containers"
     local IMAGES=( "kube-apiserver" "kube-scheduler" "kube-controller-manager" )
     for IMG in "${IMAGES[@]}"; do
@@ -126,10 +134,6 @@ function init_templates {
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
-[Unit]
-Requires=flanneld.service
-After=flanneld.service
-
 [Service]
 ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
 ExecStart=/opt/bin/kubelet \
@@ -153,10 +157,6 @@ EOF
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
-[Unit]
-Requires=flanneld.service
-After=flanneld.service
-
 [Service]
 ExecStart=/opt/bin/kube-proxy --master=http://127.0.0.1:8080 --logtostderr
 Restart=always
@@ -540,6 +540,7 @@ if [ "$CMD" == "init" ]; then
     echo "Starting initialization"
     init_config
     init_flannel
+    init_docker
     init_kubernetes_release
     init_templates
     echo "Initialization complete"
@@ -558,5 +559,3 @@ fi
 
 usage
 exit 1
-
-

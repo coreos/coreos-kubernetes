@@ -40,6 +40,23 @@ function init_config {
     done
 }
 
+function init_docker {
+    local TEMPLATE=/etc/systemd/system/docker.service.d/40-flannel.conf
+    [ -f $TEMPLATE ] || {
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+[Unit]
+Requires=flanneld.service
+After=flanneld.service
+EOF
+    }
+
+	# reload now before docker commands are run in later
+	# init steps or dockerd will start before flanneld
+	systemctl daemon-reload
+}
+
 function init_kubernetes_release {
     local RELEASE_DIR=/opt/kubernetes_release/$K8S_VER
     mkdir -p $RELEASE_DIR
@@ -71,10 +88,6 @@ function init_templates {
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
-[Unit]
-Requires=flanneld.service
-After=flanneld.service
-
 [Service]
 ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
 ExecStart=/opt/bin/kubelet \
@@ -97,10 +110,6 @@ EOF
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
-[Unit]
-Requires=flanneld.service
-After=flanneld.service
-
 [Service]
 ExecStart=/opt/bin/kube-proxy \
   --master=${CONTROLLER_ENDPOINT} \
@@ -163,6 +172,7 @@ EOF
 if [ "$CMD" == "init" ]; then
     echo "Starting initialization"
     init_config
+    init_docker
     init_kubernetes_release
     init_templates
     echo "Initialization complete"

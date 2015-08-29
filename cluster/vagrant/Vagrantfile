@@ -23,6 +23,11 @@ if File.exist?(CONFIG)
   require CONFIG
 end
 
+TOKEN_SIGNER_KEY = File.join(cwd, "token-signer-private.pem")
+if !File.exist?(TOKEN_SIGNER_KEY)
+  system("/usr/bin/openssl genrsa -out #{TOKEN_SIGNER_KEY} 4096") or abort("Failed generating RSA key")
+end
+
 ETCD_CLOUD_CONFIG_PATH = File.join(cwd, "etcd-cloud-config.yaml")
 
 CONTROLLER_CLOUD_CONFIG_PATH = File.join(cwd, "controller-cloud-config.yaml")
@@ -143,6 +148,9 @@ Vagrant.configure("2") do |config|
       end
 
       controller.vm.network :private_network, ip: controllerIP(i)
+
+      controller.vm.provision :file, :source => TOKEN_SIGNER_KEY, :destination => "/tmp/service-account-private-key.pem"
+      controller.vm.provision :shell, :inline => "mkdir -p /etc/kubernetes; mv /tmp/service-account-private-key.pem /etc/kubernetes/service-account-private-key.pem", :privileged => true
 
       controller.vm.provision :file, :source => CONTROLLER_DEPLOYER_PATH, :destination => "/tmp/controller.sh"
       controller.vm.provision :shell, :inline => "mkdir -p /opt; mv /tmp/controller.sh /opt/controller.sh", :privileged => true

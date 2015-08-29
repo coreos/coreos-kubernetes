@@ -193,6 +193,7 @@ spec:
     - --service-cluster-ip-range=${SERVICE_IP_RANGE}
     - --secure_port=443
     - --advertise-address=${ADVERTISE_IP}
+    - --admission-control=NamespaceLifecycle,NamespaceExists,LimitRanger,SecurityContextDeny,ResourceQuota
     ports:
     - containerPort: 443
       hostPort: 443

@@ -157,6 +157,18 @@ spec:
 EOF
     }
 
+    local TEMPLATE=/srv/kubernetes/manifests/kube-system.yaml
+    [ -f $TEMPLATE ] || {
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kube-system
+EOF
+    }
+
     local TEMPLATE=/etc/kubernetes/manifests/kube-apiserver.yaml
     [ -f $TEMPLATE ] || {
         echo "TEMPLATE: $TEMPLATE"
@@ -527,6 +539,8 @@ function start_addons {
         sleep 5
     done
     echo
+    echo "K8S: kube-system namespace"
+    /opt/bin/kubectl create -f /srv/kubernetes/manifests/kube-system.yaml
     echo "K8S: DNS addon"
     /opt/bin/kubectl create -f /srv/kubernetes/manifests/kube-dns.yaml
 }

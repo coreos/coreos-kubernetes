@@ -1,0 +1,58 @@
+# -*- mode: ruby -*-
+# # vi: set ft=ruby :
+
+require 'fileutils'
+require 'open-uri'
+require 'tempfile'
+require 'yaml'
+
+Vagrant.require_version ">= 1.6.0"
+
+cwd = File.dirname(__FILE__)
+
+CLOUD_CONFIG_PATH = File.join(cwd, "cloud-config.yaml")
+CONTROLLER_DEPLOYER_PATH = File.expand_path("../../deploy/controller.sh", cwd)
+
+Vagrant.configure("2") do |config|
+  # always use Vagrant's insecure key
+  config.ssh.insert_key = false
+
+  config.vm.box = "coreos-alpha"
+  config.vm.box_version = ">= 766.0.0"
+  config.vm.box_url = "http://alpha.release.core-os.net/amd64-usr/current/coreos_production_vagrant.json"
+
+  ["vmware_fusion", "vmware_workstation"].each do |vmware|
+    config.vm.provider vmware do |v, override|
+      v.vmx['numvcpus'] = 1
+      v.vmx['memsize'] = 512
+      v.gui = false
+
+      override.vm.box_url = "http://alpha.release.core-os.net/amd64-usr/current/coreos_production_vagrant_vmware_fusion.json"
+    end
+  end
+
+  config.vm.provider :virtualbox do |v|
+    v.cpus = 1
+    v.gui = false
+    v.memory = 512
+
+    # On VirtualBox, we don't have guest additions or a functional vboxsf
+    # in CoreOS, so tell Vagrant that so it can be smarter.
+    v.check_guest_additions = false
+    v.functional_vboxsf     = false
+  end
+
+  # plugin conflict
+  if Vagrant.has_plugin?("vagrant-vbguest") then
+    config.vbguest.auto_update = false
+  end
+
+  config.vm.network :private_network, ip: "172.17.4.99"
+
+  config.vm.provision :file, :source => CONTROLLER_DEPLOYER_PATH, :destination => "/tmp/controller.sh"
+  config.vm.provision :shell, :inline => "mkdir -p /opt; mv /tmp/controller.sh /opt/controller.sh", :privileged => true
+
+  config.vm.provision :file, :source => CLOUD_CONFIG_PATH, :destination => "/tmp/vagrantfile-user-data"
+  config.vm.provision :shell, :inline => "mv /tmp/vagrantfile-user-data /var/lib/coreos-vagrant/", :privileged => true
+
+end

@@ -1,60 +1,63 @@
-# Single Node CoreOS + Kubernetes
+# Kubernetes on CoreOS Quickstart
 
-These instructions will walk you through deploying a single-node Kubernetes stack on CoreOS.
+While Kubernetes is designed to run across large clusters, it can be useful to have Kubernetes available on a single machine.
+This guide walks a deployer through this process using Vagrant and CoreOS.
+After completing this guide, a deployer will be able to interact with the Kubernetes API from their workstation using the kubectl CLI tool.
 
-CoreOS-vagrant will be used in this example, but these steps can be used to deploy on a CoreOS system in any environment using the included cloud-config.
+## Step 0: Install Prerequisites
 
-NOTE: A single-node stack is not recommended for production workloads
+### Vagrant
 
-## Deploy on CoreOS Vagrant
+Navigate to the [Vagrant downloads page][vagrant-downloads] and grab the appropriate package   for your system. Install the downloaded software before continuing.
 
-### Step 1: Clone CoreOS Vagrant repo
+[vagrant-downloads]: https://www.vagrantup.com/downloads.html
 
-```
-git clone https://github.com/coreos/coreos-vagrant.git
-cd coreos-vagrant
-```
+### kubectl
 
-### Step 2: Create the cloud-config
+The primary CLI tool used to interact with the Kubernetes API is called `kubectl`.
+This tool is not yet available through the typical means of software distribution, so it is suggested that you download the binary directly from the Kubernetes release artifact site:
 
-Copy the provided single-node [cloud-config](../../cluster/single-node/cloud-config.yaml) into the `user-data` file in the coreos-vagrant directory.
-
-### Step 3: Start the Vagrant node
-
-```
-vagrant up
-```
-
-### Step 4: Connect & inspect state
+First, download the binary using a command-line tool such as `wget` or `curl` from `https://storage.googleapis.com/kubernetes-release/release/v1.0.3/bin/${ARCH}/amd64/kubectl`.
+Set the ARCH environment variable to "linux" or "darwin" based no your workstation operating system:
 
 ```
-vagrant ssh core-01
+ARCH=linux wget https://storage.googleapis.com/kubernetes-release/release/v1.0.3/bin/$ARCH/amd64/kubectl
 ```
 
-It will take a few minutes to download all of the assets. You can watch the status of bootstrap:
+After downloading the binary, ensure it is executable and move it into your PATH:
 
 ```
-journalctl -fu bootstrap
+chmod +x kubectl
+mv kubectl /usr/local/bin/kubectl
 ```
 
-*NOTE*: Bootstrap is complete when you see: `systemd[1]: Started bootstrap.service`
+## Step 1: Bring the cluster up
 
-## Next Steps
+Simply run `vagrant up` and wait for the command to succeed.
+Once Vagrant is finished booting and provisioning your machine, your cluster is good to go.
 
-### Query Kubernetes API
+## Step 2: Configure kubectl
 
-Once the Kubernetes API is running, you can use the `kubectl` tool to query for running pods:
+Configure your local Kubernetes client using the following commands:
 
 ```
-core@core-01 ~ $ kubectl get pods --all-namespaces
-NAMESPACE     NAME                                   READY     STATUS    RESTARTS   AGE
-kube-system   kube-apiserver-172.17.8.101            1/1       Running   0          2m
-kube-system   kube-controller-manager-172.17.8.101   1/1       Running   0          2m
-kube-system   kube-dns-v8-eyfuz                      4/4       Running   0          2m
-kube-system   kube-podmaster-172.17.8.101            2/2       Running   0          2m
-kube-system   kube-scheduler-172.17.8.101            1/1       Running   0          2m
+kubectl config set-cluster vagrant --server=https://172.17.4.99:443 --insecure-skip-tls-verify=true
+kubectl config set-credentials vagrant-admin --username=admin --password=dontcare
+kubectl config set-context vagrant --cluster=vagrant --user=vagrant-admin
+kubectl config use-context vagrant
 ```
 
-### Deploy Sample Application
+Check that your client is configured properly by using `kubectl` to inspect your single-node cluster:
 
-Simple multi-tier web application: [Guestbook Example](http://kubernetes.io/v1.0/examples/guestbook-go/README.html)
+```
+% kubectl get nodes
+NAME          LABELS                               STATUS
+172.17.4.99   kubernetes.io/hostname=172.17.4.99   Ready
+```
+
+## Step 3: Deploy an Application
+
+Now that you've got a working Kubernetes cluster with a functional CLI tool, you are free to deploy Kubernetes-ready applications.
+Start with a [multi-tier web application][guestbook] from the official Kubernetes documentation to visualize how the various Kubernetes components fit together.
+
+[guestbook]: http://kubernetes.io/v1.0/examples/guestbook-go/README.html

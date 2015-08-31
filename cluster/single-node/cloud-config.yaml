@@ -11,9 +11,6 @@ coreos:
   - name: etcd2.service
     command: start
 
-  - name: flanneld.service
-    command: start
-
   - name: bootstrap.service
     command: start
     content: |

@@ -1,6 +1,6 @@
 # Generic Network Setup
 
-These instructions assume the default network configuration used in the sample [controller-cloud-config](files/controller-cloud-config.sample) and [worker-cloud-config](files/worker-cloud-config.sample) files.
+These instructions assume the default network configuration used in the sample [controller-cloud-config](generic/controller-cloud-config.yaml) and [worker-cloud-config](worker-cloud-config.yaml) files.
 
 ## Network Configuration
 

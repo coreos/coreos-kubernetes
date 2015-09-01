@@ -9,9 +9,6 @@ coreos:
     etcd_endpoints: {{ETCD_ENDPOINTS}}
 
   units:
-  - name: flanneld.service
-    command: start
-
   - name: bootstrap.service
     command: start
     content: |

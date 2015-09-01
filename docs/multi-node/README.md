@@ -47,7 +47,18 @@ You will need to deploy a minimum of 1 controller and 1 worker. Depending on you
 
 * If deploying onto baremetal servers, the [CoreOS Install Utility](https://coreos.com/os/docs/latest/installing-to-disk.html) may be useful to assist in deployment.
 
-### Step 5: Inspect State
+### Step 5: Distribute Keys to Controller
+
+In order for the kube-controller-manager to create tokens for service accounts, it needs access to an RSA private key.
+Generate this key using a command like the following:
+
+```
+openssl genrsa -out service-account-private-key.pem 4096
+```
+
+Distribute the same key securely to each controller node, placing it at `/etc/kubernetes/service-account-private-key.pem`.
+
+### Step 6: Inspect State
 
 It will take a few minutes for the bootstrap process to download all of the assets. You can watch the status of bootstrap process on controller & worker nodes, by ssh'ing into the machine and querying the systemd journal:
 

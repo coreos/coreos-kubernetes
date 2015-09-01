@@ -9,9 +9,6 @@ coreos:
     etcd_endpoints: {{ETCD_ENDPOINTS}}
 
   units:
-  - name: flanneld.service
-    command: start
-
   - name: bootstrap.service
     command: start
     content: |
@@ -51,4 +48,11 @@ write_files:
     #TODO(aaron): currently just a gist copy of ../deploy/controller.sh. Update to tagged version in repo once public
     curl --silent -o /tmp/controller.sh https://gist.githubusercontent.com/aaronlevy/77fbd531a83b3e5f0515/raw/83d8ca8489d484cecf0116ac12e69548fce27ca8/controller.sh
     /bin/bash /tmp/controller.sh init
+
+    KEY_FILE="/etc/kubernetes/service-account-private-key.pem"
+    echo "Waiting for ${KEY_FILE} to exist..."
+    while [ ! -e "${KEY_FILE}" ]; do
+      sleep 5
+    done
+
     /bin/bash /tmp/controller.sh start

@@ -157,6 +157,18 @@ spec:
 EOF
     }
 
+    local TEMPLATE=/srv/kubernetes/manifests/kube-system.yaml
+    [ -f $TEMPLATE ] || {
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kube-system
+EOF
+    }
+
     local TEMPLATE=/etc/kubernetes/manifests/kube-apiserver.yaml
     [ -f $TEMPLATE ] || {
         echo "TEMPLATE: $TEMPLATE"
@@ -181,6 +193,7 @@ spec:
     - --service-cluster-ip-range=${SERVICE_IP_RANGE}
     - --secure_port=443
     - --advertise-address=${ADVERTISE_IP}
+    - --admission-control=NamespaceLifecycle,NamespaceExists,LimitRanger,SecurityContextDeny,ServiceAccount,ResourceQuota
     ports:
     - containerPort: 443
       hostPort: 443
@@ -292,6 +305,7 @@ spec:
     - /hyperkube
     - controller-manager
     - --master=http://127.0.0.1:8080
+    - --service-account-private-key-file=/etc/kubernetes/service-account-private-key.pem
     livenessProbe:
       httpGet:
         host: 127.0.0.1
@@ -312,6 +326,9 @@ spec:
     - mountPath: /etc/pki/tls
       name: etcpkitls
       readOnly: true
+    - mountPath: /etc/kubernetes/service-account-private-key.pem
+      name: service-account-private-key
+      readOnly: true
   hostNetwork: true
   volumes:
   - hostPath:
@@ -326,6 +343,9 @@ spec:
   - hostPath:
       path: /etc/pki/tls
     name: etcpkitls
+  - hostPath:
+      path: /etc/kubernetes/service-account-private-key.pem
+    name: service-account-private-key
 EOF
     }
 
@@ -527,6 +547,8 @@ function start_addons {
         sleep 5
     done
     echo
+    echo "K8S: kube-system namespace"
+    /opt/bin/kubectl create -f /srv/kubernetes/manifests/kube-system.yaml
     echo "K8S: DNS addon"
     /opt/bin/kubectl create -f /srv/kubernetes/manifests/kube-dns.yaml
 }

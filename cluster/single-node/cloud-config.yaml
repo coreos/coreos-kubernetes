@@ -11,9 +11,6 @@ coreos:
   - name: etcd2.service
     command: start
 
-  - name: flanneld.service
-    command: start
-
   - name: bootstrap.service
     command: start
     content: |
@@ -25,7 +22,11 @@ coreos:
 write_files:
 - path: /tmp/bootstrap.sh
   content: |
-    curl --silent -o /tmp/controller.sh https://gist.githubusercontent.com/aaronlevy/77fbd531a83b3e5f0515/raw/83d8ca8489d484cecf0116ac12e69548fce27ca8/controller.sh
-    /bin/bash /tmp/controller.sh init
-    /bin/bash /tmp/controller.sh start
+    /bin/bash /opt/controller.sh init
 
+    [ -e /etc/kubernetes/service-account-private-key.pem ] || {
+      mkdir -p /etc/kubernetes
+      openssl genrsa -out /etc/kubernetes/service-account-private-key.pem 4096
+    }
+
+    /bin/bash /opt/controller.sh start

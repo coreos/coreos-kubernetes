@@ -1,2 +1,3 @@
 .vagrant
 config.rb
+token-signer-private.pem

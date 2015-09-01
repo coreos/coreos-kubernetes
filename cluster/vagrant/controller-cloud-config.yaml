@@ -46,4 +46,11 @@ write_files:
 - path: /tmp/bootstrap.sh
   content: |
     /bin/bash /opt/controller.sh init
+
+    KEY_FILE="/etc/kubernetes/service-account-private-key.pem"
+    echo "Waiting for ${KEY_FILE} to exist..."
+    while [ ! -e "${KEY_FILE}" ]; do
+      sleep 5
+    done
+
     /bin/bash /opt/controller.sh start

@@ -85,9 +85,9 @@ After=flanneld.service
 EOF
     }
 
-	# reload now before docker commands are run in later
-	# init steps or dockerd will start before flanneld
-	systemctl daemon-reload
+    # reload now before docker commands are run in later
+    # init steps or dockerd will start before flanneld
+    systemctl daemon-reload
 }
 
 function init_kubernetes_release {

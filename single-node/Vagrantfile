@@ -11,7 +11,7 @@ Vagrant.require_version ">= 1.6.0"
 cwd = File.dirname(__FILE__)
 
 CLOUD_CONFIG_PATH = File.join(cwd, "cloud-config.yaml")
-CONTROLLER_DEPLOYER_PATH = File.expand_path("../../deploy/controller.sh", cwd)
+CONTROLLER_DEPLOYER_PATH = File.expand_path("../deploy/controller.sh", cwd)
 
 Vagrant.configure("2") do |config|
   # always use Vagrant's insecure key

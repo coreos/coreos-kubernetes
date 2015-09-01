@@ -1,6 +1,6 @@
 # AWS Network Setup
 
-These instructions assume the default network configuration used in the sample [controller-cloud-config](files/controller-cloud-config.sample) and [worker-cloud-config](files/worker-cloud-config.sample) files.
+These instructions assume the default network configuration used in the sample [controller-cloud-config](generic/controller-cloud-config.yaml) and [worker-cloud-config](generic/worker-cloud-config.yaml) files.
 
 The following actions are all taken through the AWS Web Console.
 

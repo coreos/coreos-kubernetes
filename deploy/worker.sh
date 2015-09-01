@@ -1,7 +1,5 @@
 #!/bin/bash -e
 
-K8S_VER="v1.0.3"
-
 function usage {
     echo "USAGE: $0 <command>"
     echo "Commands:"
@@ -15,6 +13,10 @@ if [ -z $1 ]; then
 fi
 
 CMD=$1
+
+# Sanity check kubelet is available (missing will exit with set -e)
+which kubelet
+K8S_VER=$(kubelet --version | awk '{print $2}')
 
 function init_config {
     local REQUIRED=( 'ADVERTISE_IP' 'ETCD_ENDPOINTS' 'CONTROLLER_ENDPOINT' 'DNS_SERVICE_IP' )
@@ -57,29 +59,13 @@ EOF
     systemctl daemon-reload
 }
 
-function init_kubernetes_release {
-    local RELEASE_DIR=/opt/kubernetes_release/$K8S_VER
-    mkdir -p $RELEASE_DIR
-
-    [ -f $RELEASE_DIR/kubernetes-server-linux-amd64.tar.gz ] || {
-        echo "K8S: downloading release: $K8S_VER"
-        curl --silent -o $RELEASE_DIR/kubernetes-server-linux-amd64.tar.gz  https://storage.googleapis.com/kubernetes-release/release/$K8S_VER/kubernetes-server-linux-amd64.tar.gz
+function init_kubectl {
+    [ -f /opt/bin/kubectl ] || {
+        mkdir -p /opt/bin
+        curl --silent -o /opt/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/$K8S_VER/bin/linux/amd64/kubectl
+        chown core:core /opt/bin/kubectl
+        chmod +x /opt/bin/kubectl
     }
-
-    [ -d $RELEASE_DIR/kubernetes/server ] || {
-        echo "K8S: extracting release: $K8S_VER"
-        tar xzf $RELEASE_DIR/kubernetes-server-linux-amd64.tar.gz -C $RELEASE_DIR
-    }
-
-    mkdir -p /opt/bin
-    BINS=( "kubectl" "kubelet" "kube-proxy" )
-    for BIN in "${BINS[@]}"; do
-      [ -x /opt/bin/$BIN ] || {
-        echo "K8S BIN: $BIN"
-        cp $RELEASE_DIR/kubernetes/server/bin/$BIN /opt/bin/$BIN
-        chown core:core /opt/bin/$BIN
-      }
-    done
 }
 
 function init_templates {
@@ -90,34 +76,17 @@ function init_templates {
         cat << EOF > $TEMPLATE
 [Service]
 ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
-ExecStart=/opt/bin/kubelet \
+ExecStart=/usr/bin/kubelet \
   --api_servers=${CONTROLLER_ENDPOINT} \
+  --allow-privileged=true \
+  --config=/etc/kubernetes/manifests \
   --hostname-override=${ADVERTISE_IP} \
   --cluster_dns=${DNS_SERVICE_IP} \
-  --kubeconfig=/srv/kubernetes/istv-kubeconfig.yaml \
   --cluster_domain=cluster.local \
+  --kubeconfig=/srv/kubernetes/istv-kubeconfig.yaml \
   --cadvisor-port=0
 Restart=always
 RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-EOF
-    }
-
-    local TEMPLATE=/etc/systemd/system/kube-proxy.service
-    [ -f $TEMPLATE ] || {
-        echo "TEMPLATE: $TEMPLATE"
-        mkdir -p $(dirname $TEMPLATE)
-        cat << EOF > $TEMPLATE
-[Service]
-ExecStart=/opt/bin/kube-proxy \
-  --master=${CONTROLLER_ENDPOINT} \
-  --kubeconfig=/srv/kubernetes/istv-kubeconfig.yaml \
-  --logtostderr
-Restart=always
-RestartSec=10
-
 [Install]
 WantedBy=multi-user.target
 EOF
@@ -139,6 +108,45 @@ contexts:
     cluster: control
   name: default-context
 current-context: default-context
+EOF
+    }
+
+
+    local TEMPLATE=/etc/kubernetes/manifests/kube-proxy.yaml
+    [ -f $TEMPLATE ] || {
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-proxy
+  namespace: kube-system
+spec:
+  hostNetwork: true
+  containers:
+  - name: kube-proxy
+    image: gcr.io/google_containers/hyperkube:$K8S_VER
+    command:
+    - /hyperkube
+    - proxy
+    - --master=${CONTROLLER_ENDPOINT}
+    - --kubeconfig=/config/kubeconfig.yaml
+    securityContext:
+      privileged: true
+    volumeMounts:
+      - mountPath: /etc/ssl/certs
+        name: "ssl-certs"
+      - mountPath: /config/kubeconfig.yaml
+        name: kubeconfig
+        readOnly: true
+  volumes:
+    - name: "ssl-certs"
+      hostPath:
+        path: "/usr/share/ca-certificates"
+    - name: "kubeconfig"
+      hostPath:
+        path: "/srv/kubernetes/istv-kubeconfig.yaml"
 EOF
     }
 
@@ -173,7 +181,7 @@ if [ "$CMD" == "init" ]; then
     echo "Starting initialization"
     init_config
     init_docker
-    init_kubernetes_release
+    init_kubectl
     init_templates
     echo "Initialization complete"
     exit 0
@@ -183,7 +191,6 @@ if [ "$CMD" == "start" ]; then
     echo "Starting services"
     systemctl daemon-reload
     systemctl enable kubelet; systemctl start kubelet
-    systemctl enable kube-proxy; systemctl start kube-proxy
     echo "Service start complete"
     exit 0
 fi

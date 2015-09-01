@@ -1,7 +1,5 @@
 #!/bin/bash -e
 
-K8S_VER="v1.0.3"
-
 function usage {
     echo "USAGE: $0 <command>"
     echo "Commands:"
@@ -15,6 +13,10 @@ if [ -z $1 ]; then
 fi
 
 CMD=$1
+
+# Sanity check kubelet is available in image (missing will exit with set -e)
+which kubelet
+K8S_VER=$(kubelet --version | awk '{print $2}')
 
 function init_config {
     local REQUIRED=('ADVERTISE_IP' 'POD_NETWORK' 'ETCD_ENDPOINTS' 'SERVICE_IP_RANGE' 'K8S_SERVICE_IP' 'DNS_SERVICE_IP' )
@@ -90,42 +92,13 @@ EOF
     systemctl daemon-reload
 }
 
-function init_kubernetes_release {
-    local RELEASE_DIR=/opt/kubernetes_release/$K8S_VER
-    mkdir -p $RELEASE_DIR
-
-    [ -f $RELEASE_DIR/kubernetes-server-linux-amd64.tar.gz ] || {
-        echo "K8S: downloading release: $K8S_VER"
-        curl --silent -o $RELEASE_DIR/kubernetes-server-linux-amd64.tar.gz  https://storage.googleapis.com/kubernetes-release/release/$K8S_VER/kubernetes-server-linux-amd64.tar.gz
+function init_kubectl {
+    [ -f /opt/bin/kubectl ] || {
+        mkdir -p /opt/bin
+        curl --silent -o /opt/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/$K8S_VER/bin/linux/amd64/kubectl
+        chown core:core /opt/bin/kubectl
+        chmod +x /opt/bin/kubectl
     }
-
-    [ -d $RELEASE_DIR/kubernetes/server ] || {
-        echo "K8S: extracting release: $K8S_VER"
-        tar xzf $RELEASE_DIR/kubernetes-server-linux-amd64.tar.gz -C $RELEASE_DIR
-    }
-
-    mkdir -p /opt/bin
-    BINS=( "kubectl" "kubelet" "kube-proxy" )
-    for BIN in "${BINS[@]}"; do
-      [ -x /opt/bin/$BIN ] || {
-        echo "K8S BIN: $BIN"
-        cp $RELEASE_DIR/kubernetes/server/bin/$BIN /opt/bin/$BIN
-        chown core:core /opt/bin/$BIN
-      }
-    done
-
-    local REPO="gcr.io/google_containers"
-    local IMAGES=( "kube-apiserver" "kube-scheduler" "kube-controller-manager" )
-    for IMG in "${IMAGES[@]}"; do
-        local IMG_TAG=$(cat $RELEASE_DIR/kubernetes/server/bin/$IMG.docker_tag)
-        if [ "$IMG_TAG" != "$(docker images $REPO/$IMG | awk '/$IMG/ {print $2}')" ]; then
-            echo "K8S IMAGE: $REPO/$IMG:$IMG_TAG"
-            docker load -i $RELEASE_DIR/kubernetes/server/bin/$IMG.tar
-        fi
-        # export image name variables for use in templates. e.g. KUBE_APISERVER_IMAGE
-        local NAME=$(echo $IMG | awk '{print toupper($0)}' | tr '-' '_')
-        export $(echo "$NAME"_IMAGE=$REPO/$IMG:$IMG_TAG)
-    done
 }
 
 function init_templates {
@@ -136,9 +109,10 @@ function init_templates {
         cat << EOF > $TEMPLATE
 [Service]
 ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
-ExecStart=/opt/bin/kubelet \
+ExecStart=/usr/bin/kubelet \
   --api_servers=http://127.0.0.1:8080 \
   --register-node=${REGISTER_NODE} \
+  --allow-privileged=true \
   --config=/etc/kubernetes/manifests \
   --hostname-override=${ADVERTISE_IP} \
   --cluster_dns=${DNS_SERVICE_IP} \
@@ -152,18 +126,34 @@ WantedBy=multi-user.target
 EOF
     }
 
-    local TEMPLATE=/etc/systemd/system/kube-proxy.service
+    local TEMPLATE=/etc/kubernetes/manifests/kube-proxy.yaml
     [ -f $TEMPLATE ] || {
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
-[Service]
-ExecStart=/opt/bin/kube-proxy --master=http://127.0.0.1:8080 --logtostderr
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-proxy
+  namespace: kube-system
+spec:
+  hostNetwork: true
+  containers:
+  - name: kube-proxy
+    image: gcr.io/google_containers/hyperkube:$K8S_VER
+    command:
+    - /hyperkube
+    - proxy
+    - --master=http://127.0.0.1:8080
+    securityContext:
+      privileged: true
+    volumeMounts:
+      - mountPath: /etc/ssl/certs
+        name: "ssl-certs"
+  volumes:
+    - name: "ssl-certs"
+      hostPath:
+        path: "/usr/share/ca-certificates"
 EOF
     }
 
@@ -181,11 +171,16 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-apiserver
-    image: $KUBE_APISERVER_IMAGE
+    image: gcr.io/google_containers/hyperkube:$K8S_VER
     command:
-    - /bin/sh
-    - -c
-    - /usr/local/bin/kube-apiserver --bind-address=0.0.0.0 --etcd_servers=${ETCD_ENDPOINTS} --service-cluster-ip-range=${SERVICE_IP_RANGE} --secure_port=443 --advertise-address=${ADVERTISE_IP}
+    - /hyperkube
+    - apiserver
+    - --bind-address=0.0.0.0
+    - --etcd_servers=${ETCD_ENDPOINTS}
+    - --allow-privileged=true
+    - --service-cluster-ip-range=${SERVICE_IP_RANGE}
+    - --secure_port=443
+    - --advertise-address=${ADVERTISE_IP}
     ports:
     - containerPort: 443
       hostPort: 443
@@ -291,11 +286,12 @@ metadata:
   namespace: kube-system
 spec:
   containers:
-  - command:
-    - /bin/sh
-    - -c
-    - /usr/local/bin/kube-controller-manager --master=http://127.0.0.1:8080
-    image: $KUBE_CONTROLLER_MANAGER_IMAGE
+  - name: kube-controller-manager
+    image: gcr.io/google_containers/hyperkube:$K8S_VER
+    command:
+    - /hyperkube
+    - controller-manager
+    - --master=http://127.0.0.1:8080
     livenessProbe:
       httpGet:
         host: 127.0.0.1
@@ -303,7 +299,6 @@ spec:
         port: 10252
       initialDelaySeconds: 15
       timeoutSeconds: 1
-    name: kube-controller-manager
     volumeMounts:
     - mountPath: /etc/ssl
       name: etcssl
@@ -348,11 +343,11 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-scheduler
-    image: $KUBE_SCHEDULER_IMAGE
+    image: gcr.io/google_containers/hyperkube:$K8S_VER
     command:
-    - /bin/sh
-    - -c
-    - /usr/local/bin/kube-scheduler --master=http://127.0.0.1:8080
+    - /hyperkube
+    - scheduler
+    - --master=http://127.0.0.1:8080
     livenessProbe:
       httpGet:
         host: 127.0.0.1
@@ -541,7 +536,7 @@ if [ "$CMD" == "init" ]; then
     init_config
     init_flannel
     init_docker
-    init_kubernetes_release
+    init_kubectl
     init_templates
     echo "Initialization complete"
     exit 0
@@ -551,7 +546,6 @@ if [ "$CMD" == "start" ]; then
     echo "Starting services"
     systemctl daemon-reload
     systemctl enable kubelet; systemctl start kubelet
-    systemctl enable kube-proxy; systemctl start kube-proxy
     start_addons
     echo "Service start complete"
     exit 0

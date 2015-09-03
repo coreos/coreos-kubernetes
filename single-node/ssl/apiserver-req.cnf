@@ -13,3 +13,4 @@ subjectAltName = @alt_names
 DNS.1 = kubernetes
 DNS.2 = kubernetes.default
 IP.1 = 172.17.4.99
+IP.2 = 10.3.0.1

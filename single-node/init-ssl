@@ -1,0 +1,37 @@
+#!/bin/bash -e
+
+# define location of openssl binary manually since running this
+# script under Vagrant fails on some systems without it
+OPENSSL=/usr/bin/openssl
+
+function usage {
+	echo "usage: $0 <output-tarball>"
+}
+
+[ -n "$1" ] || {
+	usage
+	exit 2
+}
+
+echo "Generating SSL artifacts..."
+
+rm -fr ssl/*.pem ssl/*.csr ssl/*.srl
+
+# establish cluster CA and self-sign a cert
+$OPENSSL genrsa -out ssl/ca-key.pem 2048
+$OPENSSL req -x509 -new -nodes -key ssl/ca-key.pem -days 10000 -out ssl/ca.pem -subj "/CN=kube-ca"
+
+# create apiserver key and signed cert
+$OPENSSL genrsa -out ssl/apiserver-key.pem 2048
+$OPENSSL req -new -key ssl/apiserver-key.pem -out ssl/apiserver.csr -subj "/CN=kube-apiserver" -config ssl/apiserver-req.cnf
+$OPENSSL x509 -req -in ssl/apiserver.csr -CA ssl/ca.pem -CAkey ssl/ca-key.pem -CAcreateserial -out ssl/apiserver.pem -days 365 -extensions v3_req -extfile ssl/apiserver-req.cnf
+
+# create admin key and signed cert
+$OPENSSL genrsa -out ssl/admin-key.pem 2048
+$OPENSSL req -new -key ssl/admin-key.pem -out ssl/admin.csr -subj "/CN=kube-admin"
+$OPENSSL x509 -req -in ssl/admin.csr -CA ssl/ca.pem -CAkey ssl/ca-key.pem -CAcreateserial -out ssl/admin.pem -days 365
+
+rm -fr $1
+tar -cf $1 ssl/ca.pem ssl/apiserver.pem ssl/apiserver-key.pem
+
+echo "Bundled SSL artifacts into $1"

@@ -45,7 +45,10 @@ write_files:
 
     # Sanity check kubelet is available in image (missing will exit with set -e)
     which kubelet
-    K8S_VER=$(kubelet --version | awk '{print $2}')
+    #NOTE(bcwaldon): pin K8S_VER to v1.0.3 manually for now until v1.0.4
+    # image is published to gcr.io
+    #K8S_VER=$(kubelet --version | awk '{print $2}')
+    K8S_VER=v1.0.3
 
     function init_config {
         local REQUIRED=('ADVERTISE_IP' 'POD_NETWORK' 'ETCD_ENDPOINTS' 'SERVICE_IP_RANGE' 'K8S_SERVICE_IP' 'DNS_SERVICE_IP' )

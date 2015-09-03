@@ -365,36 +365,11 @@ write_files:
     EOF
         }
 
-        local DNS_KUBECONFIG="
-    apiVersion: v1
-    kind: Config
-    clusters:
-    - name: default
-      cluster:
-         server: https://$K8S_SERVICE_IP
-         insecure-skip-tls-verify: true
-    contexts:
-    - context:
-        cluster: default
-        namespace: kube-system
-      name: dns-context
-    current-context: dns-context"
-
         local TEMPLATE=/srv/kubernetes/manifests/kube-dns.yaml
         [ -f $TEMPLATE ] || {
             echo "TEMPLATE: $TEMPLATE"
             mkdir -p $(dirname $TEMPLATE)
             cat << EOF > $TEMPLATE
-    apiVersion: v1
-    kind: Secret
-    metadata:
-      name: dns-kubeconfig
-      namespace: kube-system
-    data:
-      kubeconfig: $(echo "$DNS_KUBECONFIG" | base64 --wrap=0)
-
-    ---
-
     apiVersion: v1
     kind: ReplicationController
     metadata:
@@ -445,13 +420,9 @@ write_files:
             args:
             # command = "/kube2sky"
             - -domain=cluster.local
-            - --kubecfg_file=/config/kubeconfig
             volumeMounts:
             - name: sslcerts
               mountPath: /etc/ssl/certs/ca-certificates.crt
-            - name: kubeconfig
-              mountPath: /config
-              readOnly: true
           - name: skydns
             image: gcr.io/google_containers/skydns:2015-03-11-001
             resources:
@@ -495,9 +466,6 @@ write_files:
           - name: sslcerts
             hostPath:
               path: /etc/ssl/certs/ca-certificates.crt
-          - name: kubeconfig
-            secret:
-              secretName: dns-kubeconfig
           dnsPolicy: Default  # Don't use cluster DNS.
 
     ---

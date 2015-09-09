@@ -86,11 +86,6 @@ write_files:
                 exit 1
             fi
         done
-
-        # For use in single-node deployments
-        if [ "$REGISTER_NODE" != "true" ]; then
-            export REGISTER_NODE="false"
-        fi
     }
 
     function init_flannel {
@@ -143,7 +138,7 @@ write_files:
     ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
     ExecStart=/usr/bin/kubelet \
       --api_servers=http://127.0.0.1:8080 \
-      --register-node=${REGISTER_NODE} \
+      --register-node=true \
       --allow-privileged=true \
       --config=/etc/kubernetes/manifests \
       --hostname-override=${ADVERTISE_IP} \

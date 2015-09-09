@@ -82,9 +82,7 @@ kube-system   kube-podmaster-172.17.8.102            2/2       Running   0      
 kube-system   kube-scheduler-172.17.8.101            1/1       Running   0          2m
 ```
 
-## Next Steps
-
-### Deploy Sample Application
+### Step 7: Deploy an Application
 
 Simple multi-tier web application: [Guestbook Example](http://kubernetes.io/v1.0/examples/guestbook-go/README.html)
 

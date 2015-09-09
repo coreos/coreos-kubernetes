@@ -24,6 +24,9 @@ coreos:
       # However, it is also possible to point directly to a single control node.
       Environment=CONTROLLER_ENDPOINT={{CONTROLLER_ENDPOINT}}
 
+      # Specify the version (vX.Y.Z) of Kubernetes assets to deploy
+      #Environment=K8S_VER=v1.0.3
+
       # The IP address of the cluster DNS service.
       # This must be the same DNS_SERVICE_IP used when configuring the controller nodes.
       #Environment=DNS_SERVICE_IP=10.3.0.10
@@ -55,22 +58,12 @@ write_files:
 
     CMD=$1
 
-    # Sanity check kubelet is available (missing will exit with set -e)
-    which kubelet
-
-    KUBELET_VER=$(kubelet --version | cut -d ' ' -f 2 | sed 's/\(v[0-9]\.[0-9]\.[0-9]\).*$/\1/')
-
-    if [ -z "$K8S_VER" ]; then
-        K8S_VER=$KUBELET_VER
-    fi
-
-    if [ "$K8S_VER" != "$KUBELET_VER" ]; then
-        echo "WARNING: Kubernetes version mismatch. KUBELET_VER=$KUBELET_VER K8S_VER=$K8S_VER"
-    fi
-
     function init_config {
-        local REQUIRED=( 'ADVERTISE_IP' 'ETCD_ENDPOINTS' 'CONTROLLER_ENDPOINT' 'DNS_SERVICE_IP' )
+        local REQUIRED=( 'ADVERTISE_IP' 'ETCD_ENDPOINTS' 'CONTROLLER_ENDPOINT' 'DNS_SERVICE_IP' 'K8S_VER' )
 
+        if [ -z $K8S_VER ]; then
+            export K8S_VER=v1.0.3
+        fi
         if [ -z $ADVERTISE_IP ]; then
             export ADVERTISE_IP=$(awk -F= '/COREOS_PUBLIC_IPV4/ {print $2}' /etc/environment)
         fi

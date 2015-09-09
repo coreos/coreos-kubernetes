@@ -20,8 +20,7 @@ coreos:
       Environment=ETCD_ENDPOINTS={{ETCD_ENDPOINTS}}
 
       # Specify the version (vX.Y.Z) of Kubernetes assets to deploy
-      # If left blank, the same version as the host's kubelet will be used.
-      #Environment=K8S_VER=v1.0.X
+      #Environment=K8S_VER=v1.0.3
 
       # The CIDR network to use for pod IPs.
       # Each pod launched in the cluster will be assigned an IP out of this range.
@@ -70,22 +69,12 @@ write_files:
 
     CMD=$1
 
-    # Sanity check kubelet is available (missing will exit with set -e)
-    which kubelet
-
-    KUBELET_VER=$(kubelet --version | cut -d ' ' -f 2 | sed 's/\(v[0-9]\.[0-9]\.[0-9]\).*$/\1/')
-
-    if [ -z "$K8S_VER" ]; then
-        K8S_VER=$KUBELET_VER
-    fi
-
-    if [ "$K8S_VER" != "$KUBELET_VER" ]; then
-        echo "WARNING: Kubernetes version mismatch. KUBELET_VER=$KUBELET_VER K8S_VER=$K8S_VER"
-    fi
-
     function init_config {
-        local REQUIRED=('ADVERTISE_IP' 'POD_NETWORK' 'ETCD_ENDPOINTS' 'SERVICE_IP_RANGE' 'K8S_SERVICE_IP' 'DNS_SERVICE_IP' )
+        local REQUIRED=('ADVERTISE_IP' 'POD_NETWORK' 'ETCD_ENDPOINTS' 'SERVICE_IP_RANGE' 'K8S_SERVICE_IP' 'DNS_SERVICE_IP' 'K8S_VER' )
 
+        if [ -z $K8S_VER ]; then
+            export K8S_VER=v1.0.3
+        fi
         if [ -z $ADVERTISE_IP ]; then
             export ADVERTISE_IP=$(awk -F= '/COREOS_PUBLIC_IPV4/ {print $2}' /etc/environment)
         fi

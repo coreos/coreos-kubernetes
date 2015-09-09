@@ -2,7 +2,6 @@
 
 Get started by following one of the deployment guides:
 
-* [Vagrant Cluster](docs/vagrant)
-* [Single-Node Kubernetes Stack](docs/single-node)
-* [Multi-Node Kubernetes Stack](docs/multi-node)
+* [Single-Node Vagrant Stack](single-node/README.md)
+* [Multi-Node Vagrant Cluster](multi-node/vagrant/README.md)
 

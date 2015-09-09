@@ -1,3 +1,5 @@
+# WARNING: THIS IS A WIP & DOES NOT FULLY DOCUMENT A FUNCTIONAL INSTALLATION
+
 # Multi Node CoreOS + Kubernetes
 
 These instructions will walk you through deploying a multi-node Kubernetes cluster on CoreOS
@@ -15,14 +17,14 @@ Use the [official etcd clustering guide](https://coreos.com/etcd/docs/latest/clu
 
 ### Step 1: Prepare Controller cloud-config
 
-It is suggested that a deployer start from the sample [controller cloud-config](generic/controller-cloud-config.yaml) provided alongside this guide.
+It is suggested that a deployer start from the sample [controller cloud-config](controller-cloud-config.yaml) provided alongside this guide.
 
 * Replace the `{{ETCD_ENDPOINTS}}` with comma separated list of etcd servers (http://ip:port)
 * The remaining configurable items are documented in the sample, and can be left as their defaults if IP ranges do not conflict with any existing network infrastructure.
 
 ### Step 2: Prepare Worker Configuration
 
-It is suggested that a deployer start from the sample [worker cloud-config](generic/worker-cloud-config.yaml) provided alongside this guide.
+It is suggested that a deployer start from the sample [worker cloud-config](worker-cloud-config.yaml) provided alongside this guide.
 
 * Replace the `{{ETCD_ENDPOINTS}}` with comma separated list of etcd servers (http://ip:port)
 * Replace `{{CONTROLLER_ENDPOINT}}` with the endpoint where the controller nodes can be contacted (https://ip:port). In HA configurations this will typically be an external DNS record, or loadbalancer in front of the cluster control nodes.
@@ -47,42 +49,33 @@ You will need to deploy a minimum of 1 controller and 1 worker. Depending on you
 
 * If deploying onto baremetal servers, the [CoreOS Install Utility](https://coreos.com/os/docs/latest/installing-to-disk.html) may be useful to assist in deployment.
 
-### Step 5: Distribute Keys to Controller
+### Step 5: Distribute Keys to Nodes
 
-In order for the kube-controller-manager to create tokens for service accounts, it needs access to an RSA private key.
-Generate this key using a command like the following:
+TODO
 
-```
-openssl genrsa -out service-account-private-key.pem 4096
-```
+### Step 6: Configure kubectl
 
-Distribute the same key securely to each controller node, placing it at `/etc/kubernetes/service-account-private-key.pem`.
-
-### Step 6: Inspect State
-
-It will take a few minutes for the bootstrap process to download all of the assets. You can watch the status of bootstrap process on controller & worker nodes, by ssh'ing into the machine and querying the systemd journal:
+Configure your local Kubernetes client using the following commands:
 
 ```
-journalctl -fu bootstrap
+kubectl config set-cluster vagrant --server=https://{{CONTROLLER_ENDPOINT}}:443 --certificate-authority=${PWD}/ssl/ca.pem
+kubectl config set-credentials vagrant-admin --certificate-authority=${PWD}/ssl/ca.pem --client-key=${PWD}/ssl/admin-key.pem --client-certificate=${PWD}/ssl/ad
+kubectl config set-context vagrant --cluster=vagrant --user=vagrant-admin
+kubectl config use-context vagrant
 ```
 
-*NOTE*: Bootstrap is complete when you see: `systemd[1]: Started bootstrap.service`
-
-Once the controller and worker nodes are running, you can use the `kubectl` tool to query for running pods:
+Check that your client is configured properly by using `kubectl` to inspect your cluster:
 
 ```
-core@core-01 ~ $ kubectl get pods --all-namespaces
-NAMESPACE     NAME                                   READY     STATUS    RESTARTS   AGE
-kube-system   kube-apiserver-172.17.8.101            1/1       Running   0          2m
-kube-system   kube-apiserver-172.17.8.102            1/1       Running   0          2m
-kube-system   kube-controller-manager-172.17.8.102   1/1       Running   0          2m
-kube-system   kube-dns-v8-eyfuz                      4/4       Running   0          2m
-kube-system   kube-podmaster-172.17.8.101            2/2       Running   0          2m
-kube-system   kube-podmaster-172.17.8.102            2/2       Running   0          2m
-kube-system   kube-scheduler-172.17.8.101            1/1       Running   0          2m
+% kubectl get nodes
+NAME          LABELS                               STATUS
+x.x.x.x       kubernetes.io/hostname=x.x.x.x       Ready
 ```
 
 ### Step 7: Deploy an Application
 
-Simple multi-tier web application: [Guestbook Example](http://kubernetes.io/v1.0/examples/guestbook-go/README.html)
+Now that you've got a working Kubernetes cluster with a functional CLI tool, you are free to deploy Kubernetes-ready applications.
+Start with a [multi-tier web application][guestbook] from the official Kubernetes documentation to visualize how the various Kubernetes components fit together
+
+[guestbook]: http://kubernetes.io/v1.0/examples/guestbook-go/README.html
 

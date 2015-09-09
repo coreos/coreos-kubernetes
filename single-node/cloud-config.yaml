@@ -17,7 +17,6 @@ coreos:
       [Service]
       ExecStart=/bin/bash -e /tmp/bootstrap.sh
       Type=oneshot
-      Environment=REGISTER_NODE=true
 
 write_files:
 - path: /tmp/bootstrap.sh
@@ -43,16 +42,12 @@ write_files:
 
     CMD=$1
 
-    # Sanity check kubelet is available in image (missing will exit with set -e)
-    which kubelet
-    #NOTE(bcwaldon): pin K8S_VER to v1.0.3 manually for now until v1.0.4
-    # image is published to gcr.io
-    #K8S_VER=$(kubelet --version | awk '{print $2}')
-    K8S_VER=v1.0.3
-
     function init_config {
-        local REQUIRED=('ADVERTISE_IP' 'POD_NETWORK' 'ETCD_ENDPOINTS' 'SERVICE_IP_RANGE' 'K8S_SERVICE_IP' 'DNS_SERVICE_IP' )
+        local REQUIRED=('ADVERTISE_IP' 'POD_NETWORK' 'ETCD_ENDPOINTS' 'SERVICE_IP_RANGE' 'K8S_SERVICE_IP' 'DNS_SERVICE_IP' 'K8S_VER' )
 
+        if [ -z $K8S_VER ]; then
+            export K8S_VER=v1.0.3
+        fi
         if [ -z $ADVERTISE_IP ]; then
             export ADVERTISE_IP=$(awk -F= '/COREOS_PUBLIC_IPV4/ {print $2}' /etc/environment)
         fi
@@ -77,11 +72,6 @@ write_files:
                 exit 1
             fi
         done
-
-        # For use in single-node deployments
-        if [ "$REGISTER_NODE" != "true" ]; then
-            export REGISTER_NODE="false"
-        fi
     }
 
     function init_flannel {
@@ -134,7 +124,7 @@ write_files:
     ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
     ExecStart=/usr/bin/kubelet \
       --api_servers=http://127.0.0.1:8080 \
-      --register-node=${REGISTER_NODE} \
+      --register-node=true \
       --allow-privileged=true \
       --config=/etc/kubernetes/manifests \
       --hostname-override=${ADVERTISE_IP} \
@@ -220,8 +210,9 @@ write_files:
           hostPort: 8080
           name: local
         volumeMounts:
-        - mountPath: /etc/kubernetes
-          name: etckubernetes
+        - mountPath: /etc/kubernetes/ssl
+          name: etckubessl
+          readOnly: true
         - mountPath: /etc/ssl
           name: etcssl
           readOnly: true
@@ -235,9 +226,9 @@ write_files:
           name: etcpkitls
           readOnly: true
       volumes:
-      - name: etckubernetes
+      - name: etckubessl
         hostPath:
-          path: /etc/kubernetes
+          path: /etc/kubernetes/ssl
       - hostPath:
           path: /etc/ssl
         name: etcssl
@@ -281,8 +272,9 @@ write_files:
           initialDelaySeconds: 15
           timeoutSeconds: 1
         volumeMounts:
-        - mountPath: /etc/kubernetes
-          name: etckubernetes
+        - mountPath: /etc/kubernetes/ssl
+          name: etckubessl
+          readOnly: true
         - mountPath: /etc/ssl
           name: etcssl
           readOnly: true
@@ -297,9 +289,9 @@ write_files:
           readOnly: true
       hostNetwork: true
       volumes:
-      - name: etckubernetes
+      - name: etckubessl
         hostPath:
-          path: /etc/kubernetes
+          path: /etc/kubernetes/ssl
       - hostPath:
           path: /etc/ssl
         name: etcssl
@@ -365,152 +357,149 @@ write_files:
             mkdir -p $(dirname $TEMPLATE)
             cat << EOF > $TEMPLATE
     {
-      "apiVersion": "v1",
-      "kind": "ReplicationController",
-      "metadata": {
-        "name": "kube-dns-v8",
-        "namespace": "kube-system",
-        "labels": {
-          "k8s-app": "kube-dns",
-          "version": "v8",
-          "kubernetes.io/cluster-service": "true"
-        }
-      },
-      "spec": {
-        "replicas": 1,
-        "template": {
-          "spec": {
-            "dnsPolicy": "Default",
-            "containers": [
-              {
-                "command": [
-                  "/usr/local/bin/etcd",
-                  "-data-dir",
-                  "/var/etcd/data",
-                  "-listen-client-urls",
-                  "http://127.0.0.1:2379,http://127.0.0.1:4001",
-                  "-advertise-client-urls",
-                  "http://127.0.0.1:2379,http://127.0.0.1:4001",
-                  "-initial-cluster-token",
-                  "skydns-etcd"
-                ],
-                "image": "gcr.io/google_containers/etcd:2.0.9",
-                "volumeMounts": [
-                  {
-                    "mountPath": "/var/etcd/data",
-                    "name": "etcd-storage"
-                  }
-                ],
-                "name": "etcd",
-                "resources": {
-                  "limits": {
-                    "cpu": "100m",
-                    "memory": "50Mi"
-                  }
-                }
-              },
-              {
-                "image": "gcr.io/google_containers/kube2sky:1.11",
-                "args": [
-                  "-domain=cluster.local"
-                ],
-                "volumeMounts": [
-                  {
-                    "mountPath": "/etc/ssl/certs/ca-certificates.crt",
-                    "name": "sslcerts"
-                  }
-                ],
-                "name": "kube2sky",
-                "resources": {
-                  "limits": {
-                    "cpu": "100m",
-                    "memory": "50Mi"
-                  }
-                }
-              },
-              {
-                "livenessProbe": {
-                  "initialDelaySeconds": 30,
-                  "httpGet": {
-                    "path": "/healthz",
-                    "scheme": "HTTP",
-                    "port": 8080
-                  },
-                  "timeoutSeconds": 5
-                },
-                "name": "skydns",
-                "image": "gcr.io/google_containers/skydns:2015-03-11-001",
-                "args": [
-                  "-machines=http://localhost:4001",
-                  "-addr=0.0.0.0:53",
-                  "-domain=cluster.local."
-                ],
-                "ports": [
-                  {
-                    "protocol": "UDP",
-                    "containerPort": 53,
-                    "name": "dns"
-                  },
-                  {
-                    "protocol": "TCP",
-                    "containerPort": 53,
-                    "name": "dns-tcp"
-                  }
-                ],
-                "resources": {
-                  "limits": {
-                    "cpu": "100m",
-                    "memory": "50Mi"
-                  }
-                }
-              },
-              {
-                "image": "gcr.io/google_containers/exechealthz:1.0",
-                "args": [
-                  "-cmd=nslookup kubernetes.default.svc.cluster.local localhost >/dev/null",
-                  "-port=8080"
-                ],
-                "name": "healthz",
-                "resources": {
-                  "limits": {
-                    "cpu": "10m",
-                    "memory": "20Mi"
-                  }
-                },
-                "ports": [
-                  {
-                    "protocol": "TCP",
-                    "containerPort": 8080
-                  }
-                ]
-              }
-            ],
-            "volumes": [
-              {
-                "emptyDir": {},
-                "name": "etcd-storage"
-              },
-              {
-                "hostPath": {
-                  "path": "/etc/ssl/certs/ca-certificates.crt"
-                },
-                "name": "sslcerts"
-              }
-            ]
-          },
-          "metadata": {
+        "apiVersion": "v1",
+        "kind": "ReplicationController",
+        "metadata": {
             "labels": {
-              "k8s-app": "kube-dns",
-              "version": "v8",
-              "kubernetes.io/cluster-service": "true"
-            }
-          }
+                "k8s-app": "kube-dns",
+                "kubernetes.io/cluster-service": "true",
+                "version": "v9"
+            },
+            "name": "kube-dns-v9",
+            "namespace": "kube-system"
         },
-        "selector": {
-          "k8s-app": "kube-dns",
-          "version": "v8"
+        "spec": {
+            "replicas": 1,
+            "selector": {
+                "k8s-app": "kube-dns",
+                "version": "v9"
+            },
+            "template": {
+                "metadata": {
+                    "labels": {
+                        "k8s-app": "kube-dns",
+                        "kubernetes.io/cluster-service": "true",
+                        "version": "v9"
+                    }
+                },
+                "spec": {
+                    "containers": [
+                        {
+                            "command": [
+                                "/usr/local/bin/etcd",
+                                "-data-dir",
+                                "/var/etcd/data",
+                                "-listen-client-urls",
+                                "http://127.0.0.1:2379,http://127.0.0.1:4001",
+                                "-advertise-client-urls",
+                                "http://127.0.0.1:2379,http://127.0.0.1:4001",
+                                "-initial-cluster-token",
+                                "skydns-etcd"
+                            ],
+                            "image": "gcr.io/google_containers/etcd:2.0.9",
+                            "name": "etcd",
+                            "resources": {
+                                "limits": {
+                                    "cpu": "100m",
+                                    "memory": "50Mi"
+                                }
+                            },
+                            "volumeMounts": [
+                                {
+                                    "mountPath": "/var/etcd/data",
+                                    "name": "etcd-storage"
+                                }
+                            ]
+                        },
+                        {
+                            "args": [
+                                "-domain=cluster.local"
+                            ],
+                            "image": "gcr.io/google_containers/kube2sky:1.11",
+                            "name": "kube2sky",
+                            "resources": {
+                                "limits": {
+                                    "cpu": "100m",
+                                    "memory": "50Mi"
+                                }
+                            }
+                        },
+                        {
+                            "args": [
+                                "-machines=http://localhost:4001",
+                                "-addr=0.0.0.0:53",
+                                "-domain=cluster.local."
+                            ],
+                            "image": "gcr.io/google_containers/skydns:2015-03-11-001",
+                            "livenessProbe": {
+                                "httpGet": {
+                                    "path": "/healthz",
+                                    "port": 8080,
+                                    "scheme": "HTTP"
+                                },
+                                "initialDelaySeconds": 30,
+                                "timeoutSeconds": 5
+                            },
+                            "name": "skydns",
+                            "ports": [
+                                {
+                                    "containerPort": 53,
+                                    "name": "dns",
+                                    "protocol": "UDP"
+                                },
+                                {
+                                    "containerPort": 53,
+                                    "name": "dns-tcp",
+                                    "protocol": "TCP"
+                                }
+                            ],
+                            "readinessProbe": {
+                                "httpGet": {
+                                    "path": "/healthz",
+                                    "port": 8080,
+                                    "scheme": "HTTP"
+                                },
+                                "initialDelaySeconds": 1,
+                                "timeoutSeconds": 5
+                            },
+                            "resources": {
+                                "limits": {
+                                    "cpu": "100m",
+                                    "memory": "50Mi"
+                                }
+                            }
+                        },
+                        {
+                            "args": [
+                                "-cmd=nslookup kubernetes.default.svc.cluster.local localhost >/dev/null",
+                                "-port=8080"
+                            ],
+                            "image": "gcr.io/google_containers/exechealthz:1.0",
+                            "name": "healthz",
+                            "ports": [
+                                {
+                                    "containerPort": 8080,
+                                    "protocol": "TCP"
+                                }
+                            ],
+                            "resources": {
+                                "limits": {
+                                    "cpu": "10m",
+                                    "memory": "20Mi"
+                                }
+                            }
+                        }
+                    ],
+                    "dnsPolicy": "Default",
+                    "volumes": [
+                        {
+                            "emptyDir": {},
+                            "name": "etcd-storage"
+                        }
+                    ]
+                }
+            }
         }
-      }
     }
     EOF
         }

@@ -1,64 +1,65 @@
-## Vagrant Cluster
+## Kubernetes on CoreOS Quickstart
 
-The default cluster size is set to 1-controller, 1-worker, and 1-etcd server.
+This guide walks a deployer through launching a multi-node Kubernetes cluster using Vagrant and CoreOS.
+After completing this guide, a deployer will be able to interact with the Kubernetes API from their workstation using the kubectl CLI tool.
 
-However, you can modify the cluster settings by copying `cluster/vagrant/config.rb.sample` to `cluster/vagrant/config.rb` and modifying configuration values.
+## Step 0: Install Prerequisites
 
-### Step 1: Launch Cluster
+### Vagrant
 
-```
-cd cluster/vagrant
-vagrant up
+Navigate to the [Vagrant downloads page][vagrant-downloads] and grab the appropriate package   for your system. Install the downloaded software before continuing.
 
-# This will launch servers with hostnames:
-# (controllers) = c1, c2, ...
-# (workers) = w1, w2, ...
-# (etcd) = e1, e2, ...
-```
+[vagrant-downloads]: https://www.vagrantup.com/downloads.html
 
-### Step 2: Inspect Controller State
+### kubectl
 
-*NOTE:* Bootstrap is complete when you see: `systemd[1]: Started bootstrap.service`
+The primary CLI tool used to interact with the Kubernetes API is called `kubectl`.
+This tool is not yet available through the typical means of software distribution, so it is suggested that you download the binary directly from the Kubernetes release artifact site:
+
+First, download the binary using a command-line tool such as `wget` or `curl`:
 
 ```
-vagrant ssh c1
-journalctl -lfu bootstrap
+# Replace ${ARCH} with "linux" or "darwin" based on your workstation operating system
+wget https://storage.googleapis.com/kubernetes-release/release/v1.0.3/bin/${ARCH}/amd64/kubectl
 ```
 
-### Step 3: Query Kubernetes API
-
-Once the Kubernetes API is running, you can use the `kubectl` tool to query for running pods:
+After downloading the binary, ensure it is executable and move it into your PATH:
 
 ```
-core@core-01 ~ $ kubectl get pods --all-namespaces
-NAMESPACE     NAME                                   READY     STATUS    RESTARTS   AGE
-kube-system   kube-apiserver-172.17.8.101            1/1       Running   0          2m
-kube-system   kube-controller-manager-172.17.8.101   1/1       Running   0          2m
-kube-system   kube-dns-v8-eyfuz                      4/4       Running   0          2m
-kube-system   kube-podmaster-172.17.8.101            2/2       Running   0          2m
-kube-system   kube-scheduler-172.17.8.101            1/1       Running   0          2m
+chmod +x kubectl
+mv kubectl /usr/local/bin/kubectl
 ```
 
-## Next Steps:
+## Step 1: Bring the cluster up
 
-### Remote kubectl
+The default cluster size is set to 1-controller, 1-worker, and 1-etcd server. However, you can modify the default cluster settings by copying `config.rb.sample` to `config.rb` and modifying configuration values.
 
-The kubenetes API can be accessed from outside the cluster using `kubectl` and the provided (kubeconfig)[../../cluster/vagrant/kubeconfig]
+Next, simply run `vagrant up` and wait for the command to succeed.
+Once Vagrant is finished booting and provisioning your machine, your cluster is good to go.
 
-```
-# Change ARCH to "darwin" for OSX
-ARCH=linux wget https://storage.googleapis.com/kubernetes-release/release/v1.0.3/bin/$ARCH/amd64/kubectl
+## Step 2: Configure kubectl
 
-kubectl --kubeconfig=cluster/vagrant/kubeconfig get pods --all-namespaces
-```
-
-### Deploy Sample Application
-
-Simple multi-tier web application: [Guestbook Example](http://kubernetes.io/v1.0/examples/guestbook-go/README.html)
-
-## Teardown
+Configure your local Kubernetes client using the following commands:
 
 ```
-vagrant destroy
+kubectl config set-cluster vagrant --server=https://172.17.4.101:443 --certificate-authority=${PWD}/ssl/ca.pem
+kubectl config set-credentials vagrant-admin --certificate-authority=${PWD}/ssl/ca.pem --client-key=${PWD}/ssl/admin-key.pem --client-certificate=${PWD}/ssl/admin.pem
+kubectl config set-context vagrant --cluster=vagrant --user=vagrant-admin
+kubectl config use-context vagrant
 ```
+
+Check that your client is configured properly by using `kubectl` to inspect your cluster:
+
+```
+% kubectl get nodes
+NAME          LABELS                               STATUS
+172.17.4.201   kubernetes.io/hostname=172.17.4.201   Ready
+```
+
+## Step 3: Deploy an Application
+
+Now that you've got a working Kubernetes cluster with a functional CLI tool, you are free to deploy Kubernetes-ready applications.
+Start with a [multi-tier web application][guestbook] from the official Kubernetes documentation to visualize how the various Kubernetes components fit together.
+
+[guestbook]: http://kubernetes.io/v1.0/examples/guestbook-go/README.html
 

@@ -23,6 +23,7 @@ OUTDIR=$1
 SANS=$2
 
 OUTFILE_CONTROLLER="$OUTDIR/controller.tar"
+OUTFILE_WORKER="$OUTDIR/worker.tar"
 
 CNF_TEMPLATE="
 [req]
@@ -40,8 +41,7 @@ subjectAltName = @alt_names
 DNS.1 = kubernetes
 DNS.2 = kubernetes.default
 "
-
-echo "Generating SSL artifacts in: $OUTDIR"
+echo "Generating SSL artifacts in $OUTDIR"
 
 # Add SANs to openssl config
 echo "$CNF_TEMPLATE$(echo $SANS | tr ',' '\n')" > $OUTDIR/apiserver-req.cnf
@@ -55,11 +55,18 @@ $OPENSSL genrsa -out $OUTDIR/apiserver-key.pem 2048
 $OPENSSL req -new -key $OUTDIR/apiserver-key.pem -out $OUTDIR/apiserver.csr -subj "/CN=kube-apiserver" -config $OUTDIR/apiserver-req.cnf
 $OPENSSL x509 -req -in $OUTDIR/apiserver.csr -CA $OUTDIR/ca.pem -CAkey $OUTDIR/ca-key.pem -CAcreateserial -out $OUTDIR/apiserver.pem -days 365 -extensions v3_req -extfile $OUTDIR/apiserver-req.cnf
 
+# create worker key and signed cert
+$OPENSSL genrsa -out $OUTDIR/worker-key.pem 2048
+$OPENSSL req -new -key $OUTDIR/worker-key.pem -out $OUTDIR/worker.csr -subj "/CN=kube-worker"
+$OPENSSL x509 -req -in $OUTDIR/worker.csr -CA $OUTDIR/ca.pem -CAkey $OUTDIR/ca-key.pem -CAcreateserial -out $OUTDIR/worker.pem -days 365
+
 # create admin key and signed cert
 $OPENSSL genrsa -out $OUTDIR/admin-key.pem 2048
 $OPENSSL req -new -key $OUTDIR/admin-key.pem -out $OUTDIR/admin.csr -subj "/CN=kube-admin"
 $OPENSSL x509 -req -in $OUTDIR/admin.csr -CA $OUTDIR/ca.pem -CAkey $OUTDIR/ca-key.pem -CAcreateserial -out $OUTDIR/admin.pem -days 365
 
 tar -cf $OUTFILE_CONTROLLER -C $OUTDIR/ ca.pem apiserver.pem apiserver-key.pem
+tar -cf $OUTFILE_WORKER -C $OUTDIR/ ca.pem worker.pem worker-key.pem
 
 echo "Bundled controller SSL artifacts into $OUTFILE_CONTROLLER"
+echo "Bundled worker SSL artifacts into $OUTFILE_WORKER"

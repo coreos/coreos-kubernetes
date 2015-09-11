@@ -4,26 +4,41 @@ This guide will walk you through generating Kubernetes TLS assets using OpenSSL.
 
 This is provided as a proof-of-concept guide to get started with Kubernetes client certificate authentication.
 
-## Cluster Root CA
+## Deployment Options
 
-```
-openssl genrsa -out ca-key.pem 2048
-openssl req -x509 -new -nodes -key ca-key.pem -days 10000 -out ca.pem -subj "/CN=kube-ca"
+The following variables will be used throughout this guide. The default for `K8S_SERVICE_IP` can safely be used, however `MASTER_IP` will need to be customized to your infrastructure.
+
+**MASTER_IP**=_no default_
+
+The IP address of the master node. Worker nodes must be able to reach the master via this IP on port 443. Additionally, external clients (such as an administrator using `kubectl`) will also need access, since this will run the Kubernetes API endpoint.
+
+<hr/>
+
+**K8S_SERVICE_IP**=10.3.0.1
+
+The IP address of the Kubernetes API Service. The K8S_SERVICE_IP will be the first IP in the SERVICE_IP_RANGE discussed in the [deployment guide][deployment-guide]. The first IP in the default range of 10.3.0.0/24 will be 10.3.0.1. If the SERVICE_IP_RANGE was changed from the default, this value must be updated as well.
+
+## Create a Cluster Root CA
+
+First, we need to create a new certificate authority which will be used to sign the rest of our certificates.
+
+```sh
+$ openssl genrsa -out ca-key.pem 2048
+$ openssl req -x509 -new -nodes -key ca-key.pem -days 10000 -out ca.pem -subj "/CN=kube-ca"
 ```
 
-You will want to take care to store the CA keypair in a secure location for future use.
+You need to store the CA keypair in a secure location for future use.
 
 ## Kubernetes API Server Keypair
 
 ### OpenSSL Config
 
-This is a minimal openssl config which will be used when creating the api-server certificate.
+This is a minimal openssl config which will be used when creating the api-server certificate. We need to create a configuration file since some of the options we need to use can't be specified as flags. Create `openssl.cnf` on your local machine and replace the following values:
 
-* Create File: `openssl.cnf`
 * Replace `${K8S_SERVICE_IP}`
 * Replace `${MASTER_IP}`
 
-File Contents:
+**openssl.cnf**
 
 ```
 [req]
@@ -41,27 +56,32 @@ IP.1 = ${K8S_SERVICE_IP}
 IP.2 = ${MASTER_IP}
 ```
 
-Using the above `openssl.cnf`, create the api-server keypair.
+## Generate the API Server Keypair
 
-```
-openssl genrsa -out apiserver-key.pem 2048
-openssl req -new -key apiserver-key.pem -out apiserver.csr -subj "/CN=kube-apiserver" -config openssl.cnf
-openssl x509 -req -in apiserver.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out apiserver.pem -days 365 -extensions v3_req -extfile openssl.cnf
-```
+Using the above `openssl.cnf`, create the api-server keypair:
 
-## Kubernetes Worker Keypair
-
-```
-openssl genrsa -out worker-key.pem 2048
-openssl req -new -key worker-key.pem -out worker.csr -subj "/CN=kube-worker"
-openssl x509 -req -in worker.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out worker.pem -days 365
+```sh
+$ openssl genrsa -out apiserver-key.pem 2048
+$ openssl req -new -key apiserver-key.pem -out apiserver.csr -subj "/CN=kube-apiserver" -config openssl.cnf
+$ openssl x509 -req -in apiserver.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out apiserver.pem -days 365 -extensions v3_req -extfile openssl.cnf
 ```
 
-## Cluster Administrator Keypair
+## Generate the Kubernetes Worker Keypair
 
-```
-openssl genrsa -out admin-key.pem 2048
-openssl req -new -key admin-key.pem -out admin.csr -subj "/CN=kube-admin"
-openssl x509 -req -in admin.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out admin.pem -days 365
+```sh
+$ openssl genrsa -out worker-key.pem 2048
+$ openssl req -new -key worker-key.pem -out worker.csr -subj "/CN=kube-worker"
+$ openssl x509 -req -in worker.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out worker.pem -days 365
 ```
 
+## Generate the Cluster Administrator Keypair
+
+```sh
+$ openssl genrsa -out admin-key.pem 2048
+$ openssl req -new -key admin-key.pem -out admin.csr -subj "/CN=kube-admin"
+$ openssl x509 -req -in admin.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out admin.pem -days 365
+```
+
+You are now ready to return to the [deployment guide][deployment-guide] and configure your Master machine, Workers, and `kubectl` on your local machine.
+
+[deployment-guide]: getting-started.md

@@ -1,7 +1,18 @@
 # Kubernetes on CoreOS
 
-Get started by following one of the deployment guides:
+Follow the Kubernetes guides on the CoreOS website:
 
-* [Single-Node Vagrant Stack](single-node/README.md)
-* [Multi-Node Vagrant Cluster](multi-node/vagrant/README.md)
+https://coreos.com/kubernetes/docs/latest/
+
+## Kubernetes Topics
+
+ - [Intro to Pods](https://coreos.com/kubernetes/docs/latest/pods.html)
+ - [Intro to Services](https://coreos.com/kubernetes/docs/latest/services.html)
+ - [Intro to Replication Controllers](https://coreos.com/kubernetes/docs/latest/replication-controller.html)
+
+## Deploying on CoreOS
+
+- [Step-by-Step for Any Platform](getting-started.md)
+- [Single-Node Vagrant Stack](single-node/README.md)
+- [Multi-Node Vagrant Cluster](multi-node/vagrant/README.md)
 

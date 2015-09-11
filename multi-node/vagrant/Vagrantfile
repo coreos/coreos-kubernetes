@@ -16,19 +16,18 @@ $worker_vm_memory = 512
 $etcd_count = 1
 $etcd_vm_memory = 512
 
-cwd = File.dirname(__FILE__)
-
-CONFIG = File.join(cwd, "config.rb")
+CONFIG = File.expand_path("config.rb")
 if File.exist?(CONFIG)
   require CONFIG
 end
 
-ETCD_CLOUD_CONFIG_PATH = File.join(cwd, "etcd-cloud-config.yaml")
-CONTROLLER_CLOUD_CONFIG_PATH = File.join(cwd, "controller-cloud-config.yaml")
-WORKER_CLOUD_CONFIG_PATH = File.join(cwd, "worker-cloud-config.yaml")
+ETCD_CLOUD_CONFIG_PATH = File.expand_path("etcd-cloud-config.yaml")
 
-SSL_CONTROLLER_PATH = File.join(cwd, "ssl/controller.tar")
-SSL_WORKER_PATH = File.join(cwd, "ssl/worker.tar")
+CONTROLLER_CLOUD_CONFIG_PATH = File.expand_path("../generic/controller-install.sh")
+WORKER_CLOUD_CONFIG_PATH = File.expand_path("../generic/worker-install.sh")
+
+SSL_CONTROLLER_PATH = File.expand_path("ssl/controller.tar")
+SSL_WORKER_PATH = File.expand_path("ssl/worker.tar")
 
 def etcdIP(num)
   return "172.17.4.#{num+50}"
@@ -129,12 +128,6 @@ Vagrant.configure("2") do |config|
       env_file.write("ETCD_ENDPOINTS=#{etcd_endpoints}\n")
       env_file.close
 
-      data = YAML.load(IO.readlines(CONTROLLER_CLOUD_CONFIG_PATH)[1..-1].join)
-      data['coreos']['flannel']['etcd_endpoints'] = etcd_endpoints
-      controller_config_file = Tempfile.new('controller_config')
-      controller_config_file.write("#cloud-config\n#{data.to_yaml}")
-      controller_config_file.close
-
       controller.vm.hostname = vm_name
 
       ["vmware_fusion", "vmware_workstation"].each do |vmware|
@@ -152,10 +145,10 @@ Vagrant.configure("2") do |config|
       controller.vm.provision :file, :source => SSL_CONTROLLER_PATH, :destination => "/tmp/ssl.tar"
       controller.vm.provision :shell, :inline => "mkdir -p /etc/kubernetes/ssl && tar -C /etc/kubernetes/ssl -xf /tmp/ssl.tar", :privileged => true
 
-      controller.vm.provision :file, :source => env_file, :destination => "/tmp/kube-bootstrap-env"
-      controller.vm.provision :shell, :inline => "mv /tmp/kube-bootstrap-env /etc/kube-bootstrap-env", :privileged => true
+      controller.vm.provision :file, :source => env_file, :destination => "/tmp/coreos-kube-options.env"
+      controller.vm.provision :shell, :inline => "mkdir -p /run/coreos-kubernetes && mv /tmp/coreos-kube-options.env /run/coreos-kubernetes/options.env", :privileged => true
 
-      controller.vm.provision :file, :source => controller_config_file.path, :destination => "/tmp/vagrantfile-user-data"
+      controller.vm.provision :file, :source => CONTROLLER_CLOUD_CONFIG_PATH, :destination => "/tmp/vagrantfile-user-data"
       controller.vm.provision :shell, :inline => "mv /tmp/vagrantfile-user-data /var/lib/coreos-vagrant/", :privileged => true
     end
   end
@@ -168,12 +161,6 @@ Vagrant.configure("2") do |config|
       env_file.write("ETCD_ENDPOINTS=#{etcd_endpoints}\n")
       env_file.write("CONTROLLER_ENDPOINT=https://#{controllerIPs[0]}\n") #TODO(aaron): LB or DNS across control nodes
       env_file.close
-
-      data = YAML.load(IO.readlines(WORKER_CLOUD_CONFIG_PATH)[1..-1].join)
-      data['coreos']['flannel']['etcd_endpoints'] = etcd_endpoints
-      worker_config_file = Tempfile.new('worker_config')
-      worker_config_file.write("#cloud-config\n#{data.to_yaml}")
-      worker_config_file.close
 
       ["vmware_fusion", "vmware_workstation"].each do |vmware|
         worker.vm.provider vmware do |v|
@@ -190,10 +177,10 @@ Vagrant.configure("2") do |config|
       worker.vm.provision :file, :source => SSL_WORKER_PATH, :destination => "/tmp/ssl.tar"
       worker.vm.provision :shell, :inline => "mkdir -p /etc/kubernetes/ssl && tar -C /etc/kubernetes/ssl -xf /tmp/ssl.tar", :privileged => true
 
-      worker.vm.provision :file, :source => env_file, :destination => "/tmp/kube-bootstrap-env"
-      worker.vm.provision :shell, :inline => "mv /tmp/kube-bootstrap-env /etc/kube-bootstrap-env", :privileged => true
+      worker.vm.provision :file, :source => env_file, :destination => "/tmp/coreos-kube-options.env"
+      worker.vm.provision :shell, :inline => "mkdir -p /run/coreos-kubernetes && mv /tmp/coreos-kube-options.env /run/coreos-kubernetes/options.env", :privileged => true
 
-      worker.vm.provision :file, :source => worker_config_file.path, :destination => "/tmp/vagrantfile-user-data"
+      worker.vm.provision :file, :source => WORKER_CLOUD_CONFIG_PATH, :destination => "/tmp/vagrantfile-user-data"
       worker.vm.provision :shell, :inline => "mv /tmp/vagrantfile-user-data /var/lib/coreos-vagrant/", :privileged => true
     end
   end

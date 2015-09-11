@@ -8,11 +8,10 @@ require 'yaml'
 
 Vagrant.require_version ">= 1.6.0"
 
-cwd = File.dirname(__FILE__)
 
 NODE_IP = "172.17.4.99"
-CLOUD_CONFIG_PATH = File.join(cwd, "cloud-config.yaml")
-SSL_TARBALL_PATH = File.join(cwd, "ssl/controller.tar")
+USER_DATA_PATH = File.expand_path("user-data")
+SSL_TARBALL_PATH = File.expand_path("ssl/controller.tar")
 
 if !File.exist?(SSL_TARBALL_PATH) then
     system("mkdir -p ssl && ./init-ssl ssl IP.1=10.3.0.1,IP.2=#{NODE_IP}") or abort ("failed generating SSL artifacts")
@@ -57,7 +56,7 @@ Vagrant.configure("2") do |config|
   config.vm.provision :file, :source => SSL_TARBALL_PATH, :destination => "/tmp/ssl.tar"
   config.vm.provision :shell, :inline => "mkdir -p /etc/kubernetes/ssl && tar -C /etc/kubernetes/ssl -xf /tmp/ssl.tar", :privileged => true
 
-  config.vm.provision :file, :source => CLOUD_CONFIG_PATH, :destination => "/tmp/vagrantfile-user-data"
+  config.vm.provision :file, :source => USER_DATA_PATH, :destination => "/tmp/vagrantfile-user-data"
   config.vm.provision :shell, :inline => "mv /tmp/vagrantfile-user-data /var/lib/coreos-vagrant/", :privileged => true
 
 end

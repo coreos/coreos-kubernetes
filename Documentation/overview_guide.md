@@ -53,15 +53,25 @@ The IP address of the cluster DNS service. This IP must be in the range of the S
 
 ## Deploy etcd Cluster
 
-### Single-Node (development)
+Kubernetes uses etcd for data storage and for cluster consensus between different software components. Your etcd cluster will be heavily utilized since all objects storing within and every scheduling decision is recorded. It's recommended that you run a multi-machine cluster on dedicated hardware (with fast disks) to gain maximum performance and reliability of this important part of your cluster. For development environments, a single etcd is ok.
 
-You can simply start etcd on a CoreOS node:
+### Single-Node (Development)
+
+You can simply start etcd via [cloud-config][cloud-config-etcd] when you create your CoreOS machine or start it manually:
 
 ```
-systemctl start etcd2
+$ sudo systemctl start etcd2
 ```
 
-In the rest of this guide use this nodes IP and the url `http://$IP:2379` as the `ETCD_ENDPOINTS`
+To ensure etcd starts after a reboot, enable it too:
+
+```sh
+$ sudo systemctl enable etcd2
+```
+
+Record the IP address of an network interface on this machine that is reachable from your Kubernetes master, which will be configured below. In the rest of this guide, that IP in the form `http://$IP:2379` as the `ETCD_ENDPOINTS`.
+
+[cloud-config-etcd]: https://coreos.com/os/docs/latest/cloud-config.html#etcd2
 
 ### Multi-Node (Production)
 
@@ -71,36 +81,49 @@ Use the [official etcd clustering guide](https://coreos.com/etcd/docs/latest/clu
 
 ## Generate Kubernetes TLS Assets
 
-The kubernetes API has various methods for validating clients, and this guide configures the API server to use client cert authentication.
+The Kubernetes API has various methods for validating clients &mdash; this guide will configure the API server to use client cert authentication.
 
-This means it is necessary to have a Certificate Authority and generate the proper credentials. This can be done by generating the necessary assets from existing PKI infrastructure, or linked below are manual OpenSSL instructions to get started.
+This means it is necessary to have a Certificate Authority and generate the proper credentials. This can be done by generating the necessary assets from existing PKI infrastructure, or follow the OpenSSL instructions to create everything needed.
 
 [OpenSSL Manual Generation](openssl.md)
 
 In the following steps, it is assumed that you will have generated the following TLS assets:
 
-```
-# Root CA public key
+**Root CA Public Key**
+
 ca.pem
 
-# API Server public & private keys
+<hr/>
+
+**API Server Public & Private Keys**
+
 apiserver.pem
+
 apiserver-key.pem
 
-# Worker node public & private keys
+<hr/>
+
+**Worker Node Public & Private Keys**
+
 worker.pem
+
 worker-key.pem
 
-# Cluster Admin public & private keys
+<hr/>
+
+**Cluster Admin Public & Private Keys**
+
 admin.pem
+
 admin-key.pem
-```
 
-## Deploy Master Node
+## Deploy Kubernetes Master Machine
 
-Boot a single CoreOS node which will be used as the Kubernetes master.
+Boot a single CoreOS machine which will be used as the Kubernetes master.
 
 See the [CoreOS Documentation](https://coreos.com/os/docs/latest/) for guides on launching nodes on supported platforms.
+
+Manual configuration of the required Master services is explained below, but most of the configuration could also be done with cloud-config, aside from placing the TLS assets on disk. These secrets shouldn't be stored in cloud-config for enhanced security.
 
 ### Configure Service Components
 
@@ -112,42 +135,52 @@ Place the keys generated previously in the following locations:
 * File: `/etc/kubernetes/ssl/apiserver.pem`
 * File: `/etc/kubernetes/ssl/apiserver-key.pem`
 
-#### Flannel Options
+#### Flannel Configuration
 
-* Create File: `/run/flannel/options.env`
-* Replace `${ADVERTISE_IP}` with this nodes publicly routable IP.
+[Flannel][flannel-docs] provides a key Kubernetes networking capability &mdash; a software-defined overlay network to give each Kubernetes [Service][service-overview] or [Pod][pod-overview] its own IP address.
+
+Flannel stores local configuration in `/run/flannel/options.env` and cluster-level configuration in etcd. Create this file and edit the contents:
+
+* Replace `${ADVERTISE_IP}` with this machine's publicly routable IP.
 * Replace `${ETCD_ENDPOINTS}`
 
-File Contents:
+**/run/flannel/options.env**
 
-```
+```yml
 FLANNELD_IFACE=${ADVERTISE_IP}
 FLANNELD_ETCD_ENDPOINTS=${ETCD_ENDPOINTS}
 ```
 
-#### Docker Config
+[flannel-docs]: https://coreos.com/flannel/docs/latest/
+[pod-overview]: https://coreos.com/kubernetes/docs/latest/pods.html
+[service-overview]: https://coreos.com/kubernetes/docs/latest/services.html
 
-Require that flanneld is running prior to Docker start.
+#### Docker Configuration
 
-* Create File: `/etc/systemd/system/docker.service.d/40-flannel.conf`
+In order for Flannel networking in the cluster, Docker needs to be configured to use it. All we need to do is require that flanneld is running prior to Docker starting.
 
-File Contents:
+We're going to do this with a [systemd drop-in][dropins], which is a method for appending or overriding parameters of a systemd unit. In this case we're appending two dependency rules. Create the drop-in:
 
-```
+**/etc/systemd/system/docker.service.d/40-flannel.conf***
+
+```yml
 [Unit]
 Requires=flanneld.service
 After=flanneld.service
 ```
 
-#### kubelet
+[dropins]: https://coreos.com/os/docs/latest/using-systemd-drop-in-units.html
 
-* Create File: `/etc/systemd/system/kubelet.service`
+#### Create the kubelet Unit
+
+The kublet is the agent on each machine that starts and stops Pods, configures iptables rules and other machine-level tasks. The kublet communicates to the API server (also running on the master machine) with the TLS certificates we placed on disk earlier.
+
 * Replace `${ADVERTISE_IP}` with this nodes publicly routable IP.
 * Replace `${DNS_SERVICE_IP}`
 
-File Contents:
+**/etc/systemd/system/kubelet.service**
 
-```
+```yml
 [Service]
 ExecStart=/usr/bin/kubelet \
   --api_servers=http://127.0.0.1:8080 \
@@ -164,16 +197,21 @@ RestartSec=10
 WantedBy=multi-user.target
 ```
 
-#### kube-apiserver
+#### Set Up the kube-apiserver Pod
 
-* Create File: `/etc/kubernetes/manifests/kube-apiserver.yaml`
+The API server is where most of the magic happens. It is stateless by design and takes in API requests, processes them and stores the result in etcd if needed, and then returns the result of the request.
+
+We're going to use a unqiue feature of the kublet to launch a Pod runs the API server. Above we configured the kublet to watch a local directory for pods to run with the `--config=/etc/kubernetes/manifests` flag. All we need to do is place our Pod manifest in that location, and the kublet will make sure it stays running, just as if the Pod was submitted via the API. The cool trick here is that we don't have an API running yet, but the Pod will function the exact same way, which simplifies troubleshooting later on.
+
+If this is your first time looking at a Pod manifest, don't worry, they aren't all this complicated. But, this shows off the power and flexibility of the Pod concept. Create `/etc/kubernetes/manifests/kube-apiserver.yaml` and replace the settings:
+
 * Replace `${ETCD_ENDPOINTS}`
 * Replace `${SERVICE_IP_RANGE}`
 * Replace `${ADVERTISE_IP}` with this nodes publicly routable IP.
 
-File Contents:
+**/etc/kubernetes/manifests/kube-apiserver.yaml**
 
-```
+```yml
 apiVersion: v1
 kind: Pod
 metadata:
@@ -242,13 +280,17 @@ spec:
     name: etcpkitls
 ```
 
-#### kube-proxy
+#### Set Up the kube-proxy Pod
 
-* Create File: `/etc/kubernetes/manifests/kube-proxy.yaml`
+We're going to run the proxy just like we did the API server. The proxy is responsible for directing traffic destined for specific services and pods to the correct location. The proxy communicates with the API server periodically to keep up to date.
 
-File Contents:
+Both the Master and Workers in your cluster will run the proxy.
 
-```
+All you have to do is create `/etc/kubernetes/manifests/kube-proxy.yaml`, there are no settings that need to be configured.
+
+**/etc/kubernetes/manifests/kube-proxy.yaml**
+
+```yml
 apiVersion: v1
 kind: Pod
 metadata:
@@ -274,13 +316,19 @@ spec:
         path: "/usr/share/ca-certificates"
 ```
 
-#### kube-controller-manager
+#### Set Up the kube-controller-manager Pod
 
-* Create File: `/etc/kubernetes/manifests/kube-controller-manager.yaml`
+The controller manager is responsible for reconciling any required actions based on changes to [Replication Controllers][rc-overview]. 
 
-File Contents:
+For example, if you increased the replica count, the controller manager would generate a scale up event, which would cause a new Pod to get scheduled in the cluster. The controller manager communicates with the API to submit these events.
 
-```
+Create `/etc/kubernetes/manifests/kube-controller-manager.yaml`. It will use the TLS certificate placed on disk earlier.
+
+[rc-overview]: https://coreos.com/kubernetes/docs/latest/replication-controller.html
+
+**/etc/kubernetes/manifests/kube-controller-manager.yaml**
+
+```yml
 apiVersion: v1
 kind: Pod
 metadata:
@@ -338,13 +386,15 @@ spec:
     name: etcpkitls
 ```
 
-#### kube-scheduler
+#### Set Up the kube-scheduler Pod
 
-* Create File: `/etc/kubernetes/manifests/kube-scheduler.yaml`
+The scheduler is the last major piece of our Master. It monitors the API for unscheduled pods, finds them a machine to run on, and communicates the decision back to the API.
 
-File Contents:
+Create File `/etc/kubernetes/manifests/kube-scheduler.yaml`:
 
-```
+**/etc/kubernetes/manifests/kube-scheduler.yaml**
+
+```yml
 apiVersion: v1
 kind: Pod
 metadata:
@@ -370,31 +420,44 @@ spec:
 
 ### Start Services
 
+Now that we've defined all of our units and written our TLS certificates to disk, we're ready to start the Master components.
+
 #### Load Changed Units
 
+First, we need to tell systemd that we've changed units on disk and it needs to rescan everything:
+
 ```
-systemctl reload-daemon
+$ sudo systemctl daemon-reload
 ```
 
 #### Configure Flannel Network
 
+Earlier it was mentioned that Flannel stores cluster-level configuration in etcd. We need to configure our Pod network IP range now. Since etcd was started earlier, we can set this now. If you don't have etcd running, start it now.
+
 * Replace `$POD_NETWORK`
 * Replace `$ETCD_SERVER` with one host from `$ETCD_ENDPOINTS`
 
-```
-curl -X PUT -d "value={\"Network\":\"$POD_NETWORK\"}" "$ETCD_SERVER/v2/keys/coreos.com/network/config"
+```sh
+$ curl -X PUT -d "value={\"Network\":\"$POD_NETWORK\"}" "$ETCD_SERVER/v2/keys/coreos.com/network/config"
 ```
 
 #### Start Kubelet
 
-```
-systemctl start kubelet
+Now that everything is configured, we can start the Kubelet, which will also start the Pod manifests for the API server, the controller manager, proxy and scheduler.
+
+```sh
+$ sudo systemctl start kubelet
 ```
 
+Ensure that the kublet will start after a reboot:
+
+```sh
+$ sudo systemctl enable kubelet
 ```
-# Automatically start Kubelet at boot
-systemctl enable kubelet
-```
+
+Our Pods should now we starting up and downloading their containers. To check the progress, you can run `docker ps`.
+
+While you're waiting for things to download, let's start deploying our Worker machines.
 
 ## Deploy Worker Node(s)
 
@@ -412,43 +475,46 @@ Place the TLS keypairs generated previously in the following locations:
 * File: `/etc/kubernetes/ssl/worker.pem`
 * File: `/etc/kubernetes/ssl/worker-key.pem`
 
-#### Flannel Options
+#### Flannel Configuration
 
-* Create File `/run/flannel/options.env`
+Just like earlier, create `/run/flannel/options.env` and replace your values:
+
+
 * Replace `${ADVERTISE_IP}` with this nodes publicly routable IP.
 * Replace `${ETCD_ENDPOINTS}`
 
-File Contents:
+**/run/flannel/options.env**
 
-```
+```yml
 FLANNELD_IFACE=${ADVERTISE_IP}
 FLANNELD_ETCD_ENDPOINTS=${ETCD_ENDPOINTS}
 ```
 
-#### Docker Config
+#### Docker Configuration
 
 Require that flanneld is running prior to Docker start.
 
-* Create File: `/etc/systemd/system/docker.service.d/40-flannel.conf`
+Create `/etc/systemd/system/docker.service.d/40-flannel.conf`
 
-File Contents:
+**/etc/systemd/system/docker.service.d/40-flannel.conf**
 
-```
+```yml
 [Unit]
 Requires=flanneld.service
 After=flanneld.service
 ```
 
-#### kubelet
+#### Create the kubelet Unit
 
-* Create File: `/etc/systemd/system/kubelet.service`
+Create `/etc/systemd/system/kubelet.service` and replace: 
+
 * Replace `${MASTER_IP}`
 * Replace `${ADVERTISE_IP}` with this nodes publicly routable IP.
 * Replace `${DNS_SERVICE_IP}`
 
-File Contents:
+**/etc/systemd/system/kubelet.service**
 
-```
+```yml
 [Service]
 ExecStart=/usr/bin/kubelet \
   --api_servers=https://${MASTER_IP} \
@@ -468,14 +534,15 @@ RestartSec=10
 WantedBy=multi-user.target
 ```
 
-#### kube-proxy
+#### Set Up the kube-proxy Pod
 
-* Create File: `/etc/kubernetes/manifests/kube-proxy.yaml`
-* Replace `${MASTER_IP}
+Create `/etc/kubernetes/manifests/kube-proxy.yaml` and replace:
 
-File Contents:
+* Replace `${MASTER_IP}`
 
-```
+**/etc/kubernetes/manifests/kube-proxy.yaml**
+
+```yml
 apiVersion: v1
 kind: Pod
 metadata:
@@ -514,13 +581,15 @@ spec:
         path: "/etc/kubernetes/ssl"
 ```
 
-#### kubeconfig
+#### Set Up kubeconfig
 
-* CreateFile: `/etc/kubernetes/worker-kubeconfig.yaml`
+In order to facilitate secure communication between multiple Kubernetes clusters, kubeconfig can be used to track settings related to each cluster. A user can switch between them when using `kubectl`.
 
-File Contents:
+Create `/etc/kubernetes/worker-kubeconfig.yaml`:
 
-```
+**/etc/kubernetes/worker-kubeconfig.yaml**
+
+```yml
 apiVersion: v1
 kind: Config
 clusters:
@@ -542,41 +611,48 @@ current-context: kubelet-context
 
 ### Start Services
 
+Now we can start the Worker services.
+
 #### Load Changed Units
 
-```
-systemctl reload-daemon
+Tell systemd to rescan the units on disk:
+
+```sh
+$ sudo systemctl daemon-reload
 ```
 
 #### Start Kubelet
 
-```
-systemctl start kubelet
+Start the Kublet, which will start the proxy as well.
+
+```sh
+$ sudo systemctl start kubelet
 ```
 
-```
-# Automatically start Kubelet at boot
-systemctl enable kubelet
+Ensure that the kublet starts on each boot:
+
+```sh
+$ sudo systemctl enable kubelet
 ```
 
 ## Configure kubectl
 
 The primary CLI tool used to interact with the Kubernetes API is called `kubectl`.
 
-The following steps should be done from your local workstation.
+The following steps should be done from your local workstation to configure `kubectl` to work with your new cluster.
 
 First, download the binary using a command-line tool such as `wget` or `curl`:
 
-```
+```sh
 # Replace ${ARCH} with "linux" or "darwin" based on your workstation operating system
-wget https://storage.googleapis.com/kubernetes-release/release/v1.0.3/bin/${ARCH}/amd64/kubectl
+$ wget https://storage.googleapis.com/kubernetes-release/release/v1.0.3/bin/${ARCH}/amd64/kubectl
 ```
 
 After downloading the binary, ensure it is executable and move it into your PATH:
 
-```
-chmod +x kubectl
-mv kubectl /usr/local/bin/kubectl
+```sh
+$ chmod +x kubectl
+$ mv kubectl /usr/local/bin/kubectl
 ```
 
 Configure your local Kubernetes client using the following commands:
@@ -586,35 +662,34 @@ Configure your local Kubernetes client using the following commands:
 * Replace `${ADMIN_KEY}` with the path to the `admin-key.pem` created in previous steps
 * Replace `${ADMIN_CERT}` with the path to the `admin.pem` created in previous steps
 
-```
-kubectl config set-cluster vagrant --server=${MASTER_IP} --certificate-authority=${CA_CERT}
-kubectl config set-credentials vagrant-admin --certificate-authority=${CA_CERT} --client-key=${ADMIN_KEY} --client-certificate=${ADMIN_CERT}
-kubectl config set-context vagrant --cluster=vagrant --user=vagrant-admin
-kubectl config use-context vagrant
+```sh
+$ kubectl config set-cluster vagrant --server=${MASTER_IP} --certificate-authority=${CA_CERT}
+$ kubectl config set-credentials vagrant-admin --certificate-authority=${CA_CERT} --client-key=${ADMIN_KEY} --client-certificate=${ADMIN_CERT}
+$ kubectl config set-context vagrant --cluster=vagrant --user=vagrant-admin
+$ kubectl config use-context vagrant
 ```
 
 Check that your client is configured properly by using `kubectl` to inspect your cluster:
 
-```
-% kubectl get nodes
+```sh
+$ kubectl get nodes
 NAME          LABELS                               STATUS
 X.X.X.X       kubernetes.io/hostname=X.X.X.X       Ready
 ```
 
-## Deploy DNS Addon
+## Deploy the DNS Add-on
 
-Save the dns-addon file contents below, then create using kubectl:
+The DNS add-on allows for your services to have a DNS name in addition to an IP address. This is helpful for older pieces of software that can't be reconfigured easily or aren't "Kubernetes-aware".
 
-```
-kubectl create -f dns-addon.yaml
-```
+Add-ons are built on the same Kubernetes components as user-submitted jobs &mdash; Pods, Replication Controllers and Services. We're going to install the DNS add-on with `kubectl`.
 
-* Create File: dns-addon.yaml
+First create `dns-addon.yml` on your local machine and replace the variable. There is a lot going on in there, so let's break it down after you create it.
+
 * Replace `${DNS_SERVICE_IP}`
 
-File Contents:
+**dns-addon.yml**
 
-```
+```yml
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -745,9 +820,20 @@ spec:
       dnsPolicy: Default
 ```
 
+This single YAML file is actually creating 3 different Kubernetes objects, separated by `---`. The first is a new namespace called `kube-system`. Namespaces allow you to group related objects together. This namespace is a Kubernetes convention and it holds all add-ons.
+
+The second object is a service that provides DNS lookups over port 53 for any service that requires it.
+
+The third object is a Replication Controller, which consists of several different containers that work together to provide DNS lookups. Thre's too much going on to explain it all, but it's using health checks, resource limits, and intra-pod networking over multiple ports. These are features that you can't get in other container orchestration systems and shows the production knowledge that Google has applied to Kubernetes.
+
+Next, start the DNS add-on:
+
+```sh
+$ kubectl create -f dns-addon.yml
+```
+
 ## Next Steps: Deploy an Application
 
 Now that you have a working Kubernetes cluster with a functional CLI tool, you are free to deploy Kubernetes-ready applications.
 
 Start with a [multi-tier web application](http://kubernetes.io/v1.0/examples/guestbook-go/README.html) from the official Kubernetes documentation to visualize how the various Kubernetes components fit together.
-

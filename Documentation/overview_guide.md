@@ -1,38 +1,55 @@
 # CoreOS + Kubernetes
 
-This guide will walk you through a manual deployment of a single-master/multi-worker Kubernetes cluster on CoreOS.
+This guide will walk you through a deployment of a single-master/multi-worker Kubernetes cluster on CoreOS. We're going to configure or deploy:
+
+- an etcd cluster for Kubernetes to use
+- generate the required certificates for communication between Kubernetes components
+- deploy our Master node
+- deploy our Worker nodes
+- configure `kubectl` to work with our cluster
+- deploy the DNS add-on
+
+Working through this guide may take you a few hours, but it will give you good understanding of the moving pieces of your cluster and set you up for success in the long run. Let's get started.
 
 ## Deployment Options
 
-The following variables will be used throughout this guide. Most of the provided defaults can safely be used, however some values such as `ETCD_ENDPOINTS` and `MASTER_IP` will need to be provided by the deployer.
+The following variables will be used throughout this guide. Most of the provided defaults can safely be used, however some values such as `ETCD_ENDPOINTS` and `MASTER_IP` will need to be customized to your infrastructure.
 
-```
-# The IP address of the master node. Worker nodes must be able to reach the master via this IP on port 443. Additionally, external clients (such as an administrator using `kubectl`) will also need access.
-MASTER_IP=
+**MASTER_IP**=_no default_
 
-# List of etcd servers (http://ip:port), comma separated
-ETCD_ENDPOINTS=
+The IP address of the master node. Worker nodes must be able to reach the master via this IP on port 443. Additionally, external clients (such as an administrator using `kubectl`) will also need access, since this will run the Kubernetes API endpoint.
 
-# The CIDR network to use for pod IPs.
-# Each pod launched in the cluster will be assigned an IP out of this range.
-# This network must be routable between all nodes in the cluster. In a default installation, the flannel overlay network will provide routing to this network.
-POD_NETWORK=10.2.0.0/16
+<hr/>
 
-# The CIDR network to use for service cluster IPs.
-# Each service will be assigned a cluster IP out of this range.
-# This must not overlap with any IP ranges assigned to the POD_NETWORK, or other existing network infrastructure.
-# Routing to these IPs is handled by a kube-proxy service local to each node, and are not required to be routable between nodes.
-SERVICE_IP_RANGE=10.3.0.0/24
+**ETCD_ENDPOINTS**=_no default_
 
-# The IP address of the Kubernetes API Service
-# If the SERVICE_IP_RANGE is changed above, this must be set to the first IP in that range.
-K8S_SERVICE_IP=10.3.0.1
+List of etcd machines (`http://ip:port`), comma separated. If you're running a cluster of 5 machines, list them all here.
 
-# The IP address of the cluster DNS service.
-# This IP must be in the range of the SERVICE_IP_RANGE and cannot be the first IP in the range.
-# This same IP must be configured on all worker nodes to enable DNS service discovery.
-DNS_SERVICE_IP=10.3.0.10
-```
+<hr/>
+
+**POD_NETWORK**=10.2.0.0/16
+
+The CIDR network to use for pod IPs.
+Each pod launched in the cluster will be assigned an IP out of this range.
+This network must be routable between all nodes in the cluster. In a default installation, the flannel overlay network will provide routing to this network.
+
+<hr/>
+
+**SERVICE_IP_RANGE**=10.3.0.0/24
+
+The CIDR network to use for service cluster IPs. Each service will be assigned a cluster IP out of this range. This must not overlap with any IP ranges assigned to the POD_NETWORK, or other existing network infrastructure. Routing to these IPs is handled by a kube-proxy service local to each node, and are not required to be routable between nodes.
+
+<hr/>
+
+**K8S_SERVICE_IP**=10.3.0.1
+
+The IP address of the Kubernetes API Service. If the SERVICE_IP_RANGE is changed above, this must be set to the first IP in that range.
+
+<hr/>
+
+**DNS_SERVICE_IP**=10.3.0.10
+
+The IP address of the cluster DNS service. This IP must be in the range of the SERVICE_IP_RANGE and cannot be the first IP in the range. This same IP must be configured on all worker nodes to enable DNS service discovery.
 
 ## Deploy etcd Cluster
 

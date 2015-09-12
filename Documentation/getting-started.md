@@ -55,7 +55,7 @@ The IP address of the cluster DNS service. This IP must be in the range of the S
 
 Kubernetes uses etcd for data storage and for cluster consensus between different software components. Your etcd cluster will be heavily utilized since all objects storing within and every scheduling decision is recorded. It's recommended that you run a multi-machine cluster on dedicated hardware (with fast disks) to gain maximum performance and reliability of this important part of your cluster. For development environments, a single etcd is ok.
 
-### Single-Node (Development)
+### Single-Node/Development
 
 You can simply start etcd via [cloud-config][cloud-config-etcd] when you create your CoreOS machine or start it manually:
 
@@ -73,7 +73,7 @@ Record the IP address of an network interface on this machine that is reachable 
 
 [cloud-config-etcd]: https://coreos.com/os/docs/latest/cloud-config.html#etcd2
 
-### Multi-Node (Production)
+### Multi-Node/Production
 
 It is highly recommended that etcd is run as a dedicated cluster separately from Kubernetes components.
 

@@ -1,4 +1,4 @@
-# CoreOS + Kubernetes
+# CoreOS &#43; Kubernetes Step By Step
 
 This guide will walk you through a deployment of a single-master/multi-worker Kubernetes cluster on CoreOS. We're going to configure or deploy:
 

@@ -180,5 +180,5 @@ If you run into issues with Docker and Flannel, check to see that the drop-in wa
 
 <div class="co-m-docs-next-step">
   <p><strong>Is the Kubelet running?</strong></p>
-  <a href="deploy-workers.md" class="btn btn-primary btn-icon-right">Yes, ready to configure `kubectl`</a>
+  <a href="configure-kubectl.md" class="btn btn-primary btn-icon-right">Yes, ready to configure `kubectl`</a>
 </div>

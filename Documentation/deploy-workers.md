@@ -24,7 +24,7 @@ Just like earlier, create `/run/flannel/options.env` and replace your values:
 
 **/run/flannel/options.env**
 
-```yml
+```yaml
 FLANNELD_IFACE=${ADVERTISE_IP}
 FLANNELD_ETCD_ENDPOINTS=${ETCD_ENDPOINTS}
 ```
@@ -37,7 +37,7 @@ Create `/etc/systemd/system/docker.service.d/40-flannel.conf`
 
 **/etc/systemd/system/docker.service.d/40-flannel.conf**
 
-```yml
+```yaml
 [Unit]
 Requires=flanneld.service
 After=flanneld.service
@@ -53,7 +53,7 @@ Create `/etc/systemd/system/kubelet.service` and replace:
 
 **/etc/systemd/system/kubelet.service**
 
-```yml
+```yaml
 [Service]
 ExecStart=/usr/bin/kubelet \
   --api_servers=https://${MASTER_IP} \
@@ -81,7 +81,7 @@ Create `/etc/kubernetes/manifests/kube-proxy.yaml` and replace:
 
 **/etc/kubernetes/manifests/kube-proxy.yaml**
 
-```yml
+```yaml
 apiVersion: v1
 kind: Pod
 metadata:
@@ -128,7 +128,7 @@ Create `/etc/kubernetes/worker-kubeconfig.yaml`:
 
 **/etc/kubernetes/worker-kubeconfig.yaml**
 
-```yml
+```yaml
 apiVersion: v1
 kind: Config
 clusters:

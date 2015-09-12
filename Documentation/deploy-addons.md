@@ -12,7 +12,7 @@ First create `dns-addon.yml` on your local machine and replace the variable. The
 
 **dns-addon.yml**
 
-```yml
+```yaml
 apiVersion: v1
 kind: Namespace
 metadata:

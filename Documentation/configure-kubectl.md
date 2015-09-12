@@ -42,5 +42,5 @@ X.X.X.X       kubernetes.io/hostname=X.X.X.X       Ready
 
 <div class="co-m-docs-next-step">
   <p><strong>Is kubectl working from your local machine?</strong> We're going to install an add-on with it next.</p>
-  <a href="deploy-workers.md" class="btn btn-primary btn-icon-right">Yes, ready to deploy add-ons</div>
+  <a href="deploy-workers.md" class="btn btn-primary btn-icon-right">Yes, ready to deploy add-ons</a>
 </div>

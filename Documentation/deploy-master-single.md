@@ -44,7 +44,7 @@ We're going to do this with a [systemd drop-in][dropins], which is a method for 
 
 **/etc/systemd/system/docker.service.d/40-flannel.conf***
 
-```yml
+```yaml
 [Unit]
 Requires=flanneld.service
 After=flanneld.service
@@ -61,7 +61,7 @@ The kublet is the agent on each machine that starts and stops Pods and other mac
 
 **/etc/systemd/system/kubelet.service**
 
-```yml
+```yaml
 [Service]
 ExecStart=/usr/bin/kubelet \
   --api_servers=http://127.0.0.1:8080 \
@@ -92,7 +92,7 @@ If this is your first time looking at a Pod manifest, don't worry, they aren't a
 
 **/etc/kubernetes/manifests/kube-apiserver.yaml**
 
-```yml
+```yaml
 apiVersion: v1
 kind: Pod
 metadata:
@@ -171,7 +171,7 @@ All you have to do is create `/etc/kubernetes/manifests/kube-proxy.yaml`, there 
 
 **/etc/kubernetes/manifests/kube-proxy.yaml**
 
-```yml
+```yaml
 apiVersion: v1
 kind: Pod
 metadata:
@@ -209,7 +209,7 @@ Create `/etc/kubernetes/manifests/kube-controller-manager.yaml`. It will use the
 
 **/etc/kubernetes/manifests/kube-controller-manager.yaml**
 
-```yml
+```yaml
 apiVersion: v1
 kind: Pod
 metadata:
@@ -275,7 +275,7 @@ Create File `/etc/kubernetes/manifests/kube-scheduler.yaml`:
 
 **/etc/kubernetes/manifests/kube-scheduler.yaml**
 
-```yml
+```yaml
 apiVersion: v1
 kind: Pod
 metadata:

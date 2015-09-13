@@ -158,5 +158,5 @@ $ kubectl create -f dns-addon.yml
 <div class="co-m-docs-next-step">
   <p>Now that you have a working Kubernetes cluster with a functional CLI tool, you are free to deploy Kubernetes-ready applications.</p>
   <p>Start with a multi-tier web application (Guestbook) from the official Kubernetes documentation to visualize how the various Kubernetes components fit together.</p>
-  <a href="http://kubernetes.io/v1.0/examples/guestbook-go/README.html" class="btn btn-default btn-icon-right">Deploy the Guestbook Sample app</a>
+  <a href="http://kubernetes.io/v1.0/examples/guestbook-go/README.html" class="btn btn-default btn-icon-right" data-category="Docs Next" data-event="kubernetes.io: Guestbook">Deploy the Guestbook Sample app</a>
 </div>

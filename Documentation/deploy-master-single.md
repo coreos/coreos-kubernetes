@@ -337,5 +337,5 @@ If you run into issues with Docker and Flannel, check to see that the drop-in wa
 
 <div class="co-m-docs-next-step">
   <p><strong>Did the containers start downloading?</strong> As long as they started to download, everything is working properly.</p>
-  <a href="deploy-workers.md" class="btn btn-primary btn-icon-right">Yes, ready to deploy the Workers</a>
+  <a href="deploy-workers.md" class="btn btn-primary btn-icon-right" data-category="Docs Next" data-event="Kubernetes: Workers">Yes, ready to deploy the Workers</a>
 </div>

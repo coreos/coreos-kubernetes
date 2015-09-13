@@ -67,6 +67,7 @@ To ensure etcd starts after a reboot, enable it too:
 
 ```sh
 $ sudo systemctl enable etcd2
+Created symlink from /etc/systemd/system/multi-user.target.wants/etcd2.service to /usr/lib64/systemd/system/etcd2.service.
 ```
 
 Record the IP address of an network interface on this machine that is reachable from your Kubernetes master, which will be configured below. In the rest of this guide, use that IP in the form `http://$IP:2379` as the `ETCD_ENDPOINTS`.

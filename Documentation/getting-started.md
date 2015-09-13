@@ -120,6 +120,6 @@ admin-key.pem
 
 <div class="co-m-docs-next-step">
   <p><strong>Is your etcd cluster up and running?</strong> You need the IPs for the next step.</p>
-  <p><strong>Did you generate all of the certificates</strong> You will place these on disk next.</p>
+  <p><strong>Did you generate all of the certificates?</strong> You will place these on disk next.</p>
   <a href="deploy-master-single.md" class="btn btn-primary btn-icon-right"  data-category="Docs Next" data-event="Kubernetes: Master">Yes, ready to deploy the Master</a>
 </div>

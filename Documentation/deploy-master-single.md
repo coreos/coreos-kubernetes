@@ -299,6 +299,7 @@ Ensure that the kublet will start after a reboot:
 
 ```sh
 $ sudo systemctl enable kubelet
+Created symlink from /etc/systemd/system/multi-user.target.wants/kubelet.service to /etc/systemd/system/kubelet.service.
 ```
 
 #### Create kube-system Namespace

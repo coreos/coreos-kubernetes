@@ -172,6 +172,7 @@ Ensure that the kublet starts on each boot:
 
 ```sh
 $ sudo systemctl enable kubelet
+Created symlink from /etc/systemd/system/multi-user.target.wants/kubelet.service to /etc/systemd/system/kubelet.service.
 ```
 
 To check the health of the Kubelet systemd unit that we created, run `systemctl status kubelet.service`.

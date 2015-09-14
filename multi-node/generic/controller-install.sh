@@ -608,10 +608,9 @@ init_templates
 init_flannel
 init_docker
 
-systemctl daemon-reload
 systemctl stop update-engine; systemctl mask update-engine
-echo "REBOOT_STRATEGY=off" >> /etc/coreos/update.conf
 
+systemctl daemon-reload
 systemctl enable kubelet; systemctl start kubelet
 start_addons
 echo "DONE"

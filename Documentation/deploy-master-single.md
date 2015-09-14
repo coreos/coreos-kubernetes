@@ -129,36 +129,18 @@ spec:
       name: local
     volumeMounts:
     - mountPath: /etc/kubernetes/ssl
-      name: etckubessl
+      name: ssl-certs-kubernetes
       readOnly: true
-    - mountPath: /etc/ssl
-      name: etcssl
-      readOnly: true
-    - mountPath: /var/ssl
-      name: varssl
-      readOnly: true
-    - mountPath: /etc/openssl
-      name: etcopenssl
-      readOnly: true
-    - mountPath: /etc/pki/tls
-      name: etcpkitls
+    - mountPath: /etc/ssl/certs
+      name: ssl-certs-host
       readOnly: true
   volumes:
-  - name: etckubessl
-    hostPath:
+  - hostPath:
       path: /etc/kubernetes/ssl
+    name: ssl-certs-kubernetes
   - hostPath:
-      path: /etc/ssl
-    name: etcssl
-  - hostPath:
-      path: /var/ssl
-    name: varssl
-  - hostPath:
-      path: /etc/openssl
-    name: etcopenssl
-  - hostPath:
-      path: /etc/pki/tls
-    name: etcpkitls
+      path: /usr/share/ca-certificates
+    name: ssl-certs-host
 ```
 
 #### Set Up the kube-proxy Pod
@@ -189,12 +171,13 @@ spec:
     securityContext:
       privileged: true
     volumeMounts:
-      - mountPath: /etc/ssl/certs
-        name: "ssl-certs"
+    - mountPath: /etc/ssl/certs
+      name: ssl-certs-host
+	  readOnly: true
   volumes:
-    - name: "ssl-certs"
-      hostPath:
-        path: "/usr/share/ca-certificates"
+  - hostPath:
+      path: /usr/share/ca-certificates
+    name: ssl-certs-host
 ```
 
 #### Set Up the kube-controller-manager Pod
@@ -234,37 +217,19 @@ spec:
       timeoutSeconds: 1
     volumeMounts:
     - mountPath: /etc/kubernetes/ssl
-      name: etckubessl
+      name: ssl-certs-kubernetes
       readOnly: true
-    - mountPath: /etc/ssl
-      name: etcssl
-      readOnly: true
-    - mountPath: /var/ssl
-      name: varssl
-      readOnly: true
-    - mountPath: /etc/openssl
-      name: etcopenssl
-      readOnly: true
-    - mountPath: /etc/pki/tls
-      name: etcpkitls
+    - mountPath: /etc/ssl/certs
+      name: ssl-certs-host
       readOnly: true
   hostNetwork: true
   volumes:
-  - name: etckubessl
-    hostPath:
+  - hostPath:
       path: /etc/kubernetes/ssl
+    name: ssl-certs-kubernetes
   - hostPath:
-      path: /etc/ssl
-    name: etcssl
-  - hostPath:
-      path: /var/ssl
-    name: varssl
-  - hostPath:
-      path: /etc/openssl
-    name: etcopenssl
-  - hostPath:
-      path: /etc/pki/tls
-    name: etcpkitls
+      path: /usr/share/ca-certificates
+    name: ssl-certs-host
 ```
 
 #### Set Up the kube-scheduler Pod

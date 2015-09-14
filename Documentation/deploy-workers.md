@@ -172,6 +172,7 @@ Ensure that the kublet starts on each boot:
 
 ```sh
 $ sudo systemctl enable kubelet
+Created symlink from /etc/systemd/system/multi-user.target.wants/kubelet.service to /etc/systemd/system/kubelet.service.
 ```
 
 To check the health of the Kubelet systemd unit that we created, run `systemctl status kubelet.service`.
@@ -180,5 +181,5 @@ If you run into issues with Docker and Flannel, check to see that the drop-in wa
 
 <div class="co-m-docs-next-step">
   <p><strong>Is the Kubelet running?</strong></p>
-  <a href="configure-kubectl.md" class="btn btn-primary btn-icon-right">Yes, ready to configure `kubectl`</a>
+  <a href="configure-kubectl.md" class="btn btn-primary btn-icon-right"  data-category="Docs Next" data-event="Kubernetes: kubectl">Yes, ready to configure `kubectl`</a>
 </div>

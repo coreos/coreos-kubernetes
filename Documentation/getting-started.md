@@ -67,6 +67,7 @@ To ensure etcd starts after a reboot, enable it too:
 
 ```sh
 $ sudo systemctl enable etcd2
+Created symlink from /etc/systemd/system/multi-user.target.wants/etcd2.service to /usr/lib64/systemd/system/etcd2.service.
 ```
 
 Record the IP address of an network interface on this machine that is reachable from your Kubernetes master, which will be configured below. In the rest of this guide, use that IP in the form `http://$IP:2379` as the `ETCD_ENDPOINTS`.
@@ -119,6 +120,6 @@ admin-key.pem
 
 <div class="co-m-docs-next-step">
   <p><strong>Is your etcd cluster up and running?</strong> You need the IPs for the next step.</p>
-  <p><strong>Did you generate all of the certificates</strong> You will place these on disk next.</p>
-  <a href="deploy-master-single.md" class="btn btn-primary btn-icon-right">Yes, ready to deploy the Master</a>
+  <p><strong>Did you generate all of the certificates?</strong> You will place these on disk next.</p>
+  <a href="deploy-master-single.md" class="btn btn-primary btn-icon-right"  data-category="Docs Next" data-event="Kubernetes: Master">Yes, ready to deploy the Master</a>
 </div>

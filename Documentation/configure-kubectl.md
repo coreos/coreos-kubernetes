@@ -26,7 +26,7 @@ Configure your local Kubernetes client using the following commands:
 * Replace `${ADMIN_CERT}` with the path to the `admin.pem` created in previous steps
 
 ```sh
-$ kubectl config set-cluster vagrant --server=${MASTER_IP} --certificate-authority=${CA_CERT}
+$ kubectl config set-cluster vagrant --server=https://${MASTER_IP}:443 --certificate-authority=${CA_CERT}
 $ kubectl config set-credentials vagrant-admin --certificate-authority=${CA_CERT} --client-key=${ADMIN_KEY} --client-certificate=${ADMIN_CERT}
 $ kubectl config set-context vagrant --cluster=vagrant --user=vagrant-admin
 $ kubectl config use-context vagrant
@@ -42,5 +42,5 @@ X.X.X.X       kubernetes.io/hostname=X.X.X.X       Ready
 
 <div class="co-m-docs-next-step">
   <p><strong>Is kubectl working from your local machine?</strong> We're going to install an add-on with it next.</p>
-  <a href="deploy-addons.md" class="btn btn-primary btn-icon-right">Yes, ready to deploy add-ons</a>
+  <a href="deploy-addons.md" class="btn btn-primary btn-icon-right" data-category="Docs Next" data-event="Kubernetes: Addons">Yes, ready to deploy add-ons</a>
 </div>

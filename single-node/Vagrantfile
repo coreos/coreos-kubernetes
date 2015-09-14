@@ -28,7 +28,7 @@ Vagrant.configure("2") do |config|
   ["vmware_fusion", "vmware_workstation"].each do |vmware|
     config.vm.provider vmware do |v, override|
       v.vmx['numvcpus'] = 1
-      v.vmx['memsize'] = 512
+      v.vmx['memsize'] = 1024
       v.gui = false
 
       override.vm.box_url = "http://alpha.release.core-os.net/amd64-usr/current/coreos_production_vagrant_vmware_fusion.json"
@@ -38,7 +38,7 @@ Vagrant.configure("2") do |config|
   config.vm.provider :virtualbox do |v|
     v.cpus = 1
     v.gui = false
-    v.memory = 512
+    v.memory = 1024
 
     # On VirtualBox, we don't have guest additions or a functional vboxsf
     # in CoreOS, so tell Vagrant that so it can be smarter.

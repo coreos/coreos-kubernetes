@@ -4,4 +4,4 @@ View the full instructions at https://coreos.com/kubernetes/docs/latest/kubernet
 
 #### Contributing
 
-Submit a PR to this repository. The source for the [docs is here](../../Documentation/kubernetes-on-vagrant.md)
+Submit a PR to this repository. The source of this [documentation is here](../../Documentation/kubernetes-on-vagrant.md).

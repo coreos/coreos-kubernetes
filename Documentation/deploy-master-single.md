@@ -42,7 +42,7 @@ In order for Flannel to manage the pod network in the cluster, Docker needs to b
 
 We're going to do this with a [systemd drop-in][dropins], which is a method for appending or overriding parameters of a systemd unit. In this case we're appending two dependency rules. Create the drop-in:
 
-**/etc/systemd/system/docker.service.d/40-flannel.conf***
+**/etc/systemd/system/docker.service.d/40-flannel.conf**
 
 ```yaml
 [Unit]
@@ -334,6 +334,34 @@ Ensure that the kublet will start after a reboot:
 
 ```sh
 $ sudo systemctl enable kubelet
+```
+
+#### Create kube-system Namespace
+
+The Kubernetes Pods that make up the Master node will exist in their own namespace. We need to create this namespace so these components are discoverable by other nodes in the cluster.
+
+First, we need to make sure the Kubernetes API is available (this could take a few minutes after starting the kubelet.service)
+
+```
+curl http://127.0.0.1:8080/version
+```
+
+A successful response should look something like:
+
+```
+{
+  "major": "1",
+  "minor": "0",
+  "gitVersion": "v1.0.3",
+  "gitCommit": "61c6ac5f350253a4dc002aee97b7db7ff01ee4ca",
+  "gitTreeState": "clean"
+}
+```
+
+Now we can create the `kube-system` namespace:
+
+```
+curl -XPOST -d'{"apiVersion":"v1","kind":"Namespace","metadata":{"name":"kube-system"}}' "http://127.0.0.1:8080/api/v1/namespaces"
 ```
 
 Our Pods should now we starting up and downloading their containers. To check the download progress, you can run `docker ps`.

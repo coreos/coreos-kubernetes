@@ -12,7 +12,13 @@ Navigate to the [Vagrant downloads page][vagrant-downloads] and grab the appropr
 
 [vagrant-downloads]: https://www.vagrantup.com/downloads.html
 
-### kubectl
+## Step 1: Bring the cluster up
+
+Simply run `vagrant up` and wait for the command to succeed.
+Vagrant will boot and provision your machine but it will take a few minutes for the kubernetes component containers to be downloaded.
+While the VM is working to get everything downloaded lets configure a local command line client, `kubectl`
+
+## Step 2: Download kubectl
 
 The primary CLI tool used to interact with the Kubernetes API is called `kubectl`.
 This tool is not yet available through the typical means of software distribution, so it is suggested that you download the binary directly from the Kubernetes release artifact site:
@@ -31,14 +37,17 @@ chmod +x kubectl
 mv kubectl /usr/local/bin/kubectl
 ```
 
-## Step 1: Bring the cluster up
+Test that kubectl works by running the version command:
 
-Simply run `vagrant up` and wait for the command to succeed.
-Once Vagrant is finished booting and provisioning your machine, your cluster is good to go.
+```
+kubectl version
+```
+
 
 ## Step 2: Configure kubectl
 
-Configure your local Kubernetes client using the following commands:
+
+Now, lets configure your client to use the single node cluster we have started using the following commands:
 
 ```
 kubectl config set-cluster vagrant --server=https://172.17.4.99:443 --certificate-authority=${PWD}/ssl/ca.pem

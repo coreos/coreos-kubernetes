@@ -336,7 +336,7 @@ Ensure that the kublet will start after a reboot:
 $ sudo systemctl enable kubelet
 ```
 
-Our Pods should now starting up and downloading their containers. To check the download progress, you can run `docker ps`.
+Our Pods should now be starting up and downloading their containers. To check the download progress, you can run `docker ps`.
 
 To check the health of the Kubelet systemd unit that we created, run `systemctl status kubelet.service`.
 

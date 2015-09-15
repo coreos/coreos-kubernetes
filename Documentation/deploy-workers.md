@@ -14,12 +14,11 @@ Place the TLS keypairs generated previously in the following locations:
 * File: `/etc/kubernetes/ssl/worker.pem`
 * File: `/etc/kubernetes/ssl/worker-key.pem`
 
-#### Flannel Configuration
+#### flannel Configuration
 
-Just like earlier, create `/run/flannel/options.env` and replace your values:
+Just like earlier, create `/run/flannel/options.env` and modify these values:
 
-
-* Replace `${ADVERTISE_IP}` with this nodes publicly routable IP.
+* Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
 * Replace `${ETCD_ENDPOINTS}`
 
 **/run/flannel/options.env**
@@ -45,10 +44,10 @@ After=flanneld.service
 
 #### Create the kubelet Unit
 
-Create `/etc/systemd/system/kubelet.service` and replace: 
+Create `/etc/systemd/system/kubelet.service` and substitute the following variables:
 
 * Replace `${MASTER_IP}`
-* Replace `${ADVERTISE_IP}` with this nodes publicly routable IP.
+* Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
 * Replace `${DNS_SERVICE_IP}`
 
 **/etc/systemd/system/kubelet.service**
@@ -75,7 +74,7 @@ WantedBy=multi-user.target
 
 #### Set Up the kube-proxy Pod
 
-Create `/etc/kubernetes/manifests/kube-proxy.yaml` and replace:
+Create `/etc/kubernetes/manifests/kube-proxy.yaml`:
 
 * Replace `${MASTER_IP}`
 
@@ -122,7 +121,7 @@ spec:
 
 #### Set Up kubeconfig
 
-In order to facilitate secure communication between Kubernetes components, kubeconfig can be used to define authentication settings. In this case, the kublet and proxy are reading this configuration to communicate with the API.
+In order to facilitate secure communication between Kubernetes components, kubeconfig can be used to define authentication settings. In this case, the kubelet and proxy are reading this configuration to communicate with the API.
 
 Create `/etc/kubernetes/worker-kubeconfig.yaml`:
 
@@ -160,26 +159,26 @@ Tell systemd to rescan the units on disk:
 $ sudo systemctl daemon-reload
 ```
 
-#### Start Kubelet
+#### Start kubelet
 
-Start the Kublet, which will start the proxy as well.
+Start the kubelet, which will start the proxy as well.
 
 ```sh
 $ sudo systemctl start kubelet
 ```
 
-Ensure that the kublet starts on each boot:
+Ensure that the kubelet starts on each boot:
 
 ```sh
 $ sudo systemctl enable kubelet
 Created symlink from /etc/systemd/system/multi-user.target.wants/kubelet.service to /etc/systemd/system/kubelet.service.
 ```
 
-To check the health of the Kubelet systemd unit that we created, run `systemctl status kubelet.service`.
+To check the health of the kubelet systemd unit that we created, run `systemctl status kubelet.service`.
 
 If you run into issues with Docker and Flannel, check to see that the drop-in was applied correctly by running `systemctl cat docker.service` and ensuring that the drop-in appears at the bottom.
 
 <div class="co-m-docs-next-step">
-  <p><strong>Is the Kubelet running?</strong></p>
+  <p><strong>Is the kubelet running?</strong></p>
   <a href="configure-kubectl.md" class="btn btn-primary btn-icon-right"  data-category="Docs Next" data-event="Kubernetes: kubectl">Yes, ready to configure `kubectl`</a>
 </div>

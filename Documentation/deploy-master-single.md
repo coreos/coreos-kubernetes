@@ -20,16 +20,25 @@ Place the keys generated previously in the following locations:
 
 [flannel][flannel-docs] provides a key Kubernetes networking capability &mdash; a software-defined overlay network to manage routing of the [Pod][pod-overview] network.
 
-flannel stores local configuration in `/run/flannel/options.env` and cluster-level configuration in etcd. Create this file and edit the contents:
+We will configure flannel to source its local configuration in `/etc/flannel/options.env` and cluster-level configuration in etcd. Create this file and edit the contents:
 
 * Replace `${ADVERTISE_IP}` with this machine's publicly routable IP.
 * Replace `${ETCD_ENDPOINTS}`
 
-**/run/flannel/options.env**
+**/etc/flannel/options.env**
 
 ```sh
 FLANNELD_IFACE=${ADVERTISE_IP}
 FLANNELD_ETCD_ENDPOINTS=${ETCD_ENDPOINTS}
+```
+
+Next create a [systemd drop-in][dropins], which will use the above configuration when flannel starts
+
+**/etc/systemd/system/flanneld.service.d/40-ExecStartPre-symlink.conf**
+
+```yaml
+[Service]
+ExecStartPre=/usr/bin/ln -sf /etc/flannel/options.env /run/flannel/options.env
 ```
 
 [flannel-docs]: https://coreos.com/flannel/docs/latest/

@@ -1,8 +1,8 @@
 # CoreOS &#43; Kubernetes Step By Step
 
-This guide will walk you through a deployment of a single-master/multi-worker Kubernetes cluster on CoreOS. We're going to configure or deploy:
+This guide will walk you through a deployment of a single-master/multi-worker Kubernetes cluster on CoreOS. We're going to:
 
-- an etcd cluster for Kubernetes to use
+- configure an etcd cluster for Kubernetes to use
 - generate the required certificates for communication between Kubernetes components
 - deploy our Master node
 - deploy our Worker nodes

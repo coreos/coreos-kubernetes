@@ -1,6 +1,6 @@
 ## Deploy the DNS Add-on
 
-The DNS add-on allows for your services to have a DNS name in addition to an IP address. This is helpful for simplified service discovery between applications. More info can be found in the [Kubernetes DNS documentation][k8s-dns].
+The DNS add-on allows your services to have a DNS name in addition to an IP address. This is helpful for simplified service discovery between applications. More info can be found in the [Kubernetes DNS documentation][k8s-dns].
 
 Add-ons are built on the same Kubernetes components as user-submitted jobs &mdash; Pods, Replication Controllers and Services. We're going to install the DNS add-on with `kubectl`.
 
@@ -147,7 +147,7 @@ This single YAML file is actually creating 3 different Kubernetes objects, separ
 
 The second object is a service that provides DNS lookups over port 53 for any service that requires it.
 
-The third object is a Replication Controller, which consists of several different containers that work together to provide DNS lookups. Thre's too much going on to explain it all, but it's using health checks, resource limits, and intra-pod networking over multiple ports. 
+The third object is a Replication Controller, which consists of several different containers that work together to provide DNS lookups. There's too much going on to explain it all, but it's using health checks, resource limits, and intra-pod networking over multiple ports. 
 
 Next, start the DNS add-on:
 

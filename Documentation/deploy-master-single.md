@@ -16,11 +16,11 @@ Place the keys generated previously in the following locations:
 * File: `/etc/kubernetes/ssl/apiserver.pem`
 * File: `/etc/kubernetes/ssl/apiserver-key.pem`
 
-#### Flannel Configuration
+#### flannel Configuration
 
-[Flannel][flannel-docs] provides a key Kubernetes networking capability &mdash; a software-defined overlay network to manage routing of the [Pod][pod-overview] network.
+[flannel][flannel-docs] provides a key Kubernetes networking capability &mdash; a software-defined overlay network to manage routing of the [Pod][pod-overview] network.
 
-Flannel stores local configuration in `/run/flannel/options.env` and cluster-level configuration in etcd. Create this file and edit the contents:
+flannel stores local configuration in `/run/flannel/options.env` and cluster-level configuration in etcd. Create this file and edit the contents:
 
 * Replace `${ADVERTISE_IP}` with this machine's publicly routable IP.
 * Replace `${ETCD_ENDPOINTS}`
@@ -38,7 +38,7 @@ FLANNELD_ETCD_ENDPOINTS=${ETCD_ENDPOINTS}
 
 #### Docker Configuration
 
-In order for Flannel to manage the pod network in the cluster, Docker needs to be configured to use it. All we need to do is require that flanneld is running prior to Docker starting.
+In order for flannel to manage the pod network in the cluster, Docker needs to be configured to use it. All we need to do is require that flanneld is running prior to Docker starting.
 
 We're going to do this with a [systemd drop-in][dropins], which is a method for appending or overriding parameters of a systemd unit. In this case we're appending two dependency rules. Create the drop-in:
 
@@ -54,7 +54,7 @@ After=flanneld.service
 
 #### Create the kubelet Unit
 
-The kublet is the agent on each machine that starts and stops Pods and other machine-level tasks. The kublet communicates to the API server (also running on the master machine) with the TLS certificates we placed on disk earlier.
+The kubelet is the agent on each machine that starts and stops Pods and other machine-level tasks. The kubelet communicates to the API server (also running on the master machine) with the TLS certificates we placed on disk earlier.
 
 * Replace `${ADVERTISE_IP}` with this nodes publicly routable IP.
 * Replace `${DNS_SERVICE_IP}`
@@ -82,13 +82,13 @@ WantedBy=multi-user.target
 
 The API server is where most of the magic happens. It is stateless by design and takes in API requests, processes them and stores the result in etcd if needed, and then returns the result of the request.
 
-We're going to use a unqiue feature of the kublet to launch a Pod that runs the API server. Above we configured the kublet to watch a local directory for pods to run with the `--config=/etc/kubernetes/manifests` flag. All we need to do is place our Pod manifest in that location, and the kublet will make sure it stays running, just as if the Pod was submitted via the API. The cool trick here is that we don't have an API running yet, but the Pod will function the exact same way, which simplifies troubleshooting later on.
+We're going to use a unique feature of the kubelet to launch a Pod that runs the API server. Above we configured the kubelet to watch a local directory for pods to run with the `--config=/etc/kubernetes/manifests` flag. All we need to do is place our Pod manifest in that location, and the kubelet will make sure it stays running, just as if the Pod was submitted via the API. The cool trick here is that we don't have an API running yet, but the Pod will function the exact same way, which simplifies troubleshooting later on.
 
-If this is your first time looking at a Pod manifest, don't worry, they aren't all this complicated. But, this shows off the power and flexibility of the Pod concept. Create `/etc/kubernetes/manifests/kube-apiserver.yaml` and replace the settings:
-
+If this is your first time looking at a Pod manifest, don't worry, they aren't all this complicated. But, this shows off the power and flexibility of the Pod concept. Create `/etc/kubernetes/manifests/kube-apiserver.yaml` with the following settings:
+ 
 * Replace `${ETCD_ENDPOINTS}`
 * Replace `${SERVICE_IP_RANGE}`
-* Replace `${ADVERTISE_IP}` with this nodes publicly routable IP.
+* Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
 
 **/etc/kubernetes/manifests/kube-apiserver.yaml**
 
@@ -276,9 +276,9 @@ First, we need to tell systemd that we've changed units on disk and it needs to 
 $ sudo systemctl daemon-reload
 ```
 
-#### Configure Flannel Network
+#### Configure flannel Network
 
-Earlier it was mentioned that Flannel stores cluster-level configuration in etcd. We need to configure our Pod network IP range now. Since etcd was started earlier, we can set this now. If you don't have etcd running, start it now.
+Earlier it was mentioned that flannel stores cluster-level configuration in etcd. We need to configure our Pod network IP range now. Since etcd was started earlier, we can set this now. If you don't have etcd running, start it now.
 
 * Replace `$POD_NETWORK`
 * Replace `$ETCD_SERVER` with one host from `$ETCD_ENDPOINTS`
@@ -287,15 +287,15 @@ Earlier it was mentioned that Flannel stores cluster-level configuration in etcd
 $ curl -X PUT -d "value={\"Network\":\"$POD_NETWORK\"}" "$ETCD_SERVER/v2/keys/coreos.com/network/config"
 ```
 
-#### Start Kubelet
+#### Start kubelet
 
-Now that everything is configured, we can start the Kubelet, which will also start the Pod manifests for the API server, the controller manager, proxy and scheduler.
+Now that everything is configured, we can start the kubelet, which will also start the Pod manifests for the API server, the controller manager, proxy and scheduler.
 
 ```sh
 $ sudo systemctl start kubelet
 ```
 
-Ensure that the kublet will start after a reboot:
+Ensure that the kubelet will start after a reboot:
 
 ```sh
 $ sudo systemctl enable kubelet
@@ -332,9 +332,9 @@ curl -XPOST -d'{"apiVersion":"v1","kind":"Namespace","metadata":{"name":"kube-sy
 
 Our Pods should now we starting up and downloading their containers. To check the download progress, you can run `docker ps`.
 
-To check the health of the Kubelet systemd unit that we created, run `systemctl status kubelet.service`.
+To check the health of the kubelet systemd unit that we created, run `systemctl status kubelet.service`.
 
-If you run into issues with Docker and Flannel, check to see that the drop-in was applied correctly by running `systemctl cat docker.service` and ensuring that the drop-in appears at the bottom.
+If you run into issues with Docker and flannel, check to see that the drop-in was applied correctly by running `systemctl cat docker.service` and ensuring that the drop-in appears at the bottom.
 
 <div class="co-m-docs-next-step">
   <p><strong>Did the containers start downloading?</strong> As long as they started to download, everything is working properly.</p>

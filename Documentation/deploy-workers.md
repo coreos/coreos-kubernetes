@@ -16,10 +16,10 @@ Place the TLS keypairs generated previously in the following locations:
 
 #### flannel Configuration
 
-Just like earlier, create `/run/flannel/options.env` and replace your values:
+Just like earlier, create `/run/flannel/options.env` and modify these values:
 
-* `${ADVERTISE_IP}`, with this node's publicly routable IP.
-* `${ETCD_ENDPOINTS}`
+* Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
+* Replace `${ETCD_ENDPOINTS}`
 
 **/run/flannel/options.env**
 
@@ -44,11 +44,11 @@ After=flanneld.service
 
 #### Create the kubelet Unit
 
-Create `/etc/systemd/system/kubelet.service` and replace the following variables: 
+Create `/etc/systemd/system/kubelet.service` and substitute the following variables:
 
-* `${MASTER_IP}`
-* `${ADVERTISE_IP}`, with this node's publicly routable IP.
-* `${DNS_SERVICE_IP}`
+* Replace `${MASTER_IP}`
+* Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
+* Replace `${DNS_SERVICE_IP}`
 
 **/etc/systemd/system/kubelet.service**
 
@@ -74,9 +74,9 @@ WantedBy=multi-user.target
 
 #### Set Up the kube-proxy Pod
 
-Create `/etc/kubernetes/manifests/kube-proxy.yaml` and replace:
+Create `/etc/kubernetes/manifests/kube-proxy.yaml`:
 
-* `${MASTER_IP}`
+* Replace `${MASTER_IP}`
 
 **/etc/kubernetes/manifests/kube-proxy.yaml**
 

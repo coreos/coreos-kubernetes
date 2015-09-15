@@ -14,13 +14,6 @@ First create `dns-addon.yml` on your local machine and replace the variable. The
 
 ```yaml
 apiVersion: v1
-kind: Namespace
-metadata:
-  name: kube-system
-
----
-
-apiVersion: v1
 kind: Service
 metadata:
   name: kube-dns
@@ -143,11 +136,11 @@ spec:
       dnsPolicy: Default
 ```
 
-This single YAML file is actually creating 3 different Kubernetes objects, separated by `---`. The first is a new namespace called `kube-system`. Namespaces allow you to group related objects together. This namespace is a Kubernetes convention and it holds all add-ons.
+This single YAML file is actually creating 2 different Kubernetes objects, separated by `---`.
 
-The second object is a service that provides DNS lookups over port 53 for any service that requires it.
+The first object is a service that provides DNS lookups over port 53 for any service that requires it.
 
-The third object is a Replication Controller, which consists of several different containers that work together to provide DNS lookups. There's too much going on to explain it all, but it's using health checks, resource limits, and intra-pod networking over multiple ports. 
+The second object is a Replication Controller, which consists of several different containers that work together to provide DNS lookups. There's too much going on to explain it all, but it's using health checks, resource limits, and intra-pod networking over multiple ports. 
 
 Next, start the DNS add-on:
 

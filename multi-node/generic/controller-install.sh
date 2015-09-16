@@ -74,23 +74,6 @@ function init_flannel {
     fi
 }
 
-function init_docker {
-    local TEMPLATE=/etc/systemd/system/docker.service.d/40-flannel.conf
-    [ -f $TEMPLATE ] || {
-        echo "TEMPLATE: $TEMPLATE"
-        mkdir -p $(dirname $TEMPLATE)
-        cat << EOF > $TEMPLATE
-[Unit]
-Requires=flanneld.service
-After=flanneld.service
-EOF
-    }
-
-    # reload now before docker commands are run in later
-    # init steps or dockerd will start before flanneld
-    systemctl daemon-reload
-}
-
 function init_templates {
     local TEMPLATE=/etc/systemd/system/kubelet.service
     [ -f $TEMPLATE ] || {
@@ -539,7 +522,7 @@ EOF
 EOF
     }
 
-    local TEMPLATE=/run/flannel/options.env
+    local TEMPLATE=/etc/flannel/options.env
     [ -f $TEMPLATE ] || {
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
@@ -547,7 +530,28 @@ EOF
 FLANNELD_IFACE=$ADVERTISE_IP
 FLANNELD_ETCD_ENDPOINTS=$ETCD_ENDPOINTS
 EOF
-     }
+    }
+
+    local TEMPLATE=/etc/systemd/system/flanneld.service.d/40-ExecStartPre-symlink.conf.conf
+    [ -f $TEMPLATE ] || {
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+[Service]
+ExecStartPre=/usr/bin/ln -sf /etc/flannel/options.env /run/flannel/options.env
+EOF
+    }
+
+    local TEMPLATE=/etc/systemd/system/docker.service.d/40-flannel.conf
+    [ -f $TEMPLATE ] || {
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+[Unit]
+Requires=flanneld.service
+After=flanneld.service
+EOF
+    }
 
 }
 
@@ -569,7 +573,6 @@ init_config
 init_templates
 
 init_flannel
-init_docker
 
 systemctl stop update-engine; systemctl mask update-engine
 

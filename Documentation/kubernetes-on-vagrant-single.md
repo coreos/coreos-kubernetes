@@ -50,7 +50,7 @@ Once Vagrant is finished booting and provisioning your machine, your cluster is 
 Configure your local Kubernetes client using the following commands:
 
 ```
-$ kubectl config set-cluster vagrant --server=https://172.17.4.101:443 --certificate-authority=${PWD}/ssl/ca.pem
+$ kubectl config set-cluster vagrant --server=https://172.17.4.99:443 --certificate-authority=${PWD}/ssl/ca.pem
 $ kubectl config set-credentials vagrant-admin --certificate-authority=${PWD}/ssl/ca.pem --client-key=${PWD}/ssl/admin-key.pem --client-certificate=${PWD}/ssl/admin.pem
 $ kubectl config set-context vagrant --cluster=vagrant --user=vagrant-admin
 $ kubectl config use-context vagrant
@@ -61,7 +61,7 @@ Check that your client is configured properly by using `kubectl` to inspect your
 ```sh
 $ kubectl get nodes
 NAME          LABELS                               STATUS
-172.17.4.201   kubernetes.io/hostname=172.17.4.201   Ready
+172.17.4.99   kubernetes.io/hostname=172.17.4.99   Ready
 ```
 
 <div class="co-m-docs-next-step">

@@ -6,6 +6,8 @@ See the [CoreOS Documentation](https://coreos.com/os/docs/latest/) for guides on
 
 Manual configuration of the required Master services is explained below, but most of the configuration could also be done with cloud-config, aside from placing the TLS assets on disk. These secrets shouldn't be stored in cloud-config for enhanced security.
 
+If you are deploying multiple master nodes in a high-availability cluster, these instructions can be repeated for each master node you wish to launch.
+
 ### Configure Service Components
 
 #### TLS Assets
@@ -94,7 +96,7 @@ The API server is where most of the magic happens. It is stateless by design and
 We're going to use a unique feature of the kubelet to launch a Pod that runs the API server. Above we configured the kubelet to watch a local directory for pods to run with the `--config=/etc/kubernetes/manifests` flag. All we need to do is place our Pod manifest in that location, and the kubelet will make sure it stays running, just as if the Pod was submitted via the API. The cool trick here is that we don't have an API running yet, but the Pod will function the exact same way, which simplifies troubleshooting later on.
 
 If this is your first time looking at a Pod manifest, don't worry, they aren't all this complicated. But, this shows off the power and flexibility of the Pod concept. Create `/etc/kubernetes/manifests/kube-apiserver.yaml` with the following settings:
- 
+
 * Replace `${ETCD_ENDPOINTS}`
 * Replace `${SERVICE_IP_RANGE}`
 * Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
@@ -179,24 +181,86 @@ spec:
     volumeMounts:
     - mountPath: /etc/ssl/certs
       name: ssl-certs-host
-	  readOnly: true
+      readOnly: true
   volumes:
   - hostPath:
       path: /usr/share/ca-certificates
     name: ssl-certs-host
 ```
 
+#### Set up the kube-podmaster Pod
+
+The kube-podmaster is responsible for implementing master-election for the kube-controller-manager and kube-scheduler. Because these services modify the cluster state, we only want to have one actor making modifications at a time.
+
+In a single-master deployment, the kube-podmaster will simply run the kube-scheduler and kube-controller-manager on the current node. In a multi-master deployment, the kube-podmaster will be responsible for starting a new instance of the Kubernetes components in the case of a machine dying.
+
+When creating `/etc/kubernetes/manifests/kube-podmaster.yaml`:
+
+* Replace `${ETCD_ENDPOINTS}`
+* Replace `${ADVERTISE_IP}`
+
+**/etc/kubernetes/manifests/kube-podmaster.yaml**
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-podmaster
+  namespace: kube-system
+spec:
+  hostNetwork: true
+  containers:
+  - name: scheduler-elector
+    image: gcr.io/google_containers/podmaster:1.1
+    command:
+    - /podmaster
+    - --etcd-servers=${ETCD_ENDPOINTS}
+    - --key=scheduler
+    - --whoami=${ADVERTISE_IP}
+    - --source-file=/src/manifests/kube-scheduler.yaml
+    - --dest-file=/dst/manifests/kube-scheduler.yaml
+    volumeMounts:
+    - mountPath: /src/manifests
+      name: manifest-src
+      readOnly: true
+    - mountPath: /dst/manifests
+      name: manifest-dst
+  - name: controller-manager-elector
+    image: gcr.io/google_containers/podmaster:1.1
+    command:
+    - /podmaster
+    - --etcd-servers=${ETCD_ENDPOINTS}
+    - --key=controller
+    - --whoami=${ADVERTISE_IP}
+    - --source-file=/src/manifests/kube-controller-manager.yaml
+    - --dest-file=/dst/manifests/kube-controller-manager.yaml
+    terminationMessagePath: /dev/termination-log
+    volumeMounts:
+    - mountPath: /src/manifests
+      name: manifest-src
+      readOnly: true
+    - mountPath: /dst/manifests
+      name: manifest-dst
+  volumes:
+  - hostPath:
+      path: /srv/kubernetes/manifests
+    name: manifest-src
+  - hostPath:
+      path: /etc/kubernetes/manifests
+    name: manifest-dst
+```
+
 #### Set Up the kube-controller-manager Pod
 
-The controller manager is responsible for reconciling any required actions based on changes to [Replication Controllers][rc-overview]. 
+The controller manager is responsible for reconciling any required actions based on changes to [Replication Controllers][rc-overview].
 
 For example, if you increased the replica count, the controller manager would generate a scale up event, which would cause a new Pod to get scheduled in the cluster. The controller manager communicates with the API to submit these events.
 
-Create `/etc/kubernetes/manifests/kube-controller-manager.yaml`. It will use the TLS certificate placed on disk earlier.
+Create `/srv/kubernetes/manifests/kube-controller-manager.yaml`. It will use the TLS certificate placed on disk earlier.
 
 [rc-overview]: https://coreos.com/kubernetes/docs/latest/replication-controller.html
 
-**/etc/kubernetes/manifests/kube-controller-manager.yaml**
+**/srv/kubernetes/manifests/kube-controller-manager.yaml**
 
 ```yaml
 apiVersion: v1
@@ -242,9 +306,9 @@ spec:
 
 The scheduler is the last major piece of our Master. It monitors the API for unscheduled pods, finds them a machine to run on, and communicates the decision back to the API.
 
-Create File `/etc/kubernetes/manifests/kube-scheduler.yaml`:
+Create File `/srv/kubernetes/manifests/kube-scheduler.yaml`:
 
-**/etc/kubernetes/manifests/kube-scheduler.yaml**
+**/srv/kubernetes/manifests/kube-scheduler.yaml**
 
 ```yaml
 apiVersion: v1
@@ -311,6 +375,8 @@ Created symlink from /etc/systemd/system/multi-user.target.wants/kubelet.service
 #### Create kube-system Namespace
 
 The Kubernetes Pods that make up the Master node will exist in their own namespace. We need to create this namespace so these components are discoverable by other nodes in the cluster.
+
+**Note**: You will only need to do this once per-cluster. If deploying multiple master nodes, this step needs to happen only once.
 
 First, we need to make sure the Kubernetes API is available (this could take a few minutes after starting the kubelet.service)
 

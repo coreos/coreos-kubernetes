@@ -57,7 +57,7 @@ After=flanneld.service
 
 Create `/etc/systemd/system/kubelet.service` and substitute the following variables:
 
-* Replace `${MASTER_IP}`
+* Replace `${MASTER_HOST}`
 * Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
 * Replace `${DNS_SERVICE_IP}`
 
@@ -66,7 +66,7 @@ Create `/etc/systemd/system/kubelet.service` and substitute the following variab
 ```yaml
 [Service]
 ExecStart=/usr/bin/kubelet \
-  --api_servers=https://${MASTER_IP} \
+  --api_servers=https://${MASTER_HOST} \
   --register-node=true \
   --allow-privileged=true \
   --config=/etc/kubernetes/manifests \
@@ -87,7 +87,7 @@ WantedBy=multi-user.target
 
 Create `/etc/kubernetes/manifests/kube-proxy.yaml`:
 
-* Replace `${MASTER_IP}`
+* Replace `${MASTER_HOST}`
 
 **/etc/kubernetes/manifests/kube-proxy.yaml**
 
@@ -105,7 +105,7 @@ spec:
     command:
     - /hyperkube
     - proxy
-    - --master=https://${MASTER_IP}
+    - --master=https://${MASTER_HOST}
     - --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml
     securityContext:
       privileged: true

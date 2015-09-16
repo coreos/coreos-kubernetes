@@ -4,7 +4,7 @@ This guide will walk you through a deployment of a single-master/multi-worker Ku
 
 - configure an etcd cluster for Kubernetes to use
 - generate the required certificates for communication between Kubernetes components
-- deploy our Master node
+- deploy our Master nodes
 - deploy our Worker nodes
 - configure `kubectl` to work with our cluster
 - deploy the DNS add-on
@@ -13,11 +13,13 @@ Working through this guide may take you a few hours, but it will give you good u
 
 ## Deployment Options
 
-The following variables will be used throughout this guide. Most of the provided defaults can safely be used, however some values such as `ETCD_ENDPOINTS` and `MASTER_IP` will need to be customized to your infrastructure.
+The following variables will be used throughout this guide. Most of the provided defaults can safely be used, however some values such as `ETCD_ENDPOINTS` and `MASTER_HOST` will need to be customized to your infrastructure.
 
-**MASTER_IP**=_no default_
+**MASTER_HOST**=_no default_
 
-The IP address of the master node. Worker nodes must be able to reach the master via this IP on port 443. Additionally, external clients (such as an administrator using `kubectl`) will also need access, since this will run the Kubernetes API endpoint.
+The address of the master node. In most cases this will be the publicly routable IP of the master node. Worker nodes must be able to reach the master via this address on port 443. Additionally, external clients (such as an administrator using `kubectl`) will also need access, since this will run the Kubernetes API endpoint.
+
+If you will be running a high-availability control-plane consisting of multiple master nodes, then `MASTER_HOST` will ideally be a network load balancer that sits in front of the master nodes. Alternatively, a DNS name can be configured which will resolve to the master node IPs. How requests are routed to the master nodes will be an important consideration when creating the TLS certificates.
 
 <hr/>
 
@@ -61,7 +63,7 @@ You can simply start etcd via [cloud-config][cloud-config-etcd] when you create 
 
 If you are starting etcd manually, we need to first configure it to listen on all interfaces:
 
-* Replace `${PUBLIC_IP}` with the etcd machines publically routable IP address.
+* Replace `${PUBLIC_IP}` with the etcd machines publicly routable IP address.
 
 ** /etc/systemd/system/etcd2.service.d/40-listen-address.conf
 
@@ -135,5 +137,5 @@ admin-key.pem
 <div class="co-m-docs-next-step">
   <p><strong>Is your etcd cluster up and running?</strong> You need the IPs for the next step.</p>
   <p><strong>Did you generate all of the certificates?</strong> You will place these on disk next.</p>
-  <a href="deploy-master-single.md" class="btn btn-primary btn-icon-right"  data-category="Docs Next" data-event="Kubernetes: Master">Yes, ready to deploy the Master</a>
+  <a href="deploy-master.md" class="btn btn-primary btn-icon-right"  data-category="Docs Next" data-event="Kubernetes: Master">Yes, ready to deploy the Master</a>
 </div>

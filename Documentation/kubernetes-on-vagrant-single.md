@@ -47,7 +47,7 @@ Once Vagrant is finished booting and provisioning your machine, your cluster is 
 
 ## Configure kubectl
 
-Configure your local Kubernetes client using the following commands:
+Once in the `coreos-kubernetes/single-node/` directory, configure your local Kubernetes client using the following commands:
 
 ```
 $ kubectl config set-cluster vagrant --server=https://172.17.4.99:443 --certificate-authority=${PWD}/ssl/ca.pem

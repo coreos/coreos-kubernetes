@@ -20,7 +20,7 @@ First, download the binary using a command-line tool such as `wget` or `curl` fr
 Set the ARCH environment variable to "linux" or "darwin" based no your workstation operating system:
 
 ```sh
-ARCH=linux wget https://storage.googleapis.com/kubernetes-release/release/v1.0.3/bin/$ARCH/amd64/kubectl
+ARCH=linux; wget https://storage.googleapis.com/kubernetes-release/release/v1.0.3/bin/$ARCH/amd64/kubectl
 ```
 
 After downloading the binary, ensure it is executable and move it into your PATH:

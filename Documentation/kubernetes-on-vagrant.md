@@ -17,7 +17,7 @@ The primary CLI tool used to interact with the Kubernetes API is called `kubectl
 This tool is not yet available through the typical means of software distribution, so it is suggested that you download the binary directly from the Kubernetes release artifact site:
 
 First, download the binary using a command-line tool such as `wget` or `curl` from `https://storage.googleapis.com/kubernetes-release/release/v1.0.3/bin/${ARCH}/amd64/kubectl`.
-Set the ARCH environment variable to "linux" or "darwin" based no your workstation operating system:
+Set the ARCH environment variable to "linux" or "darwin" based on your workstation operating system:
 
 ```sh
 ARCH=linux; wget https://storage.googleapis.com/kubernetes-release/release/v1.0.3/bin/$ARCH/amd64/kubectl

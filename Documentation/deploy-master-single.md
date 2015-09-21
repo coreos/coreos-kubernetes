@@ -111,7 +111,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-apiserver
-    image: gcr.io/google_containers/hyperkube:v1.0.3
+    image: gcr.io/google_containers/hyperkube:v1.0.6
     command:
     - /hyperkube
     - apiserver
@@ -169,7 +169,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-proxy
-    image: gcr.io/google_containers/hyperkube:v1.0.3
+    image: gcr.io/google_containers/hyperkube:v1.0.6
     command:
     - /hyperkube
     - proxy
@@ -207,7 +207,7 @@ metadata:
 spec:
   containers:
   - name: kube-controller-manager
-    image: gcr.io/google_containers/hyperkube:v1.0.3
+    image: gcr.io/google_containers/hyperkube:v1.0.6
     command:
     - /hyperkube
     - controller-manager
@@ -256,7 +256,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-scheduler
-    image: gcr.io/google_containers/hyperkube:v1.0.3
+    image: gcr.io/google_containers/hyperkube:v1.0.6
     command:
     - /hyperkube
     - scheduler

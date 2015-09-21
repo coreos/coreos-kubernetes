@@ -1,6 +1,6 @@
 ## Deploy Kubernetes Master Machine
 
-Boot a single CoreOS machine which will be used as the Kubernetes master. You must use a CoreOS version 773.1.0+ for the kubelet to be present in the image.
+Boot a single CoreOS machine which will be used as the Kubernetes master. You must use a CoreOS version 773.1.0+ for the `kubelet` to be present in the image.
 
 See the [CoreOS Documentation](https://coreos.com/os/docs/latest/) for guides on launching nodes on supported platforms.
 
@@ -17,6 +17,13 @@ Place the keys generated previously in the following locations:
 * File: `/etc/kubernetes/ssl/ca.pem`
 * File: `/etc/kubernetes/ssl/apiserver.pem`
 * File: `/etc/kubernetes/ssl/apiserver-key.pem`
+
+And make sure you've set proper permission for private key:
+
+```
+$ sudo chmod 600 /etc/kubernetes/ssl/*-key.pem
+$ sudo chown root:root /etc/kubernetes/ssl/*-key.pem
+```
 
 #### flannel Configuration
 
@@ -269,6 +276,7 @@ metadata:
   name: kube-controller-manager
   namespace: kube-system
 spec:
+  hostNetwork: true
   containers:
   - name: kube-controller-manager
     image: gcr.io/google_containers/hyperkube:v1.0.6
@@ -292,7 +300,6 @@ spec:
     - mountPath: /etc/ssl/certs
       name: ssl-certs-host
       readOnly: true
-  hostNetwork: true
   volumes:
   - hostPath:
       path: /etc/kubernetes/ssl
@@ -390,8 +397,8 @@ A successful response should look something like:
 {
   "major": "1",
   "minor": "0",
-  "gitVersion": "v1.0.3",
-  "gitCommit": "61c6ac5f350253a4dc002aee97b7db7ff01ee4ca",
+  "gitVersion": "v1.0.6",
+  "gitCommit": "388061f00f0d9e4d641f9ed4971c775e1654579d",
   "gitTreeState": "clean"
 }
 ```

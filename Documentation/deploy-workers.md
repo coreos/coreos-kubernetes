@@ -1,6 +1,6 @@
 ## Deploy Worker Node(s)
 
-Boot one or more CoreOS nodes which will be used as Kubernetes Workers. You must use a CoreOS version 773.1.0+ for the kubelet to be present in the image.
+Boot one or more CoreOS nodes which will be used as Kubernetes Workers. You must use a CoreOS version 773.1.0+ for the `kubelet` to be present in the image.
 
 See the [CoreOS Documentation](https://coreos.com/os/docs/latest/) for guides on launching nodes on supported platforms.
 
@@ -13,6 +13,13 @@ Place the TLS keypairs generated previously in the following locations:
 * File: `/etc/kubernetes/ssl/ca.pem`
 * File: `/etc/kubernetes/ssl/worker.pem`
 * File: `/etc/kubernetes/ssl/worker-key.pem`
+
+And make sure you've set proper permission for private key:
+
+```
+$ sudo chmod 600 /etc/kubernetes/ssl/*-key.pem
+$ sudo chown root:root /etc/kubernetes/ssl/*-key.pem
+```
 
 #### flannel Configuration
 

@@ -39,19 +39,19 @@ This network must be routable between all nodes in the cluster. In a default ins
 
 **SERVICE_IP_RANGE**=10.3.0.0/24
 
-The CIDR network to use for service cluster IPs. Each service will be assigned a cluster IP out of this range. This must not overlap with any IP ranges assigned to the POD_NETWORK, or other existing network infrastructure. Routing to these IPs is handled by a kube-proxy service local to each node, and are not required to be routable between nodes.
+The CIDR network to use for service cluster VIPs (Virtual IPs). Each service will be assigned a cluster IP out of this range. This must not overlap with any IP ranges assigned to the `POD_NETWORK`, or other existing network infrastructure. Routing to these VIPs is handled by a local kube-proxy service to each node, and are not required to be routable between nodes.
 
 <hr/>
 
 **K8S_SERVICE_IP**=10.3.0.1
 
-The IP address of the Kubernetes API Service. If the SERVICE_IP_RANGE is changed above, this must be set to the first IP in that range.
+The VIP (Virtual IP) address of the Kubernetes API Service. If the `SERVICE_IP_RANGE` is changed above, this must be set to the first IP in that range.
 
 <hr/>
 
 **DNS_SERVICE_IP**=10.3.0.10
 
-The IP address of the cluster DNS service. This IP must be in the range of the SERVICE_IP_RANGE and cannot be the first IP in the range. This same IP must be configured on all worker nodes to enable DNS service discovery.
+The VIP (Virtual IP) address of the cluster DNS service. This IP must be in the range of the `SERVICE_IP_RANGE` and cannot be the first IP in the range. This same IP must be configured on all worker nodes to enable DNS service discovery.
 
 ## Deploy etcd Cluster
 
@@ -65,7 +65,7 @@ If you are starting etcd manually, we need to first configure it to listen on al
 
 * Replace `${PUBLIC_IP}` with the etcd machines publicly routable IP address.
 
-** /etc/systemd/system/etcd2.service.d/40-listen-address.conf
+**/etc/systemd/system/etcd2.service.d/40-listen-address.conf**
 
 ```
 [Service]

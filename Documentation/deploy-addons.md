@@ -140,12 +140,18 @@ This single YAML file is actually creating 2 different Kubernetes objects, separ
 
 The first object is a service that provides DNS lookups over port 53 for any service that requires it.
 
-The second object is a Replication Controller, which consists of several different containers that work together to provide DNS lookups. There's too much going on to explain it all, but it's using health checks, resource limits, and intra-pod networking over multiple ports. 
+The second object is a Replication Controller, which consists of several different containers that work together to provide DNS lookups. There's too much going on to explain it all, but it's using health checks, resource limits, and intra-pod networking over multiple ports.
 
 Next, start the DNS add-on:
 
 ```sh
 $ kubectl create -f dns-addon.yml
+```
+
+And check for `kube-dns-v9-*` pod up and running:
+
+```sh
+$ kubectl get pods --namespace=kube-system | grep kube-dns-v9
 ```
 
 <div class="co-m-docs-next-step">

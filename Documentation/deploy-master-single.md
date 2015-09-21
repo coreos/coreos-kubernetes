@@ -65,7 +65,7 @@ After=flanneld.service
 
 The kubelet is the agent on each machine that starts and stops Pods and other machine-level tasks. The kubelet communicates to the API server (also running on the master machine) with the TLS certificates we placed on disk earlier.
 
-* Replace `${ADVERTISE_IP}` with this nodes publicly routable IP.
+* Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
 * Replace `${DNS_SERVICE_IP}`
 
 **/etc/systemd/system/kubelet.service**

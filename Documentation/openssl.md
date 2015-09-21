@@ -6,11 +6,13 @@ This is provided as a proof-of-concept guide to get started with Kubernetes clie
 
 ## Deployment Options
 
-The following variables will be used throughout this guide. The default for `K8S_SERVICE_IP` can safely be used, however `MASTER_IP` will need to be customized to your infrastructure.
+The following variables will be used throughout this guide. The default for `K8S_SERVICE_IP` can safely be used, however `MASTER_HOST` will need to be customized to your infrastructure.
 
-**MASTER_IP**=_no default_
+**MASTER_HOST**=_no default_
 
-The IP address of the master node. Worker nodes must be able to reach the master via this IP on port 443. Additionally, external clients (such as an administrator using `kubectl`) will also need access, since this will run the Kubernetes API endpoint.
+The address of the master node. In most cases this will be the publicly routable IP or hostname of the master cluster. Worker nodes must be able to reach the master node(s) via this address on port 443. Additionally, external clients (such as an administrator using `kubectl`) will also need access, since this will run the Kubernetes API endpoint.
+
+If you will be running a highly-available control-plane consisting of multiple master nodes, then `MASTER_HOST` will ideally be a network load balancer that sits in front of the master nodes. Alternatively, a DNS name can be configured which will resolve to the master node IPs. In either case, the certificates which are generated below need to have the correct CommonName and/or SubjectAlternateNames.
 
 <hr/>
 
@@ -36,7 +38,7 @@ You need to store the CA keypair in a secure location for future use.
 This is a minimal openssl config which will be used when creating the api-server certificate. We need to create a configuration file since some of the options we need to use can't be specified as flags. Create `openssl.cnf` on your local machine and replace the following values:
 
 * Replace `${K8S_SERVICE_IP}`
-* Replace `${MASTER_IP}`
+* Replace `${MASTER_HOST}`
 
 **openssl.cnf**
 
@@ -53,7 +55,17 @@ subjectAltName = @alt_names
 DNS.1 = kubernetes
 DNS.2 = kubernetes.default
 IP.1 = ${K8S_SERVICE_IP}
-IP.2 = ${MASTER_IP}
+IP.2 = ${MASTER_HOST}
+```
+
+If you are deploying multiple master nodes in an HA configuration, you may need to add additional IP or DNS SubjectAltNames. What is configured depends on how worker nodes and `kubectl` users will be contact the master nodes (directly, via loadbalancer, via DNS name).
+
+Example:
+
+```
+DNS.3 = ${MASTER_DNS_NAME}
+IP.3 = ${MASTER_IP}
+IP.4 = ${MASTER_LOADBALANCER_IP}
 ```
 
 ## Generate the API Server Keypair

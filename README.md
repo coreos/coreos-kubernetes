@@ -27,6 +27,6 @@ https://coreos.com/kubernetes/docs/latest/
 
 ## Deploying on CoreOS
 
-- [Step-by-Step for Any Platform](getting-started.md)
+- [Step-by-Step for Any Platform](Documentation/getting-started.md)
 - [Single-Node Vagrant Stack](single-node/README.md)
 - [Multi-Node Vagrant Cluster](multi-node/vagrant/README.md)

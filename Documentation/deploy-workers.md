@@ -16,17 +16,28 @@ Place the TLS keypairs generated previously in the following locations:
 
 #### flannel Configuration
 
-Just like earlier, create `/run/flannel/options.env` and modify these values:
+Just like earlier, create `/etc/flannel/options.env` and modify these values:
 
 * Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
 * Replace `${ETCD_ENDPOINTS}`
 
-**/run/flannel/options.env**
+**/etc/flannel/options.env**
 
 ```yaml
 FLANNELD_IFACE=${ADVERTISE_IP}
 FLANNELD_ETCD_ENDPOINTS=${ETCD_ENDPOINTS}
 ```
+
+Next create a [systemd drop-in][dropins], which will use the above configuration when flannel starts
+
+**/etc/systemd/system/flanneld.service.d/40-ExecStartPre-symlink.conf**
+
+```yaml
+[Service]
+ExecStartPre=/usr/bin/ln -sf /etc/flannel/options.env /run/flannel/options.env
+```
+
+[dropins]: https://coreos.com/os/docs/latest/using-systemd-drop-in-units.html
 
 #### Docker Configuration
 

@@ -12,6 +12,16 @@ Navigate to the [Vagrant downloads page][vagrant-downloads] and grab the appropr
 
 [vagrant-downloads]: https://www.vagrantup.com/downloads.html
 
+##### Proxy Support
+
+For http proxy support, install the vagrant-proxyconf plugin.
+
+```sh
+vagrant plugin install vagrant-proxyconf
+```
+
+The provisioning scripts will detect if an HTTP_PROXY environment variable is set and will configure appropriately.
+
 ### kubectl
 
 The primary CLI tool used to interact with the Kubernetes API is called `kubectl`.

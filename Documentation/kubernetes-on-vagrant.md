@@ -36,7 +36,7 @@ The following commands will clone a repository that contains a "Vagrantfile", wh
 
 ```sh
 $ git clone https://github.com/coreos/coreos-kubernetes.git
-$ cd coreos-kubernetes/multi-node/
+$ cd coreos-kubernetes/multi-node/vagrant
 ```
 
 ## Start the Machines

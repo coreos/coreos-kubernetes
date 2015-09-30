@@ -30,6 +30,7 @@ https://coreos.com/kubernetes/docs/latest/
 - [Step-by-Step for Any Platform](Documentation/getting-started.md)
 - [Single-Node Vagrant Stack](single-node/README.md)
 - [Multi-Node Vagrant Cluster](multi-node/vagrant/README.md)
+- [Multi-Node AWS Cluster](multi-node/aws/README.md)
 
 ## Running Kubernetes Conformance Tests
 

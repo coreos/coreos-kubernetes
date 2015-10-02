@@ -194,7 +194,7 @@ The coreos-kubernetes artifacts are available at a default location, but the loc
 It is the responsibility of the deployer to establish the TLS infrastructure needed to secure the Kubernetes cluster.
 All keys and certs must be PEM-formatted and base64-encoded.
 
-##### APIServerCert, APIServerKey
+**APIServerCert, APIServerKey**
 
 The certificate and key granted to the kube-apiserver.
 This certificate will be presented to external clients of the Kubernetes cluster, so it should be valid for external DNS names, if necessary.
@@ -208,12 +208,12 @@ Additionally, the certificate must have the following SANs:
 - kubernetes.default.svc
 - kubernetes.default.svc.cluster.local
 
-##### WorkerCert, WorkerKey
+**WorkerCert, WorkerKey**
 
 The certificate and key granted to the kubelets on worker instances.
 The certificate is shared across all workers, so it must be valid for all worker hostnames.
 This is achievable with the SAN `*.*.cluster.internal`, or `*.ec2.internal` if using the us-east-1 AWS region.
 
-##### CACert
+**CACert**
 
 The certificate authority's TLS certificate used to sign other certificates in the cluster.

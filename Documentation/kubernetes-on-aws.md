@@ -13,7 +13,7 @@ Choose one of the following paths to get started:
 
 	Click the following Launch Stack button, then use the [Configuration Guide](#cloudformation-template-parameters) later in this document to decide how to set the CloudFormation template parameters:
 
-	<a href="https://console.aws.amazon.com/cloudformation/home?region=us-west-1#/stacks/new?templateURL=https:%2F%2Fcoreos-kubernetes.s3.amazonaws.com%2Flatest%2Ftemplate.json" target="_blank">
+	<a href="https://console.aws.amazon.com/cloudformation/home#/stacks/new?templateURL=https:%2F%2Fcoreos-kubernetes.s3.amazonaws.com%2Flatest%2Ftemplate.json" target="_blank">
 	<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png" alt="Launch Stack">
 	</a>
 

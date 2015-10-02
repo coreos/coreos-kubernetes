@@ -192,7 +192,7 @@ The coreos-kubernetes artifacts are available at a default location, but the loc
 #### Certs & Keys
 
 It is the responsibility of the deployer to establish the TLS infrastructure needed to secure the Kubernetes cluster.
-All keys and certs must be PEM-formatted.
+All keys and certs must be PEM-formatted and base64-encoded.
 
 ##### APIServerCert, APIServerKey
 

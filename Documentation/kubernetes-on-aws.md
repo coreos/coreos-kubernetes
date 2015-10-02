@@ -148,7 +148,7 @@ The coreos-kubernetes artifacts are available at a default location, but the loc
 #### externalDNSName
 
 This DNS name is assumed to be routable from outside the cluster to the Kubernetes API.
-It is automatically added as a SAN to the kube-apiserver TLS certificate.
+It is automatically added as a Subject Alternative Names (SANs) to the kube-apiserver TLS certificate.
 
 ### CloudFormation Template Parameters
 
@@ -199,7 +199,8 @@ All keys and certs must be PEM-formatted and base64-encoded.
 The certificate and key granted to the kube-apiserver.
 This certificate will be presented to external clients of the Kubernetes cluster, so it should be valid for external DNS names, if necessary.
 
-Additionally, the certificate must have the following SANs:
+Additionally, the certificate must have the following Subject Alternative Names (SANs).
+These IPs and DNS names are used within the cluster to route from applications to the Kubernetes API:
 
 - 10.0.0.50
 - 10.3.0.1
@@ -212,7 +213,7 @@ Additionally, the certificate must have the following SANs:
 
 The certificate and key granted to the kubelets on worker instances.
 The certificate is shared across all workers, so it must be valid for all worker hostnames.
-This is achievable with the SAN `*.*.cluster.internal`, or `*.ec2.internal` if using the us-east-1 AWS region.
+This is achievable with the Subject Alternative Name (SAN) `*.*.cluster.internal`, or `*.ec2.internal` if using the us-east-1 AWS region.
 
 **CACert**
 

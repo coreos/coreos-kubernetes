@@ -78,7 +78,7 @@ Each component certificate is only valid for 90 days, while the CA is valid for 
 If deploying a production Kubernetes cluster, consider establishing PKI independently of this tool first.
 
 Navigate to the DNS registrar hosting the zone for the provided external DNS name and ensure a single A record exists, routing the value of `externalDNSName` defined in `cluster.yaml` to the externally-accessible IP of the controller instance.
-You may use `kube-aws describe` to get this value after cluster creation, if necessary.
+You may use `kube-aws status` to get this value after cluster creation, if necessary.
 
 A kubectl config file will be written to `./clusters/<cluster-name>/kubeconfig`, which can be used to interact with your Kubernetes cluster like so:
 
@@ -104,7 +104,7 @@ After generating the necessary TLS infrastructure, `kube-aws` creates a new Clou
 The CloudFormation template encompasses everything necessary to deploy the cluster.
 
 After some time, the cluster will come up and start serving API requests.
-You can view the current state of the cluster, including the publicly-routable IP address, using `kube-aws describe`.
+You can view the current state of the cluster, including the publicly-routable IP address, using `kube-aws status`.
 `kube-aws` generates a kubeconfig file pre-configured with the admin TLS certificates that can be used with kubectl to interact with the cluster.
 
 When the cluster is taken down, `kube-aws` simply destroys the CloudFormation and the local workspace.

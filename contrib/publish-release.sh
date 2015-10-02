@@ -23,6 +23,7 @@ echo "Built kube-aws binary for local system"
 echo "Generated CloudFormation template"
 
 aws s3 cp --recursive --acl=public-read artifacts/ s3://${S3_BUCKET}/${VERSION}
+aws s3 cp --recursive --acl=public-read artifacts/ s3://${S3_BUCKET}/latest
 echo "Copied artifacts to S3 bucket"
 
 popd

@@ -199,7 +199,8 @@ All keys and certs must be PEM-formatted and base64-encoded.
 The certificate and key granted to the kube-apiserver.
 This certificate will be presented to external clients of the Kubernetes cluster, so it should be valid for external DNS names, if necessary.
 
-Additionally, the certificate must have the following Subject Alternative Names (SANs):
+Additionally, the certificate must have the following Subject Alternative Names (SANs).
+These IPs and DNS names are used within the cluster to route from applications to the Kubernetes API:
 
 - 10.0.0.50
 - 10.3.0.1

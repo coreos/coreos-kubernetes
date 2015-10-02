@@ -50,10 +50,10 @@ Either due to single-node installations, or installation default settings, a cou
 
 ### Single Node
 
-- *should proxy to cadvisor*: We disable cadvisor from listening on all iterfaces: `--cadvisor-port=0`
+- *should proxy to cadvisor*: We disable cadvisor from listening on all interfaces: `--cadvisor-port=0`
 - *should function for intra-pod communication*: Single node installation has no additional workers to communicate with.
 
 ### Multi Node
 
-- *should proxy to cadvisor*: We disable cadvisor from listening on all iterfaces: `--cadvisor-port=0`
+- *should proxy to cadvisor*: We disable cadvisor from listening on all interfaces: `--cadvisor-port=0`
 

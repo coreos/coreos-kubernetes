@@ -49,8 +49,9 @@ etcd_endpoints = etcdIPs.map.with_index{ |ip, i| "http://#{ip}:2379" }.join(",")
 
 # Configure SSL certificates
 if !File.exist?(SSL_CONTROLLER_PATH) || !File.exists?(SSL_WORKER_PATH) then
-    sans = "IP.1=10.3.0.1," + controllerIPs.map.with_index { |ip, i| "IP.#{i+2}=#{ip}"}.join(",")
-    system("mkdir -p ssl && ./init-ssl ssl #{sans}") or abort ("failed generating SSL artifacts")
+  controller_sans = "IP.1=10.3.0.1," + controllerIPs.map.with_index { |ip, i| "IP.#{i+2}=#{ip}"}.join(",")
+  worker_sans = "IP.1=10.3.0.1," + workerIPs.map.with_index { |ip, i| "IP.#{i+2}=#{ip}"}.join(",")
+  system("mkdir -p ssl && ./init-ssl ssl #{controller_sans} #{worker_sans}") or abort ("failed generating SSL artifacts")
 end
 
 Vagrant.configure("2") do |config|

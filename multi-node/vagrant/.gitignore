@@ -1,3 +1,5 @@
 .vagrant
 config.rb
 ssl/
+.dockercfg
+

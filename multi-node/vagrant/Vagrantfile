@@ -92,6 +92,12 @@ Vagrant.configure("2") do |config|
     vb.gui = false
   end
 
+  if File.file?("./.dockercfg") then
+    config.vm.provision :file, :source => "./.dockercfg", :destination => "/home/core/.dockercfg"
+    config.vm.provision :shell, :inline => "cp /home/core/.dockercfg /root/.dockercfg", :privileged => true
+    config.vm.provision :shell, :inline => "cp /home/core/.dockercfg /.dockercfg", :privileged => true
+  end
+
   (1..$etcd_count).each do |i|
     config.vm.define vm_name = "e%d" % i do |etcd|
 

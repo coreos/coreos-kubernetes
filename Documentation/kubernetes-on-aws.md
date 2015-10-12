@@ -219,4 +219,4 @@ This is achievable with the Subject Alternative Name (SAN) `*.*.cluster.internal
 
 **CACert**
 
-The certificate authority's TLS certificate used to sign other certificates in the cluster.
+The certificate authority's TLS certificate is used to sign other certificates in the cluster.

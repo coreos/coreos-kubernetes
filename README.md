@@ -1,6 +1,6 @@
 # Kubernetes on CoreOS
 
-This repo contains tooling and documention around deploying Kubernetes using CoreOS.
+This repo contains tooling and documentation around deploying Kubernetes using CoreOS.
 Initial setup of a Kubernetes cluster is covered, but ongoing maintenance and updates of the cluster is not addressed.
 It is officially maintained by the CoreOS team and meant to be a set of introductory documentation to get a feel for using Kubernetes on CoreOS.
 

@@ -23,6 +23,8 @@ $ sudo chown root:root /etc/kubernetes/ssl/*-key.pem
 
 #### flannel Configuration
 
+*Note:* If the pod-network is being managed independently of flannel, this step can be skipped. See [kubernetes networking](kubernetes-networking.md) for more detail.
+
 Just like earlier, create `/etc/flannel/options.env` and modify these values:
 
 * Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
@@ -47,6 +49,8 @@ ExecStartPre=/usr/bin/ln -sf /etc/flannel/options.env /run/flannel/options.env
 [dropins]: https://coreos.com/os/docs/latest/using-systemd-drop-in-units.html
 
 #### Docker Configuration
+
+*Note:* If the pod-network is being managed independently of flannel, this step can be skipped. See [kubernetes networking](kubernetes-networking.md) for more detail.
 
 Require that flanneld is running prior to Docker start.
 

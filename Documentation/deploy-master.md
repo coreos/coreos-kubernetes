@@ -29,6 +29,8 @@ $ sudo chown root:root /etc/kubernetes/ssl/*-key.pem
 
 [flannel][flannel-docs] provides a key Kubernetes networking capability &mdash; a software-defined overlay network to manage routing of the [Pod][pod-overview] network.
 
+*Note:* If the pod-network is being managed independently of flannel, this step can be skipped. See [kubernetes networking](kubernetes-networking.md) for more detail.
+
 We will configure flannel to source its local configuration in `/etc/flannel/options.env` and cluster-level configuration in etcd. Create this file and edit the contents:
 
 * Replace `${ADVERTISE_IP}` with this machine's publicly routable IP.
@@ -57,6 +59,8 @@ ExecStartPre=/usr/bin/ln -sf /etc/flannel/options.env /run/flannel/options.env
 #### Docker Configuration
 
 In order for flannel to manage the pod network in the cluster, Docker needs to be configured to use it. All we need to do is require that flanneld is running prior to Docker starting.
+
+*Note:* If the pod-network is being managed independently of flannel, this step can be skipped. See [kubernetes networking](kubernetes-networking.md) for more detail.
 
 We're going to do this with a [systemd drop-in][dropins], which is a method for appending or overriding parameters of a systemd unit. In this case we're appending two dependency rules. Create the drop-in:
 

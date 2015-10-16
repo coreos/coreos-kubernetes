@@ -21,9 +21,9 @@ $ mv kubectl /usr/local/bin/kubectl
 Configure your local Kubernetes client using the following commands:
 
 * Replace `${MASTER_HOST}`
-* Replace `${CA_CERT}` with the path to the `ca.pem` created in previous steps
-* Replace `${ADMIN_KEY}` with the path to the `admin-key.pem` created in previous steps
-* Replace `${ADMIN_CERT}` with the path to the `admin.pem` created in previous steps
+* Replace `${CA_CERT}` with the absolute path to the `ca.pem` created in previous steps
+* Replace `${ADMIN_KEY}` with the absolute path to the `admin-key.pem` created in previous steps
+* Replace `${ADMIN_CERT}` with the absolute path to the `admin.pem` created in previous steps
 
 ```sh
 $ kubectl config set-cluster vagrant --server=https://${MASTER_HOST} --certificate-authority=${CA_CERT}

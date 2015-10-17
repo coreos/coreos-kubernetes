@@ -361,7 +361,7 @@ Earlier it was mentioned that flannel stores cluster-level configuration in etcd
 * Replace `$ETCD_SERVER` with one host from `$ETCD_ENDPOINTS`
 
 ```sh
-$ curl -X PUT -d "value={\"Network\":\"$POD_NETWORK\"}" "$ETCD_SERVER/v2/keys/coreos.com/network/config"
+$ curl -X PUT -d "value={\"Network\":\"$POD_NETWORK\",\"Backend\":{\"Type\":\"vxlan\"}}" "$ETCD_SERVER/v2/keys/coreos.com/network/config"
 ```
 
 #### Start kubelet

@@ -5,8 +5,8 @@
 OPENSSL=/usr/bin/openssl
 
 function usage {
-    echo "USAGE: $0 <output-dir> [SAN,SAN,SAN]"
-    echo "  example: $0 ./ssl IP.1=127.0.0.1,IP.2=10.0.0.1"
+    echo "USAGE: $0 <output-dir> [CONTROLLER_SAN,CONTROLLER_SAN] [WORKER_SAN,WORKER_SAN]"
+    echo "  example: $0 ./ssl IP.1=127.0.0.1,IP.2=10.0.0.1 IP.1=172.16.8.4,IP.2=172.16.8.6"
 }
 
 if [ -z "$1" ]; then
@@ -20,7 +20,8 @@ if [ ! -d $1 ]; then
 fi
 
 OUTDIR=$1
-SANS=$2
+API_SANS=$2
+WORKER_SANS=$3
 
 OUTFILE_CONTROLLER="$OUTDIR/controller.tar"
 OUTFILE_WORKER="$OUTDIR/worker.tar"
@@ -44,7 +45,8 @@ DNS.2 = kubernetes.default
 echo "Generating SSL artifacts in $OUTDIR"
 
 # Add SANs to openssl config
-echo "$CNF_TEMPLATE$(echo $SANS | tr ',' '\n')" > $OUTDIR/apiserver-req.cnf
+echo "$CNF_TEMPLATE$(echo $API_SANS | tr ',' '\n')" > $OUTDIR/apiserver-req.cnf
+echo "$CNF_TEMPLATE$(echo $WORKER_SANS | tr ',' '\n')" > $OUTDIR/worker-req.cnf
 
 # establish cluster CA and self-sign a cert
 $OPENSSL genrsa -out $OUTDIR/ca-key.pem 2048
@@ -57,8 +59,8 @@ $OPENSSL x509 -req -in $OUTDIR/apiserver.csr -CA $OUTDIR/ca.pem -CAkey $OUTDIR/c
 
 # create worker key and signed cert
 $OPENSSL genrsa -out $OUTDIR/worker-key.pem 2048
-$OPENSSL req -new -key $OUTDIR/worker-key.pem -out $OUTDIR/worker.csr -subj "/CN=kube-worker"
-$OPENSSL x509 -req -in $OUTDIR/worker.csr -CA $OUTDIR/ca.pem -CAkey $OUTDIR/ca-key.pem -CAcreateserial -out $OUTDIR/worker.pem -days 365
+$OPENSSL req -new -key $OUTDIR/worker-key.pem -out $OUTDIR/worker.csr -subj "/CN=kube-worker" -config $OUTDIR/worker-req.cnf
+$OPENSSL x509 -req -in $OUTDIR/worker.csr -CA $OUTDIR/ca.pem -CAkey $OUTDIR/ca-key.pem -CAcreateserial -out $OUTDIR/worker.pem -days 365 -extensions v3_req -extfile $OUTDIR/worker-req.cnf
 
 # create admin key and signed cert
 $OPENSSL genrsa -out $OUTDIR/admin-key.pem 2048

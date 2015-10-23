@@ -31,6 +31,7 @@ https://coreos.com/kubernetes/docs/latest/
 - [Single-Node Vagrant Stack](single-node/README.md)
 - [Multi-Node Vagrant Cluster](multi-node/vagrant/README.md)
 - [Multi-Node AWS Cluster](multi-node/aws/README.md)
+- [Multi-Node Bare Metal Cluster](Documentation/kubernetes-on-baremetal.md)
 
 ## Running Kubernetes Conformance Tests
 

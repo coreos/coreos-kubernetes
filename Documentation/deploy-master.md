@@ -267,11 +267,11 @@ The controller manager is responsible for reconciling any required actions based
 
 For example, if you increased the replica count, the controller manager would generate a scale up event, which would cause a new Pod to get scheduled in the cluster. The controller manager communicates with the API to submit these events.
 
-Create `/srv/kubernetes/manifests/kube-controller-manager.yaml`. It will use the TLS certificate placed on disk earlier.
+Create `/etc/kubernetes/manifests/kube-controller-manager.yaml`. It will use the TLS certificate placed on disk earlier.
 
 [rc-overview]: https://coreos.com/kubernetes/docs/latest/replication-controller.html
 
-**/srv/kubernetes/manifests/kube-controller-manager.yaml**
+**/etc/kubernetes/manifests/kube-controller-manager.yaml**
 
 ```yaml
 apiVersion: v1

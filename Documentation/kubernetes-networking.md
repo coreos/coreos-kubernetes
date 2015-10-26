@@ -15,7 +15,7 @@ The Kubernetes network model outlines four methods of component communication:
 
 See [Kubernetes Networking][kubernetes-network] for more detailed information on the Kubernetes network model and motiviation.
 
-[kubernetes-network]: http://kubernetes.io/v1.0/docs/admin/networking.htm
+[kubernetes-network]: http://kubernetes.io/v1.0/docs/admin/networking.html
 
 ## Port allocation
 

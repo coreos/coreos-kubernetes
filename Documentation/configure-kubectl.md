@@ -26,10 +26,10 @@ Configure your local Kubernetes client using the following commands:
 * Replace `${ADMIN_CERT}` with the absolute path to the `admin.pem` created in previous steps
 
 ```sh
-$ kubectl config set-cluster vagrant --server=https://${MASTER_HOST} --certificate-authority=${CA_CERT}
-$ kubectl config set-credentials vagrant-admin --certificate-authority=${CA_CERT} --client-key=${ADMIN_KEY} --client-certificate=${ADMIN_CERT}
-$ kubectl config set-context vagrant --cluster=vagrant --user=vagrant-admin
-$ kubectl config use-context vagrant
+$ kubectl config set-cluster default-cluster --server=https://${MASTER_HOST} --certificate-authority=${CA_CERT}
+$ kubectl config set-credentials default-admin --certificate-authority=${CA_CERT} --client-key=${ADMIN_KEY} --client-certificate=${ADMIN_CERT}
+$ kubectl config set-context default-system --cluster=default-cluster --user=default-admin
+$ kubectl config use-context default-system
 ```
 
 Check that your client is configured properly by using `kubectl` to inspect your cluster:

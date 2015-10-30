@@ -8,13 +8,14 @@ require 'yaml'
 
 Vagrant.require_version ">= 1.6.0"
 
-
+CLUSTER_IP="10.3.0.1"
 NODE_IP = "172.17.4.99"
 USER_DATA_PATH = File.expand_path("user-data")
 SSL_TARBALL_PATH = File.expand_path("ssl/controller.tar")
 
 if !File.exist?(SSL_TARBALL_PATH) then
-    system("mkdir -p ssl && ./init-ssl ssl IP.1=10.3.0.1,IP.2=#{NODE_IP}") or abort ("failed generating SSL artifacts")
+  system("mkdir -p ssl && ./../lib/init-ssl-ca ssl") or abort ("failed generating SSL CA artifacts")
+  system("./../lib/init-ssl ssl apiserver controller IP.1=#{NODE_IP},IP.2=#{CLUSTER_IP}") or abort ("failed generating SSL certificate artifacts")
 end
 
 Vagrant.configure("2") do |config|

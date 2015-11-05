@@ -1,0 +1,14 @@
+<network>
+  <name>kubernetes</name>
+  <uuid>dcbef342-16a3-4f3e-8307-84bff91076e1</uuid>
+  <forward mode='nat'/>
+  <bridge name='virbr0' stp='on' delay='0'/>
+  <mac address='52:54:00:ba:7a:cb'/>
+  <ip address='192.168.122.1' netmask='255.255.255.0'>
+    <dhcp>
+      <range start='192.168.122.2' end='192.168.122.254'/>
+      <host mac='fe:54:00:fe:b3:c0' name='kube-master' ip='192.168.122.10'/>
+      <host mac='fe:54:00:fe:b3:c1' name='kube-worker' ip='192.168.122.11'/>
+    </dhcp>
+  </ip>
+</network>

@@ -41,7 +41,7 @@ function init_config {
 
     if [ -z $ADVERTISE_IP ]; then
         # There is no metadata service to reference, so rely on the network configuration.
-        export $(ifconfig eth0 | awk '/inet /{print $2}')
+        export ADVERTISE_IP=$(ifconfig eth0 | awk '/inet /{print $2}')
     fi
 
     for REQ in "${REQUIRED[@]}"; do

@@ -31,6 +31,10 @@ cd /var/lib/libvirt/images/coreos
 ssh-keygen -t rsa -b 2048 -f vm_key
 ```
 
+## Generate TLS keys
+
+TODO
+
 ## Set up config drive
 
 Now create a config drive file system to configure CoreOS itself. We will use
@@ -56,5 +60,25 @@ The `user_data` scripts will install the necessary Kubernetes manifests and
 assume a certain preconfigured network structure.
 
 ## Network configuration
+
+```
+# virsh net-define $CLONEDIR/multi-node/libvirt/network-kubernetes.xml
+# virsh net-autostart kubernetes
+# virsh net-start kubernetes
+```
+
+## Virtual machine startup
+
+kube-master
+```
+virt-install --connect qemu:///system --import --name kube-master --ram 1024 --vcpus 1 --os-type=linux --os-variant=virtio26 --disk path=/var/lib/libvirt/images/coreos/kube-master.qcow2,format=qcow2,bus=virtio --filesystem /var/lib/libvirt/images/coreos/kube-master/,config-2,type=mount,mode=squash --network bridge=virbrk8s,mac=54:52:00:fe:b3:b0 --vnc --noautoconsole
+```
+
+kube-worker
+```
+virt-install --connect qemu:///system --import --name kube-worker --ram 1024 --vcpus 1 --os-type=linux --os-variant=virtio26 --disk path=/var/lib/libvirt/images/coreos/kube-worker.qcow2,format=qcow2,bus=virtio --filesystem /var/lib/libvirt/images/coreos/kube-worker/,config-2,type=mount,mode=squash --network bridge=virbrk8s,mac=54:52:00:fe:b3:b1 --vnc --noautoconsole
+```
+
+## Configure kubectl
 
 TODO

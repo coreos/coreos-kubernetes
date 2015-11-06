@@ -582,7 +582,7 @@ add_authorized_key
 init_config
 init_templates
 
-systemctl set-environment ETCD_LISTEN_CLIENT_URLS="http://${ADVERTISE_IP}:2379"
+systemctl set-environment ETCD_LISTEN_CLIENT_URLS="http://${ADVERTISE_IP}:2379,http://127.0.0.1:2379"
 systemctl set-environment ETCD_ADVERTISE_CLIENT_URLS="http://${ADVERTISE_IP}:2379"
 systemctl enable etcd2; systemctl start etcd2;
 

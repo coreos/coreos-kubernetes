@@ -12,8 +12,8 @@ import (
 )
 
 type ClusterInfo struct {
-	Name         string
-	ControllerIP string
+	Name  string
+	VpnIP string
 }
 
 func (c *ClusterInfo) String() string {
@@ -22,7 +22,8 @@ func (c *ClusterInfo) String() string {
 	w.Init(buf, 0, 8, 0, '\t', 0)
 
 	fmt.Fprintf(w, "Cluster Name:\t%s\n", c.Name)
-	fmt.Fprintf(w, "Controller IP:\t%s\n", c.ControllerIP)
+	fmt.Fprintf(w, "Controller IP:\t10.0.0.50\n")
+	fmt.Fprintf(w, "VPN IP:\t%s\n", c.VpnIP)
 
 	w.Flush()
 	return buf.String()

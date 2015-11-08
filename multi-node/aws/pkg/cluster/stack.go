@@ -78,9 +78,14 @@ func mapStackResourcesToClusterInfo(svc *ec2.EC2, resources []cloudformation.Sta
 	var info ClusterInfo
 	for _, r := range resources {
 		switch aws.StringValue(r.LogicalResourceId) {
+		case resNameEipVpn:
+			if r.PhysicalResourceId != nil {
+				info.ControllerIP = *r.PhysicalResourceId
+			} else {
+				return nil, fmt.Errorf("unable to get public IP of VPN instance")
+			}
 		}
 	}
-	return nil, fmt.Errorf("unable to get public IP of controller instance")
 
 	return &info, nil
 }

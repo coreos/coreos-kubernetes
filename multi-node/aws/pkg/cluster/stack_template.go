@@ -18,7 +18,6 @@ const (
 	resNameSecurityGroupController      = "SecurityGroupController"
 	resNameSecurityGroupWorker          = "SecurityGroupWorker"
 	resNameInstanceController           = "InstanceController"
-	resNameEIPController                = "EIPController"
 	resNameAlarmControllerRecover       = "AlarmControllerRecover"
 	resNameAutoScaleWorker              = "AutoScaleWorker"
 	resNameLaunchConfigurationWorker    = "LaunchConfigurationWorker"
@@ -370,14 +369,6 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 			"Roles": []map[string]interface{}{
 				newRef(resNameIAMRoleWorker),
 			},
-		},
-	}
-
-	res[resNameEIPController] = map[string]interface{}{
-		"Type": "AWS::EC2::EIP",
-		"Properties": map[string]interface{}{
-			"InstanceId": newRef(resNameInstanceController),
-			"Domain":     "vpc",
 		},
 	}
 

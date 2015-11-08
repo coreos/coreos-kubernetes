@@ -385,7 +385,7 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 			"NetworkInterfaces": []map[string]interface{}{
 				map[string]interface{}{
 					"PrivateIpAddress":         "10.0.0.50",
-					"AssociatePublicIpAddress": false,
+					"AssociatePublicIpAddress": true,
 					"DeleteOnTermination":      true,
 					"DeviceIndex":              "0",
 					"SubnetId":                 newRef(resNameSubnet),

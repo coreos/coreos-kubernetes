@@ -568,17 +568,30 @@ function start_addons {
 }
 
 function add_authorized_key() {
-    echo "Adding user's authorized key..."
-
     local PUBKEY="/media/configvirtfs/openstack/latest/vm_key.pub"
     local AUTHORIZED_KEYS="/home/core/.ssh/authorized_keys"
 
-    if [ -e "${PUBKEY}" ]; then
+    if [ ! -e "${AUTHORIZED_KEYS}" ] && [ -e "${PUBKEY}" ]; then
+        echo "Adding user's authorized key..."
         cat "${PUBKEY}" >> "${AUTHORIZED_KEYS}"
     fi
 }
 
+function deploy_tls_assets() {
+    local CERTS="/media/configvirtfs/openstack/latest/kube-apiserver.tar"
+    local CERT_DIR="/etc/kubernetes/ssl"
+
+    if [ ! -e "${CERT_DIR}/ca.pem" ] && [ -e "${CERTS}" ]; then
+        mkdir -p "${CERT_DIR}"
+        tar -C "${CERT_DIR}" -xf "${CERTS}"
+        chmod 600 "${CERT_DIR}/apiserver-key.pem"
+        chown root:root "${CERT_DIR}/apiserver-key.pem"
+    fi
+}
+
 add_authorized_key
+deploy_tls_assets
+
 init_config
 init_templates
 

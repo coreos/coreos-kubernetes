@@ -22,6 +22,11 @@ qemu-img create -f qcow2 -b coreos_production_qemu_image.img kube-worker.qcow2
 These images will store the differences between the VM and the base image
 separately for each machine.
 
+## Generate TLS keys
+
+See the included script `gentls.sh` for steps. Running the script will generate
+a new CA, issue certs for the master, worker, and `kubectl` command line tool.
+
 ## Generate ssh keys
 
 It is good practice to use dedicated credentials for accessing guest systems.
@@ -30,10 +35,6 @@ Generate a new SSH keypair like this:
 cd /var/lib/libvirt/images/coreos
 ssh-keygen -t rsa -b 2048 -f vm_key
 ```
-
-## Generate TLS keys
-
-TODO
 
 ## Set up config drive
 
@@ -45,14 +46,18 @@ need to operate. Assuming you have cloned `coreos-kubernetes` to $CLONEDIR:
 
 For kube-master:
 ```
+cd /var/lib/libvirt/images/coreos
 cp -R $CLONEDIR/multi-node/libvirt/kube-master /var/lib/libvirt/images/coreos/
+cp $CLONEDIR/multi-node/libvirt/certs/kube-apiserver.tar /var/lib/libvirt/images/coreos/kube-master/openstack/latest/
 cp vm_key.pub /var/lib/libvirt/images/coreos/kube-master/openstack/latest/
 
 ```
 
 For kube-worker:
 ```
+cd /var/lib/libvirt/images/coreos
 cp -R $CLONEDIR/multi-node/libvirt/kube-worker /var/lib/libvirt/images/coreos/
+cp $CLONEDIR/multi-node/libvirt/certs/kube-worker.tar /var/lib/libvirt/images/coreos/kube-worker/openstack/latest/
 cp vm_key.pub /var/lib/libvirt/images/coreos/kube-worker/openstack/latest/
 ```
 
@@ -80,5 +85,11 @@ virt-install --connect qemu:///system --import --name kube-worker --ram 1024 --v
 ```
 
 ## Configure kubectl
-
-TODO
+Assuming you have cloned `coreos-kubernetes` to $CLONEDIR and run `gentls.sh`:
+```
+MASTER_HOST=192.168.120.10 CA_CERT=$CLONEDIR/multi-node/libvirt/certs/ca.pem ADMIN_KEY=$CLONEDIR/multi-node/libvirt/certs/admin-key.pem ADMIN_CERT=$CLONEDIR/multi-node/libvirt/certs/admin.pem
+kubectl config set-cluster default-cluster --server=https://${MASTER_HOST} --certificate-authority=${CA_CERT}
+kubectl config set-credentials default-admin --certificate-authority=${CA_CERT} --client-key=${ADMIN_KEY} --client-certificate=${ADMIN_CERT}
+kubectl config set-context default-system --cluster=default-cluster --user=default-admin
+kubectl config use-context default-system
+```

@@ -2,12 +2,12 @@
 set -e
 
 # List of etcd servers (http://ip:port), comma separated
-export ETCD_ENDPOINTS="http://192.168.122.10:2379"
+export ETCD_ENDPOINTS="http://192.168.120.10:2379"
 
 # The endpoint the worker node should use to contact controller nodes (https://ip:port)
 # In HA configurations this should be an external DNS record or loadbalancer in front of the control nodes.
 # However, it is also possible to point directly to a single control node.
-export CONTROLLER_ENDPOINT="https://192.168.122.10:443"
+export CONTROLLER_ENDPOINT="https://192.168.120.10:443"
 
 # Specify the version (vX.Y.Z) of Kubernetes assets to deploy
 export K8S_VER=v1.0.7
@@ -171,17 +171,30 @@ EOF
 }
 
 function add_authorized_key() {
-    echo "Adding user's authorized key..."
-
     local PUBKEY="/media/configvirtfs/openstack/latest/vm_key.pub"
     local AUTHORIZED_KEYS="/home/core/.ssh/authorized_keys"
 
-    if [ -e "${PUBKEY}" ]; then
+    if [ ! -e "${AUTHORIZED_KEYS}" ] && [ -e "${PUBKEY}" ]; then
+        echo "Adding user's authorized key..."
         cat "${PUBKEY}" >> "${AUTHORIZED_KEYS}"
     fi
 }
 
+function deploy_tls_assets() {
+    local CERTS="/media/configvirtfs/openstack/latest/kube-worker.tar"
+    local CERT_DIR="/etc/kubernetes/ssl"
+
+    if [ ! -e "${CERT_DIR}/ca.pem" ] && [ -e "${CERTS}" ]; then
+        mkdir -p "${CERT_DIR}"
+        tar -C "${CERT_DIR}" -xf "${CERTS}"
+        chmod 600 "${CERT_DIR}/worker-key.pem"
+        chown root:root "${CERT_DIR}/worker-key.pem"
+    fi
+}
+
 add_authorized_key
+deploy_tls_assets
+
 init_config
 init_templates
 

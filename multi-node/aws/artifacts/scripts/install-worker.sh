@@ -34,6 +34,13 @@ EOF
 " > $2
 }
 
+function install_kubelet {
+	mkdir /opt
+	cd /opt
+	curl -sLO https://storage.googleapis.com/kubernetes-release/release/v1.1.1/bin/linux/amd64/kubelet
+	chmod a+rx /opt/kubelet
+}
+
 function init_config {
 	local REQUIRED=( 'ADVERTISE_IP' 'ETCD_ENDPOINTS' 'CONTROLLER_ENDPOINT' 'DNS_SERVICE_IP' 'K8S_VER' 'ARTIFACT_URL' )
 
@@ -78,7 +85,7 @@ function init_templates {
 		cat << EOF > $TEMPLATE
 [Service]
 ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
-ExecStart=/usr/bin/kubelet \
+ExecStart=/opt/kubelet \
   --api_servers=${CONTROLLER_ENDPOINT} \
   --register-node=true \
   --allow-privileged=true \
@@ -113,6 +120,7 @@ EOF
 }
 
 init_config
+install_kubelet
 init_templates
 init_docker
 

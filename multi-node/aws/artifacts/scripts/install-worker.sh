@@ -53,23 +53,6 @@ function init_config {
 	done
 }
 
-function init_docker {
-	local TEMPLATE=/etc/systemd/system/docker.service.d/40-flannel.conf
-	[ -f $TEMPLATE ] || {
-		echo "TEMPLATE: $TEMPLATE"
-		mkdir -p $(dirname $TEMPLATE)
-		cat << EOF > $TEMPLATE
-[Unit]
-Requires=flanneld.service
-After=flanneld.service
-EOF
-	}
-
-	# reload now before docker commands are run in later
-	# init steps or dockerd will start before flanneld
-	systemctl daemon-reload
-}
-
 function init_templates {
 	local TEMPLATE=/etc/systemd/system/kubelet.service
 	[ -f $TEMPLATE ] || {
@@ -99,22 +82,10 @@ EOF
 	mkdir -p /etc/kubernetes/manifests
 	template manifests/worker/kubeconfig /etc/kubernetes/worker-kubeconfig.yaml
 	template manifests/worker/kube-proxy.yaml /etc/kubernetes/manifests/kube-proxy.yaml
-
-	local TEMPLATE=/run/flannel/options.env
-	[ -f $TEMPLATE ] || {
-		echo "TEMPLATE: $TEMPLATE"
-		mkdir -p $(dirname $TEMPLATE)
-		cat << EOF > $TEMPLATE
-FLANNELD_IFACE=$ADVERTISE_IP
-FLANNELD_ETCD_ENDPOINTS=$ETCD_ENDPOINTS
-EOF
-	}
-
 }
 
 init_config
 init_templates
-init_docker
 
 systemctl daemon-reload
 systemctl stop update-engine; systemctl mask update-engine

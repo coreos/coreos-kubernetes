@@ -269,16 +269,6 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 			},
 		},
 	}
-	res[resNameSecurityGroupWorker+"IngressFromWorkerToFlannel"] = map[string]interface{}{
-		"Type": "AWS::EC2::SecurityGroupIngress",
-		"Properties": map[string]interface{}{
-			"GroupId":               newRef(resNameSecurityGroupWorker),
-			"SourceSecurityGroupId": newRef(resNameSecurityGroupWorker),
-			"FromPort":              8285,
-			"ToPort":                8285,
-			"IpProtocol":            sgProtoUDP,
-		},
-	}
 	res[resNameSecurityGroupWorker+"IngressFromWorkerToKubeletReadOnly"] = map[string]interface{}{
 		"Type": "AWS::EC2::SecurityGroupIngress",
 		"Properties": map[string]interface{}{
@@ -287,16 +277,6 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 			"FromPort":              10255,
 			"ToPort":                10255,
 			"IpProtocol":            sgProtoTCP,
-		},
-	}
-	res[resNameSecurityGroupWorker+"IngressFromControllerToFlannel"] = map[string]interface{}{
-		"Type": "AWS::EC2::SecurityGroupIngress",
-		"Properties": map[string]interface{}{
-			"GroupId":               newRef(resNameSecurityGroupWorker),
-			"SourceSecurityGroupId": newRef(resNameSecurityGroupController),
-			"FromPort":              8285,
-			"ToPort":                8285,
-			"IpProtocol":            sgProtoUDP,
 		},
 	}
 	res[resNameSecurityGroupWorker+"IngressFromControllerTocAdvisor"] = map[string]interface{}{

@@ -64,29 +64,6 @@ function init_config {
 	done
 }
 
-function init_flannel {
-	echo "Waiting for etcd..."
-	while true
-	do
-		IFS=',' read -ra ES <<< "$ETCD_ENDPOINTS"
-		for ETCD in "${ES[@]}"; do
-			echo "Trying: $ETCD"
-			if [ -n "$(curl --silent "$ETCD/v2/machines")" ]; then
-				local ACTIVE_ETCD=$ETCD
-				break
-			fi
-			sleep 1
-		done
-		if [ -n "$ACTIVE_ETCD" ]; then
-			break
-		fi
-	done
-	RES=$(curl --silent -X PUT -d "value={\"Network\":\"$POD_NETWORK\"}" "$ACTIVE_ETCD/v2/keys/coreos.com/network/config?prevExist=false")
-	if [ -z "$(echo $RES | grep '"action":"create"')" ] && [ -z "$(echo $RES | grep 'Key already exists')" ]; then
-		echo "Unexpected error configuring flannel pod network: $RES"
-	fi
-}
-
 function init_templates {
 	local TEMPLATE=/etc/systemd/system/kubelet.service
 	[ -f $TEMPLATE ] || {
@@ -122,37 +99,6 @@ EOF
 	template manifests/cluster/kube-system.json /srv/kubernetes/manifests/kube-system.json
 	template manifests/cluster/kube-dns-rc.json /srv/kubernetes/manifests/kube-dns-rc.json
 	template manifests/cluster/kube-dns-svc.json /srv/kubernetes/manifests/kube-dns-svc.json
-
-	local TEMPLATE=/etc/flannel/options.env
-	[ -f $TEMPLATE ] || {
-		echo "TEMPLATE: $TEMPLATE"
-		mkdir -p $(dirname $TEMPLATE)
-		cat << EOF > $TEMPLATE
-FLANNELD_IFACE=$ADVERTISE_IP
-FLANNELD_ETCD_ENDPOINTS=$ETCD_ENDPOINTS
-EOF
-	 }
-
-	local TEMPLATE=/etc/systemd/system/flanneld.service.d/40-ExecStartPre-symlink.conf.conf
-	[ -f $TEMPLATE ] || {
-		echo "TEMPLATE: $TEMPLATE"
-		mkdir -p $(dirname $TEMPLATE)
-		cat << EOF > $TEMPLATE
-[Service]
-ExecStartPre=/usr/bin/ln -sf /etc/flannel/options.env /run/flannel/options.env
-EOF
-	}
-
-	local TEMPLATE=/etc/systemd/system/docker.service.d/40-flannel.conf
-	[ -f $TEMPLATE ] || {
-		echo "TEMPLATE: $TEMPLATE"
-		mkdir -p $(dirname $TEMPLATE)
-		cat << EOF > $TEMPLATE
-[Unit]
-Requires=flanneld.service
-After=flanneld.service
-EOF
-	}
 }
 
 function start_addons {
@@ -171,8 +117,6 @@ function start_addons {
 
 init_config
 init_templates
-
-init_flannel
 
 systemctl daemon-reload
 systemctl stop update-engine; systemctl mask update-engine

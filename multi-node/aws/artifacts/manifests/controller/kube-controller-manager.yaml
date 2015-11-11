@@ -14,6 +14,9 @@ spec:
     - --service-account-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
     - --root-ca-file=/etc/kubernetes/ssl/ca.pem
     - --cloud-provider=aws
+    - --cluster-name=${CLUSTER_NAME}
+    - --allocate-node-cidrs=true
+    - --cluster-cidr=${POD_NETWORK}
     livenessProbe:
       httpGet:
         host: 127.0.0.1

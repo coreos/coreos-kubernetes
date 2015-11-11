@@ -60,3 +60,7 @@ externalDNSName:
 
 # IP address of Kubernetes dns service (must be contained by serviceCIDR)
 # dnsServiceIP: 10.3.0.10
+
+# The address of the AWS provided DNS server in the cluster subnet.  It is the .2 address in
+# whatever CIDR was assigned to the cluster subnet.
+# awsDNSIP: 10.0.0.2

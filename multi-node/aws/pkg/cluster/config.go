@@ -18,6 +18,7 @@ const (
 	DefaultServiceCIDR         = "10.3.0.0/24"
 	DefaultKubernetesServiceIP = "10.3.0.1"
 	DefaultDNSServiceIP        = "10.3.0.10"
+	DefaultAWSDNSIP            = "10.0.0.2"
 )
 
 var (
@@ -44,6 +45,7 @@ type Config struct {
 	ServiceCIDR              string `yaml:"serviceCIDR"`
 	KubernetesServiceIP      string `yaml:"kubernetesServiceIP"`
 	DNSServiceIP             string `yaml:"dnsServiceIP"`
+	AWSDNSIP                 string `yaml:"awsDNSIP"`
 }
 
 func (cfg *Config) Valid() error {
@@ -151,6 +153,18 @@ func (cfg *Config) Valid() error {
 	}
 	if !serviceNet.Contains(dnsServiceIPAddr) {
 		return fmt.Errorf("serviceCIDR (%s) does not contain dnsServiceIP (%s)", serviceCIDR, dnsServiceIP)
+	}
+
+	awsDNSIP := cfg.AWSDNSIP
+	if awsDNSIP == "" {
+		awsDNSIP = DefaultAWSDNSIP
+	}
+	awsDNSIPAddr := net.ParseIP(awsDNSIP)
+	if awsDNSIPAddr == nil {
+		return fmt.Errorf("Invalid awsDNSIP: %s", awsDNSIP)
+	}
+	if !instancesNet.Contains(awsDNSIPAddr) {
+		return fmt.Errorf("instanceCIDR (%s) does not contain awsDNSIP (%s)", instanceCIDR, awsDNSIP)
 	}
 
 	return nil

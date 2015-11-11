@@ -12,6 +12,15 @@ export CONTROLLER_ENDPOINT=
 # Specify the version (vX.Y.Z) of Kubernetes assets to deploy
 export K8S_VER=v1.1.2
 
+# The address of the AWS provided DNS server in the cluster subnet.  It is the .2 address in 
+# whatever CIDR was assigned to the cluster subnet.
+export AWS_DNS_IP=
+
+# The CIDR network to use for pod IPs.
+# Each pod launched in the cluster will be assigned an IP out of this range.
+# Each node will be configured such that these IPs will be routable using the Kubernetes AWS cloud provider.
+export POD_NETWORK=
+
 # The IP address of the cluster DNS service.
 # This must be the same DNS_SERVICE_IP used when configuring the controller nodes.
 export DNS_SERVICE_IP=
@@ -35,7 +44,7 @@ EOF
 }
 
 function init_config {
-	local REQUIRED=( 'ADVERTISE_IP' 'ETCD_ENDPOINTS' 'CONTROLLER_ENDPOINT' 'DNS_SERVICE_IP' 'K8S_VER' 'ARTIFACT_URL' )
+	local REQUIRED=( 'ADVERTISE_IP' 'POD_NETWORK' 'AWS_DNS_IP' 'CONTROLLER_ENDPOINT' 'DNS_SERVICE_IP' 'K8S_VER' 'ARTIFACT_URL' )
 
 	if [ -f $ENV_FILE ]; then
 		export $(cat $ENV_FILE | xargs)
@@ -61,6 +70,7 @@ function init_templates {
 		cat << EOF > $TEMPLATE
 [Service]
 ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
+ExecStartPre=/usr/sbin/iptables -t nat -A POSTROUTING -s ${POD_NETWORK} -d ${AWS_DNS_IP}/32 -j MASQUERADE
 ExecStart=/usr/bin/kubelet \
   --api_servers=${CONTROLLER_ENDPOINT} \
   --register-node=true \
@@ -71,7 +81,10 @@ ExecStart=/usr/bin/kubelet \
   --cloud-provider=aws \
   --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml \
   --tls-cert-file=/etc/kubernetes/ssl/worker.pem \
-  --tls-private-key-file=/etc/kubernetes/ssl/worker-key.pem
+  --tls-private-key-file=/etc/kubernetes/ssl/worker-key.pem \
+  --cadvisor-port=0 \
+  --cloud-provider=aws \
+  --configure-cbr0=true
 Restart=always
 RestartSec=10
 [Install]

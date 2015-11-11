@@ -7,9 +7,12 @@ export ETCD_ENDPOINTS=
 # Specify the version (vX.Y.Z) of Kubernetes assets to deploy
 export K8S_VER=v1.1.2
 
+# The Kubernetes cluster name.
+export CLUSTER_NAME=
+
 # The CIDR network to use for pod IPs.
 # Each pod launched in the cluster will be assigned an IP out of this range.
-# Each node will be configured such that these IPs will be routable using the flannel overlay network.
+# Each node will be configured such that these IPs will be routable using the Kubernetes AWS cloud provider.
 export POD_NETWORK=
 
 # The CIDR network to use for service cluster IPs.
@@ -46,7 +49,7 @@ EOF
 }
 
 function init_config {
-	local REQUIRED=('ADVERTISE_IP' 'POD_NETWORK' 'ETCD_ENDPOINTS' 'SERVICE_IP_RANGE' 'K8S_SERVICE_IP' 'DNS_SERVICE_IP' 'K8S_VER' 'ARTIFACT_URL' )
+	local REQUIRED=('CLUSTER_NAME' 'ADVERTISE_IP' 'POD_NETWORK' 'ETCD_ENDPOINTS' 'SERVICE_IP_RANGE' 'K8S_SERVICE_IP' 'DNS_SERVICE_IP' 'K8S_VER' 'ARTIFACT_URL' )
 
 	if [ -f $ENV_FILE ]; then
 		export $(cat $ENV_FILE | xargs)
@@ -78,7 +81,9 @@ ExecStart=/usr/bin/kubelet \
   --allow-privileged=true \
   --config=/etc/kubernetes/manifests \
   --cluster_dns=${DNS_SERVICE_IP} \
-  --cluster_domain=cluster.local
+  --cluster_domain=cluster.local \
+  --cadvisor-port=0 \
+  --cloud-provider=aws
 Restart=always
 RestartSec=10
 

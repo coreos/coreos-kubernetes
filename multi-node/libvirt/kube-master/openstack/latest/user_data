@@ -551,6 +551,17 @@ After=flanneld.service
 EOF
     }
 
+    local TEMPLATE=/etc/systemd/system/etcd2.service.d/urls.conf
+     [ -f $TEMPLATE ] || {
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+[Service]
+Environment="ETCD_LISTEN_CLIENT_URLS=http://${ADVERTISE_IP}:2379,http://127.0.0.1:2379"
+Environment="ETCD_ADVERTISE_CLIENT_URLS=http://${ADVERTISE_IP}:2379"
+EOF
+    }
+
 }
 
 function start_addons {
@@ -594,16 +605,11 @@ deploy_tls_assets
 
 init_config
 init_templates
-
-systemctl set-environment ETCD_LISTEN_CLIENT_URLS="http://${ADVERTISE_IP}:2379,http://127.0.0.1:2379"
-systemctl set-environment ETCD_ADVERTISE_CLIENT_URLS="http://${ADVERTISE_IP}:2379"
-systemctl enable etcd2; systemctl start etcd2;
-
 init_flannel
 
 systemctl stop update-engine; systemctl mask update-engine
-
 systemctl daemon-reload
+systemctl enable etcd2; systemctl start etcd2;
 systemctl enable kubelet; systemctl start kubelet
 start_addons
 echo "DONE"

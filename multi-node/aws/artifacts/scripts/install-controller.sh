@@ -5,7 +5,7 @@ set -e
 export ETCD_ENDPOINTS=
 
 # Specify the version (vX.Y.Z) of Kubernetes assets to deploy
-export K8S_VER=v1.0.7
+export K8S_VER=v1.1.1
 
 # The CIDR network to use for pod IPs.
 # Each pod launched in the cluster will be assigned an IP out of this range.
@@ -64,6 +64,13 @@ function init_config {
 	done
 }
 
+function install_kubelet {
+	mkdir /opt
+	cd /opt
+	curl -sLO https://storage.googleapis.com/kubernetes-release/release/${K8S_VER}/bin/linux/amd64/kubelet
+	chmod a+rx /opt/kubelet
+}
+
 function init_flannel {
 	echo "Waiting for etcd..."
 	while true
@@ -95,7 +102,7 @@ function init_templates {
 		cat << EOF > $TEMPLATE
 [Service]
 ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
-ExecStart=/usr/bin/kubelet \
+ExecStart=/opt/kubelet \
   --api_servers=http://127.0.0.1:8080 \
   --register-node=false \
   --allow-privileged=true \
@@ -171,8 +178,8 @@ function start_addons {
 }
 
 init_config
+install_kubelet
 init_templates
-
 init_flannel
 
 systemctl daemon-reload

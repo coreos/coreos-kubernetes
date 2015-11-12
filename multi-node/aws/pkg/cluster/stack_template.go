@@ -15,10 +15,14 @@ const (
 	resNameRouteToInternet              = "RouteToInternet"
 	resNameSubnet                       = "Subnet"
 	resNameSubnetRouteTableAssociation  = "SubnetRouteTableAssociation"
+	resNameSecurityGroupVpn             = "SecurityGroupVpn"
+	resNameEipVpn                       = "EipVpn"
+	resNameInstanceVpn                  = "InstanceVpn"
+	resNameEipAssociationVpn            = "EipAssociationVpn"
+	resNameAlarmControllerRecoverVpn    = "AlarmControllerRecoverVpn"
 	resNameSecurityGroupController      = "SecurityGroupController"
 	resNameSecurityGroupWorker          = "SecurityGroupWorker"
 	resNameInstanceController           = "InstanceController"
-	resNameEIPController                = "EIPController"
 	resNameAlarmControllerRecover       = "AlarmControllerRecover"
 	resNameAutoScaleWorker              = "AutoScaleWorker"
 	resNameLaunchConfigurationWorker    = "LaunchConfigurationWorker"
@@ -48,6 +52,8 @@ const (
 var (
 	supportedChannels    = []string{"alpha"}
 	tagKubernetesCluster = "KubernetesCluster"
+
+	vpcCidr = "10.0.0.0/16"
 
 	sgProtoTCP = "tcp"
 	sgProtoUDP = "udp"
@@ -120,6 +126,14 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 		},
 	}
 
+	vpnImageID := map[string]interface{}{
+		"Fn::FindInMap": []interface{}{
+			"VpnRegionMap",
+			newRef("AWS::Region"),
+			"AMI",
+		},
+	}
+
 	defaultAvailabilityZone := map[string]interface{}{
 		"Fn::Select": []interface{}{
 			"0",
@@ -142,7 +156,7 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 	res[resNameVPC] = map[string]interface{}{
 		"Type": "AWS::EC2::VPC",
 		"Properties": map[string]interface{}{
-			"CidrBlock":          "10.0.0.0/16",
+			"CidrBlock":          vpcCidr,
 			"EnableDnsSupport":   true,
 			"EnableDnsHostnames": true,
 			"InstanceTenancy":    "default",
@@ -213,6 +227,105 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 		},
 	}
 
+	res[resNameSecurityGroupVpn] = map[string]interface{}{
+		"Type": "AWS::EC2::SecurityGroup",
+		"Properties": map[string]interface{}{
+			"GroupDescription": "VPN server security group",
+			"VpcId":            newRef(resNameVPC),
+			"SecurityGroupIngress": []map[string]interface{}{
+				map[string]interface{}{"IpProtocol": sgProtoTCP, "FromPort":   22, "ToPort":   22, "CidrIp": "0.0.0.0/0"},
+				map[string]interface{}{"IpProtocol": sgProtoTCP, "FromPort":  443, "ToPort":  443, "CidrIp": "0.0.0.0/0"},
+				map[string]interface{}{"IpProtocol": sgProtoTCP, "FromPort":  943, "ToPort":  943, "CidrIp": "0.0.0.0/0"},
+				map[string]interface{}{"IpProtocol": sgProtoUDP, "FromPort": 1194, "ToPort": 1194, "CidrIp": "0.0.0.0/0"},
+			},
+			"Tags": []map[string]interface{}{
+				newTag(tagKubernetesCluster, newRef(parClusterName)),
+			},
+		},
+	}
+
+	res[resNameEipVpn] = map[string]interface{}{
+		"Type": "AWS::EC2::EIP",
+		"Properties": map[string]interface{}{
+			"Domain": "vpc",
+		},
+	}
+
+	res[resNameInstanceVpn] = map[string]interface{}{
+		"Type": "AWS::EC2::Instance",
+		"DependsOn": resNameEipVpn,
+		"Properties": map[string]interface{}{
+			"ImageId": vpnImageID,
+			"InstanceType": "t2.small",
+			"KeyName": newRef(parNameKeyName),
+			"SubnetId":	newRef(resNameSubnet),
+			"SecurityGroupIds": []interface{}{
+				newRef(resNameSecurityGroupVpn),
+			},
+			"Tags": []map[string]interface{}{
+				newTag(tagKubernetesCluster, newRef(parClusterName)),
+				newTag("Name", "OpenVPN server"),
+			},
+			"UserData": map[string]interface{}{
+				"Fn::Base64": map[string]interface{}{
+					"Fn::Join": []interface{}{
+						"",
+						[]interface{}{
+							"public_hostname=",
+							newRef(resNameEipVpn),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	res[resNameEipAssociationVpn] = map[string]interface{}{
+		"Type": "AWS::EC2::EIPAssociation",
+		"DependsOn": resNameInstanceVpn,
+		"Properties": map[string]interface{}{
+			"AllocationId": map[string]interface{}{
+				"Fn::GetAtt": []string{
+					resNameEipVpn,
+					"AllocationId",
+				},
+			},
+			"InstanceId": newRef(resNameInstanceVpn),
+		},
+	}
+
+	res[resNameAlarmControllerRecoverVpn] = map[string]interface{}{
+		"Type": "AWS::CloudWatch::Alarm",
+		"Properties": map[string]interface{}{
+			"AlarmDescription":   "Trigger a recovery when system check fails for 5 consecutive minutes.",
+			"Namespace":          "AWS/EC2",
+			"MetricName":         "StatusCheckFailed_System",
+			"Statistic":          "Minimum",
+			"Period":             "60",
+			"EvaluationPeriods":  "5",
+			"ComparisonOperator": "GreaterThanThreshold",
+			"Threshold":          "0",
+			"AlarmActions": []interface{}{
+				map[string]interface{}{
+					"Fn::Join": []interface{}{
+						"",
+						[]interface{}{
+							"arn:aws:automate:",
+							newRef("AWS::Region"),
+							":ec2:recover",
+						},
+					},
+				},
+			},
+			"Dimensions": []interface{}{
+				map[string]interface{}{
+					"Name":  "InstanceId",
+					"Value": newRef(resNameInstanceVpn),
+				},
+			},
+		},
+	}
+
 	res[resNameSecurityGroupController] = map[string]interface{}{
 		"Type": "AWS::EC2::SecurityGroup",
 		"Properties": map[string]interface{}{
@@ -223,8 +336,8 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 				map[string]interface{}{"IpProtocol": sgProtoUDP, "FromPort": 0, "ToPort": sgPortMax, "CidrIp": sgAllIPs},
 			},
 			"SecurityGroupIngress": []map[string]interface{}{
-				map[string]interface{}{"IpProtocol": sgProtoTCP, "FromPort": 22, "ToPort": 22, "CidrIp": sgAllIPs},
-				map[string]interface{}{"IpProtocol": sgProtoTCP, "FromPort": 443, "ToPort": 443, "CidrIp": sgAllIPs},
+				map[string]interface{}{"IpProtocol": sgProtoTCP, "FromPort": 22, "ToPort": 22, "CidrIp": vpcCidr},
+				map[string]interface{}{"IpProtocol": sgProtoTCP, "FromPort": 443, "ToPort": 443, "CidrIp": vpcCidr},
 			},
 			"Tags": []map[string]interface{}{
 				newTag(tagKubernetesCluster, newRef(parClusterName)),
@@ -252,7 +365,7 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 				map[string]interface{}{"IpProtocol": sgProtoUDP, "FromPort": 0, "ToPort": sgPortMax, "CidrIp": sgAllIPs},
 			},
 			"SecurityGroupIngress": []map[string]interface{}{
-				map[string]interface{}{"IpProtocol": sgProtoTCP, "FromPort": 22, "ToPort": 22, "CidrIp": sgAllIPs},
+				map[string]interface{}{"IpProtocol": sgProtoTCP, "FromPort": 22, "ToPort": 22, "CidrIp": vpcCidr},
 			},
 			"Tags": []map[string]interface{}{
 				newTag(tagKubernetesCluster, newRef(parClusterName)),
@@ -373,14 +486,6 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 		},
 	}
 
-	res[resNameEIPController] = map[string]interface{}{
-		"Type": "AWS::EC2::EIP",
-		"Properties": map[string]interface{}{
-			"InstanceId": newRef(resNameInstanceController),
-			"Domain":     "vpc",
-		},
-	}
-
 	res[resNameInstanceController] = map[string]interface{}{
 		"Type": "AWS::EC2::Instance",
 		"Properties": map[string]interface{}{
@@ -394,7 +499,7 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 			"NetworkInterfaces": []map[string]interface{}{
 				map[string]interface{}{
 					"PrivateIpAddress":         "10.0.0.50",
-					"AssociatePublicIpAddress": false,
+					"AssociatePublicIpAddress": true,
 					"DeleteOnTermination":      true,
 					"DeviceIndex":              "0",
 					"SubnetId":                 newRef(resNameSubnet),
@@ -586,7 +691,18 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 	}
 
 	mappings := map[string]interface{}{
-		"RegionMap": regionMap,
+    "RegionMap": regionMap,
+    "VpnRegionMap":     map[string]interface{}{
+      "us-east-1":      map[string]string { "AMI" : "ami-5fe36434", },
+      "us-west-1":      map[string]string { "AMI" : "ami-8bf40fcf", },
+      "us-west-2":      map[string]string { "AMI" : "ami-9fe2f2af", },
+      "eu-west-1":      map[string]string { "AMI" : "ami-03644074", },
+      "eu-central-1":   map[string]string { "AMI" : "ami-507f7e4d", },
+      "sa-east-1":      map[string]string { "AMI" : "ami-4fd55f52", },
+      "ap-southeast-1": map[string]string { "AMI" : "ami-365c5764", },
+      "ap-southeast-2": map[string]string { "AMI" : "ami-831d51b9", },
+      "ap-northeast-1": map[string]string { "AMI" : "ami-5ea72b5e", },
+ 		},
 	}
 
 	conditions := map[string]interface{}{

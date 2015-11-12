@@ -551,7 +551,7 @@ After=flanneld.service
 EOF
     }
 
-    local TEMPLATE=/etc/systemd/system/etcd2.service.d/urls.conf
+    local TEMPLATE=/etc/systemd/system/etcd2.service.d/50-listen-urls.conf
      [ -f $TEMPLATE ] || {
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
@@ -605,11 +605,12 @@ deploy_tls_assets
 
 init_config
 init_templates
-init_flannel
 
 systemctl stop update-engine; systemctl mask update-engine
 systemctl daemon-reload
-systemctl enable etcd2; systemctl start etcd2;
+systemctl enable etcd2; systemctl start etcd2
 systemctl enable kubelet; systemctl start kubelet
+
+init_flannel
 start_addons
 echo "DONE"

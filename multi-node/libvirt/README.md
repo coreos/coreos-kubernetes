@@ -64,6 +64,17 @@ cp vm_key.pub /var/lib/libvirt/images/coreos/kube-worker/openstack/latest/
 The `user_data` scripts will install the necessary Kubernetes manifests and
 assume a certain preconfigured network structure.
 
+## SELinux configuration
+
+If you are using SELinux in enforcing mode, you will need to properly label
+these config drive directories.
+
+```
+cd /var/lib/libvirt/images/coreos
+chcon -R -t svirt_image_t kube-master
+chcon -R -t svirt_image_t kube-worker
+```
+
 ## Network configuration
 
 ```

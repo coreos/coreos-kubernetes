@@ -67,7 +67,7 @@ function init_config {
 function install_kubelet {
 	mkdir /opt
 	cd /opt
-	curl -sLO https://storage.googleapis.com/kubernetes-release/release/v1.1.1/bin/linux/amd64/kubelet
+	curl -sLO https://storage.googleapis.com/kubernetes-release/release/${K8S_VER}/bin/linux/amd64/kubelet
 	chmod a+rx /opt/kubelet
 }
 

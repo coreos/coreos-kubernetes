@@ -28,8 +28,10 @@ https://coreos.com/kubernetes/docs/latest/
 ## Deploying on CoreOS
 
 - [Step-by-Step for Any Platform](Documentation/getting-started.md)
+- [Single-Node xhyve Stack on OS X](https://github.com/rimusz/kube-solo-osx/blob/master/README.md)
 - [Single-Node Vagrant Stack](single-node/README.md)
 - [Multi-Node Vagrant Cluster](multi-node/vagrant/README.md)
+- [Multi-Node Vagrant Cluster on OS X](https://github.com/rimusz/coreos-osx-gui-kubernetes-cluster/blob/master/README.md)
 - [Multi-Node AWS Cluster](multi-node/aws/README.md)
 - [Multi-Node Bare Metal Cluster](Documentation/kubernetes-on-baremetal.md)
 

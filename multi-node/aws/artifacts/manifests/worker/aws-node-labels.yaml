@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: aws-node-labels
+spec:
+  hostNework: true
+  restartPolicy: OnFailure
+  containers:
+    - name: apply-labels
+      image: elevy/aws-node-labels:latest
+      securityContext:
+        privileged: true
+      env:
+        - name: CONTROLLER_ENDPOINT
+          value: "${CONTROLLER_ENDPOINT}"
+      volumeMounts:
+        - mountPath: /etc/kubernetes/ssl
+          name: kubernetes-ssl
+          readOnly: true
+  volumes:
+    - name: kubernetes-ssl
+      hostPath:
+        path: /etc/kubernetes/ssl

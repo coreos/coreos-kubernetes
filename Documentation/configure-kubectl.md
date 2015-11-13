@@ -8,7 +8,7 @@ First, download the binary using a command-line tool such as `wget` or `curl`:
 
 ```sh
 # Replace ${ARCH} with "linux" or "darwin" based on your workstation operating system
-$ ARCH=linux; wget https://storage.googleapis.com/kubernetes-release/release/v1.0.7/bin/${ARCH}/amd64/kubectl
+$ ARCH=linux; wget https://storage.googleapis.com/kubernetes-release/release/v1.1.1/bin/${ARCH}/amd64/kubectl
 ```
 
 After downloading the binary, ensure it is executable and move it into your `PATH`:

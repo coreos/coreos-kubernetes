@@ -5,7 +5,7 @@ set -e
 export ETCD_ENDPOINTS=
 
 # Specify the version (vX.Y.Z) of Kubernetes assets to deploy
-export K8S_VER=v1.0.7
+export K8S_VER=v1.1.1
 
 # The CIDR network to use for pod IPs.
 # Each pod launched in the cluster will be assigned an IP out of this range.
@@ -402,11 +402,12 @@ EOF
                     },
                     {
                         "args": [
-                            "-machines=http://localhost:4001",
+                            "-machines=http://127.0.0.1:4001",
                             "-addr=0.0.0.0:53",
+                            "-ns-rotate=false",
                             "-domain=cluster.local."
                         ],
-                        "image": "gcr.io/google_containers/skydns:2015-03-11-001",
+                        "image": "gcr.io/google_containers/skydns:2015-10-13-8c72f8c",
                         "livenessProbe": {
                             "httpGet": {
                                 "path": "/healthz",

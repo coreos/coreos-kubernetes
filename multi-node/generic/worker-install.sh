@@ -112,6 +112,7 @@ spec:
     - proxy
     - --master=${CONTROLLER_ENDPOINT}
     - --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml
+    - --proxy-mode=iptables
     securityContext:
       privileged: true
     volumeMounts:

@@ -118,6 +118,7 @@ spec:
     - proxy
     - --master=https://${MASTER_HOST}
     - --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml
+    - --proxy-mode=iptables
     securityContext:
       privileged: true
     volumeMounts:

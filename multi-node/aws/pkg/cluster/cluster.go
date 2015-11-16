@@ -102,6 +102,11 @@ func (c *Cluster) Create(tlsConfig *TLSConfig) error {
 			UsePreviousValue: aws.Bool(true),
 		},
 		{
+			ParameterKey:     aws.String(parNameControllerCount),
+			ParameterValue:   aws.String(fmt.Sprintf("%d", c.cfg.ControllerCount)),
+			UsePreviousValue: aws.Bool(true),
+		},
+		{
 			ParameterKey:     aws.String(parNameControllerRootVolumeSize),
 			ParameterValue:   aws.String(fmt.Sprintf("%d", c.cfg.ControllerRootVolumeSize)),
 			UsePreviousValue: aws.Bool(true),

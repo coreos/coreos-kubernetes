@@ -1,6 +1,6 @@
 ## Deploy Worker Node(s)
 
-Boot one or more CoreOS nodes which will be used as Kubernetes Workers. You must use a CoreOS version 773.1.0+ for the kubelet to be present in the image.
+Boot one or more CoreOS nodes which will be used as Kubernetes Workers. You must use a CoreOS version 773.1.0+ for the `kubelet` to be present in the image.
 
 See the [CoreOS Documentation](https://coreos.com/os/docs/latest/) for guides on launching nodes on supported platforms.
 
@@ -14,7 +14,16 @@ Place the TLS keypairs generated previously in the following locations:
 * File: `/etc/kubernetes/ssl/worker.pem`
 * File: `/etc/kubernetes/ssl/worker-key.pem`
 
+And make sure you've set proper permission for private key:
+
+```
+$ sudo chmod 600 /etc/kubernetes/ssl/*-key.pem
+$ sudo chown root:root /etc/kubernetes/ssl/*-key.pem
+```
+
 #### flannel Configuration
+
+*Note:* If the pod-network is being managed independently of flannel, this step can be skipped. See [kubernetes networking](kubernetes-networking.md) for more detail.
 
 Just like earlier, create `/etc/flannel/options.env` and modify these values:
 
@@ -40,6 +49,8 @@ ExecStartPre=/usr/bin/ln -sf /etc/flannel/options.env /run/flannel/options.env
 [dropins]: https://coreos.com/os/docs/latest/using-systemd-drop-in-units.html
 
 #### Docker Configuration
+
+*Note:* If the pod-network is being managed independently of flannel, this step can be skipped. See [kubernetes networking](kubernetes-networking.md) for more detail.
 
 Require that flanneld is running prior to Docker start.
 
@@ -71,8 +82,8 @@ ExecStart=/usr/bin/kubelet \
   --allow-privileged=true \
   --config=/etc/kubernetes/manifests \
   --hostname-override=${ADVERTISE_IP} \
-  --cluster_dns=${DNS_SERVICE_IP} \
-  --cluster_domain=cluster.local \
+  --cluster-dns=${DNS_SERVICE_IP} \
+  --cluster-domain=cluster.local \
   --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml \
   --tls-cert-file=/etc/kubernetes/ssl/worker.pem \
   --tls-private-key-file=/etc/kubernetes/ssl/worker-key.pem \
@@ -101,7 +112,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-proxy
-    image: gcr.io/google_containers/hyperkube:v1.0.6
+    image: gcr.io/google_containers/hyperkube:v1.0.7
     command:
     - /hyperkube
     - proxy

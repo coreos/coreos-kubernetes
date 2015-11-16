@@ -18,7 +18,7 @@ If you will be running a highly-available control-plane consisting of multiple m
 
 **K8S_SERVICE_IP**=10.3.0.1
 
-The IP address of the Kubernetes API Service. The K8S_SERVICE_IP will be the first IP in the SERVICE_IP_RANGE discussed in the [deployment guide][deployment-guide]. The first IP in the default range of 10.3.0.0/24 will be 10.3.0.1. If the SERVICE_IP_RANGE was changed from the default, this value must be updated as well.
+The IP address of the Kubernetes API Service. The `K8S_SERVICE_IP` will be the first IP in the `SERVICE_IP_RANGE` discussed in the [deployment guide][deployment-guide]. The first IP in the default range of 10.3.0.0/24 will be 10.3.0.1. If the SERVICE_IP_RANGE was changed from the default, this value must be updated as well.
 
 ## Create a Cluster Root CA
 
@@ -29,7 +29,7 @@ $ openssl genrsa -out ca-key.pem 2048
 $ openssl req -x509 -new -nodes -key ca-key.pem -days 10000 -out ca.pem -subj "/CN=kube-ca"
 ```
 
-You need to store the CA keypair in a secure location for future use.
+**You need to store the CA keypair in a secure location for future use.**
 
 ## Kubernetes API Server Keypair
 

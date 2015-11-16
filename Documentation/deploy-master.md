@@ -1,6 +1,6 @@
-## Deploy Kubernetes Master Machine
+# Deploy Kubernetes Master Machine
 
-Boot a single CoreOS machine which will be used as the Kubernetes master. You must use a CoreOS version 773.1.0+ for the kubelet to be present in the image.
+Boot a single CoreOS machine which will be used as the Kubernetes master. You must use a CoreOS version 773.1.0+ for the `kubelet` to be present in the image.
 
 See the [CoreOS Documentation](https://coreos.com/os/docs/latest/) for guides on launching nodes on supported platforms.
 
@@ -8,9 +8,9 @@ Manual configuration of the required Master services is explained below, but mos
 
 If you are deploying multiple master nodes in a high-availability cluster, these instructions can be repeated for each master node you wish to launch.
 
-### Configure Service Components
+## Configure Service Components
 
-#### TLS Assets
+### TLS Assets
 
 Place the keys generated previously in the following locations:
 
@@ -18,9 +18,18 @@ Place the keys generated previously in the following locations:
 * File: `/etc/kubernetes/ssl/apiserver.pem`
 * File: `/etc/kubernetes/ssl/apiserver-key.pem`
 
-#### flannel Configuration
+And make sure you've set proper permission for private key:
+
+```
+$ sudo chmod 600 /etc/kubernetes/ssl/*-key.pem
+$ sudo chown root:root /etc/kubernetes/ssl/*-key.pem
+```
+
+### flannel Configuration
 
 [flannel][flannel-docs] provides a key Kubernetes networking capability &mdash; a software-defined overlay network to manage routing of the [Pod][pod-overview] network.
+
+*Note:* If the pod-network is being managed independently of flannel, this step can be skipped. See [kubernetes networking](kubernetes-networking.md) for more detail.
 
 We will configure flannel to source its local configuration in `/etc/flannel/options.env` and cluster-level configuration in etcd. Create this file and edit the contents:
 
@@ -47,9 +56,11 @@ ExecStartPre=/usr/bin/ln -sf /etc/flannel/options.env /run/flannel/options.env
 [pod-overview]: https://coreos.com/kubernetes/docs/latest/pods.html
 [service-overview]: https://coreos.com/kubernetes/docs/latest/services.html
 
-#### Docker Configuration
+### Docker Configuration
 
 In order for flannel to manage the pod network in the cluster, Docker needs to be configured to use it. All we need to do is require that flanneld is running prior to Docker starting.
+
+*Note:* If the pod-network is being managed independently of flannel, this step can be skipped. See [kubernetes networking](kubernetes-networking.md) for more detail.
 
 We're going to do this with a [systemd drop-in][dropins], which is a method for appending or overriding parameters of a systemd unit. In this case we're appending two dependency rules. Create the drop-in:
 
@@ -63,9 +74,13 @@ After=flanneld.service
 
 [dropins]: https://coreos.com/os/docs/latest/using-systemd-drop-in-units.html
 
-#### Create the kubelet Unit
+### Create the kubelet Unit
 
-The kubelet is the agent on each machine that starts and stops Pods and other machine-level tasks. The kubelet communicates to the API server (also running on the master machine) with the TLS certificates we placed on disk earlier.
+The [kubelet](http://kubernetes.io/v1.0/docs/admin/kubelet.html) is the agent on each machine that starts and stops Pods and other machine-level tasks. The kubelet communicates with the API server (also running on the master machines) with the TLS certificates we placed on disk earlier.
+
+On the master node, the kubelet is configured to communicate with the API server, but not register for cluster work, as shown in the `--register-node=false` line in the YAML excerpt below. This prevents user pods being scheduled on the master nodes, and ensures cluster work is routed only to task-specific worker nodes.
+
+Note that the kubelet running on a master node may log repeated attempts to post its status to the API server. These warnings are expected behavior and can be ignored. Future Kubernetes releases plan to [handle this common deployment consideration more gracefully](https://github.com/kubernetes/kubernetes/issues/14140#issuecomment-142126864).
 
 * Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
 * Replace `${DNS_SERVICE_IP}`
@@ -80,8 +95,8 @@ ExecStart=/usr/bin/kubelet \
   --allow-privileged=true \
   --config=/etc/kubernetes/manifests \
   --hostname-override=${ADVERTISE_IP} \
-  --cluster_dns=${DNS_SERVICE_IP} \
-  --cluster_domain=cluster.local \
+  --cluster-dns=${DNS_SERVICE_IP} \
+  --cluster-domain=cluster.local \
   --cadvisor-port=0
 Restart=always
 RestartSec=10
@@ -89,7 +104,7 @@ RestartSec=10
 WantedBy=multi-user.target
 ```
 
-#### Set Up the kube-apiserver Pod
+### Set Up the kube-apiserver Pod
 
 The API server is where most of the magic happens. It is stateless by design and takes in API requests, processes them and stores the result in etcd if needed, and then returns the result of the request.
 
@@ -113,7 +128,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-apiserver
-    image: gcr.io/google_containers/hyperkube:v1.0.6
+    image: gcr.io/google_containers/hyperkube:v1.0.7
     command:
     - /hyperkube
     - apiserver
@@ -151,7 +166,7 @@ spec:
     name: ssl-certs-host
 ```
 
-#### Set Up the kube-proxy Pod
+### Set Up the kube-proxy Pod
 
 We're going to run the proxy just like we did the API server. The proxy is responsible for directing traffic destined for specific services and pods to the correct location. The proxy communicates with the API server periodically to keep up to date.
 
@@ -171,7 +186,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-proxy
-    image: gcr.io/google_containers/hyperkube:v1.0.6
+    image: gcr.io/google_containers/hyperkube:v1.0.7
     command:
     - /hyperkube
     - proxy
@@ -188,7 +203,7 @@ spec:
     name: ssl-certs-host
 ```
 
-#### Set up the kube-podmaster Pod
+### Set up the kube-podmaster Pod
 
 The kube-podmaster is responsible for implementing master-election for the kube-controller-manager and kube-scheduler. Because these services modify the cluster state, we only want to have one actor making modifications at a time.
 
@@ -269,9 +284,10 @@ metadata:
   name: kube-controller-manager
   namespace: kube-system
 spec:
+  hostNetwork: true
   containers:
   - name: kube-controller-manager
-    image: gcr.io/google_containers/hyperkube:v1.0.6
+    image: gcr.io/google_containers/hyperkube:v1.0.7
     command:
     - /hyperkube
     - controller-manager
@@ -292,7 +308,6 @@ spec:
     - mountPath: /etc/ssl/certs
       name: ssl-certs-host
       readOnly: true
-  hostNetwork: true
   volumes:
   - hostPath:
       path: /etc/kubernetes/ssl
@@ -302,7 +317,7 @@ spec:
     name: ssl-certs-host
 ```
 
-#### Set Up the kube-scheduler Pod
+### Set Up the kube-scheduler Pod
 
 The scheduler is the last major piece of our Master. It monitors the API for unscheduled pods, finds them a machine to run on, and communicates the decision back to the API.
 
@@ -320,7 +335,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-scheduler
-    image: gcr.io/google_containers/hyperkube:v1.0.6
+    image: gcr.io/google_containers/hyperkube:v1.0.7
     command:
     - /hyperkube
     - scheduler
@@ -334,11 +349,11 @@ spec:
       timeoutSeconds: 1
 ```
 
-### Start Services
+## Start Services
 
 Now that we've defined all of our units and written our TLS certificates to disk, we're ready to start the Master components.
 
-#### Load Changed Units
+### Load Changed Units
 
 First, we need to tell systemd that we've changed units on disk and it needs to rescan everything:
 
@@ -346,7 +361,7 @@ First, we need to tell systemd that we've changed units on disk and it needs to 
 $ sudo systemctl daemon-reload
 ```
 
-#### Configure flannel Network
+### Configure flannel Network
 
 Earlier it was mentioned that flannel stores cluster-level configuration in etcd. We need to configure our Pod network IP range now. Since etcd was started earlier, we can set this now. If you don't have etcd running, start it now.
 
@@ -354,10 +369,10 @@ Earlier it was mentioned that flannel stores cluster-level configuration in etcd
 * Replace `$ETCD_SERVER` with one host from `$ETCD_ENDPOINTS`
 
 ```sh
-$ curl -X PUT -d "value={\"Network\":\"$POD_NETWORK\"}" "$ETCD_SERVER/v2/keys/coreos.com/network/config"
+$ curl -X PUT -d "value={\"Network\":\"$POD_NETWORK\",\"Backend\":{\"Type\":\"vxlan\"}}" "$ETCD_SERVER/v2/keys/coreos.com/network/config"
 ```
 
-#### Start kubelet
+### Start kubelet
 
 Now that everything is configured, we can start the kubelet, which will also start the Pod manifests for the API server, the controller manager, proxy and scheduler.
 
@@ -372,7 +387,7 @@ $ sudo systemctl enable kubelet
 Created symlink from /etc/systemd/system/multi-user.target.wants/kubelet.service to /etc/systemd/system/kubelet.service.
 ```
 
-#### Create kube-system Namespace
+### Create kube-system Namespace
 
 The Kubernetes Pods that make up the Master node will exist in their own namespace. We need to create this namespace so these components are discoverable by other nodes in the cluster.
 
@@ -390,8 +405,8 @@ A successful response should look something like:
 {
   "major": "1",
   "minor": "0",
-  "gitVersion": "v1.0.3",
-  "gitCommit": "61c6ac5f350253a4dc002aee97b7db7ff01ee4ca",
+  "gitVersion": "v1.0.6",
+  "gitCommit": "388061f00f0d9e4d641f9ed4971c775e1654579d",
   "gitTreeState": "clean"
 }
 ```

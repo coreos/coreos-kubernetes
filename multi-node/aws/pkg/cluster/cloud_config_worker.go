@@ -21,7 +21,7 @@ write_files:
 - path: /run/coreos-kubernetes/options.env
   content: |
     ETCD_ENDPOINTS=http://10.0.0.50:2379
-    CONTROLLER_ENDPOINT=https://10.0.0.50
+    CONTROLLER_ENDPOINT=https://kubernetes.{{ ClusterName }}.cluster.local
     ARTIFACT_URL={{ ArtifactURL }}
 
 - path: /tmp/install-worker.sh

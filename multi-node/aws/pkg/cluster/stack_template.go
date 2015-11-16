@@ -235,13 +235,13 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 			},
 		},
 	}
-	res[resNameSecurityGroupController+"IngressFromWorkerToEtcd"] = map[string]interface{}{
+	res[resNameSecurityGroupController+"IngressFromControllerToEtcd"] = map[string]interface{}{
 		"Type": "AWS::EC2::SecurityGroupIngress",
 		"Properties": map[string]interface{}{
 			"GroupId":               newRef(resNameSecurityGroupController),
-			"SourceSecurityGroupId": newRef(resNameSecurityGroupWorker),
+			"SourceSecurityGroupId": newRef(resNameSecurityGroupController),
 			"FromPort":              2379,
-			"ToPort":                2379,
+			"ToPort":                2380,
 			"IpProtocol":            sgProtoTCP,
 		},
 	}
@@ -339,7 +339,14 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 					"PolicyDocument": map[string]interface{}{
 						"Version": "2012-10-17",
 						"Statement": []map[string]interface{}{
+							/* ec2:Describe* required by ectd-aws-cluster to describe controllers to manage etcd membership.
+							   Other permissiosn required by Kubernetes to manage routing table for Pod IP addresses and
+							   security groups to make services accessible by the service load balancers.
+							   This could be tightened. Tracked in kubernetes/kubernetes@11936 */
 							newIAMPolicyStatement("ec2:*", "*"),
+							/* Required by etcd-aws-cluster to describe controllers to manage etcd membership. */
+							newIAMPolicyStatement("autoscaling:Describe*", "*"),
+							/* Required by Kubernetes to create load balanced services. */
 							newIAMPolicyStatement("elasticloadbalancing:*", "*"),
 						},
 					},

@@ -128,7 +128,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-apiserver
-    image: gcr.io/google_containers/hyperkube:v1.0.7
+    image: gcr.io/google_containers/hyperkube:v1.1.1
     command:
     - /hyperkube
     - apiserver
@@ -186,11 +186,12 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-proxy
-    image: gcr.io/google_containers/hyperkube:v1.0.7
+    image: gcr.io/google_containers/hyperkube:v1.1.1
     command:
     - /hyperkube
     - proxy
     - --master=http://127.0.0.1:8080
+    - --proxy-mode=iptables
     securityContext:
       privileged: true
     volumeMounts:
@@ -287,7 +288,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-controller-manager
-    image: gcr.io/google_containers/hyperkube:v1.0.7
+    image: gcr.io/google_containers/hyperkube:v1.1.1
     command:
     - /hyperkube
     - controller-manager
@@ -335,7 +336,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-scheduler
-    image: gcr.io/google_containers/hyperkube:v1.0.7
+    image: gcr.io/google_containers/hyperkube:v1.1.1
     command:
     - /hyperkube
     - scheduler

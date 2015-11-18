@@ -10,7 +10,7 @@ if [ $# -ne 1 ]; then
 fi
 
 VERSION=$1
-S3_BUCKET="coreos-kubernetes"
+S3_BUCKET=${S3_BUCKET:-coreos-kubernetes}
 
 echo "Preparing release artifacts for $VERSION"
 

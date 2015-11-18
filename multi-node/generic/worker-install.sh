@@ -177,4 +177,3 @@ systemctl stop update-engine; systemctl mask update-engine
 
 systemctl daemon-reload
 systemctl enable kubelet; systemctl start kubelet
-

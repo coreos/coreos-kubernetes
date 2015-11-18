@@ -13,7 +13,7 @@ When designing these guides and tools, the following considerations are made:
 * Internal cluster DNS is available
 * Service accounts enabled
 * Use a cloud-provider if we can, for instance on AWS
-* Follow Kubernetes v1.0 guidelines for AdmissionControllers and other suggested configuration
+* Follow Kubernetes guidelines for AdmissionControllers and other suggested configuration
 
 ## Kubernetes Topics
 

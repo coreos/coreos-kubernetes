@@ -6,7 +6,7 @@ Add-ons are built on the same Kubernetes components as user-submitted jobs &mdas
 
 First create `dns-addon.yml` on your local machine and replace the variable. There is a lot going on in there, so let's break it down after you create it.
 
-[k8s-dns]: http://kubernetes.io/v1.0/docs/admin/dns.html
+[k8s-dns]: http://kubernetes.io/v1.1/docs/admin/dns.html
 
 * Replace `${DNS_SERVICE_IP}`
 
@@ -157,5 +157,5 @@ $ kubectl get pods --namespace=kube-system | grep kube-dns-v9
 <div class="co-m-docs-next-step">
   <p>Now that you have a working Kubernetes cluster with a functional CLI tool, you are free to deploy Kubernetes-ready applications.</p>
   <p>Start with a multi-tier web application (Guestbook) from the official Kubernetes documentation to visualize how the various Kubernetes components fit together.</p>
-  <a href="http://kubernetes.io/v1.0/examples/guestbook-go/README.html" class="btn btn-default btn-icon-right" data-category="Docs Next" data-event="kubernetes.io: Guestbook">Deploy the Guestbook Sample app</a>
+  <a href="http://kubernetes.io/v1.1/examples/guestbook-go/README.html" class="btn btn-default btn-icon-right" data-category="Docs Next" data-event="kubernetes.io: Guestbook">Deploy the Guestbook Sample app</a>
 </div>

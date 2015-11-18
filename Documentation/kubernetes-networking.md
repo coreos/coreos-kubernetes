@@ -15,7 +15,7 @@ The Kubernetes network model outlines four methods of component communication:
 
 See [Kubernetes Networking][kubernetes-network] for more detailed information on the Kubernetes network model and motiviation.
 
-[kubernetes-network]: http://kubernetes.io/v1.0/docs/admin/networking.html
+[kubernetes-network]: http://kubernetes.io/v1.1/docs/admin/networking.html
 
 ## Port allocation
 
@@ -44,7 +44,7 @@ etcd Node Inbound
 | TCP      | 2379-2380  | Control Nodes | etcd server client API                                   |
 | TCP      | 2379-2380  | Worker Nodes  | etcd server client API (only required if using flannel). |
 
-[external-service]: http://kubernetes.io/v1.0/docs/user-guide/services.html#external-services
+[external-service]: http://kubernetes.io/v1.1/docs/user-guide/services.html#external-services
 
 ## Advanced Configuration
 
@@ -76,7 +76,7 @@ The actual allocation of Pod IPs on the host can be achieved by configuring Dock
 
 To achieve this network model, there are various methods that can be used. See the [Kubernetes Networking][how-to-achieve] documentation for more detail.
 
-[how-to-achieve]: http://kubernetes.io/v1.0/docs/admin/networking.html#how-to-achieve-this
+[how-to-achieve]: http://kubernetes.io/v1.1/docs/admin/networking.html#how-to-achieve-this
 
 ### Pod-to-Service Communication
 
@@ -90,5 +90,5 @@ IP addresses assigned on the pod network are typically not routable outside of t
 
 In a manually configured network, it may be necessary to open a range of ports to outside clients (default 30000-32767) for use with "external services". See the [Kubernetes Service][kube-service] documentation for more information on external services.
 
-[kube-service]: http://kubernetes.io/v1.0/docs/user-guide/services.html#external-services
+[kube-service]: http://kubernetes.io/v1.1/docs/user-guide/services.html#external-services
 

@@ -76,7 +76,7 @@ After=flanneld.service
 
 ### Create the kubelet Unit
 
-The [kubelet](http://kubernetes.io/v1.0/docs/admin/kubelet.html) is the agent on each machine that starts and stops Pods and other machine-level tasks. The kubelet communicates with the API server (also running on the master machines) with the TLS certificates we placed on disk earlier.
+The [kubelet](http://kubernetes.io/v1.1/docs/admin/kubelet.html) is the agent on each machine that starts and stops Pods and other machine-level tasks. The kubelet communicates with the API server (also running on the master machines) with the TLS certificates we placed on disk earlier.
 
 On the master node, the kubelet is configured to communicate with the API server, but not register for cluster work, as shown in the `--register-node=false` line in the YAML excerpt below. This prevents user pods being scheduled on the master nodes, and ensures cluster work is routed only to task-specific worker nodes.
 
@@ -128,7 +128,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-apiserver
-    image: gcr.io/google_containers/hyperkube:v1.0.7
+    image: gcr.io/google_containers/hyperkube:v1.1.1
     command:
     - /hyperkube
     - apiserver
@@ -186,11 +186,12 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-proxy
-    image: gcr.io/google_containers/hyperkube:v1.0.7
+    image: gcr.io/google_containers/hyperkube:v1.1.1
     command:
     - /hyperkube
     - proxy
     - --master=http://127.0.0.1:8080
+    - --proxy-mode=iptables
     securityContext:
       privileged: true
     volumeMounts:
@@ -287,7 +288,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-controller-manager
-    image: gcr.io/google_containers/hyperkube:v1.0.7
+    image: gcr.io/google_containers/hyperkube:v1.1.1
     command:
     - /hyperkube
     - controller-manager
@@ -335,7 +336,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-scheduler
-    image: gcr.io/google_containers/hyperkube:v1.0.7
+    image: gcr.io/google_containers/hyperkube:v1.1.1
     command:
     - /hyperkube
     - scheduler
@@ -405,7 +406,7 @@ A successful response should look something like:
 {
   "major": "1",
   "minor": "0",
-  "gitVersion": "v1.0.6",
+  "gitVersion": "v1.1.1",
   "gitCommit": "388061f00f0d9e4d641f9ed4971c775e1654579d",
   "gitTreeState": "clean"
 }

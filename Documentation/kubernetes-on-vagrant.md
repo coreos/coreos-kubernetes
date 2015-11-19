@@ -16,11 +16,11 @@ Navigate to the [Vagrant downloads page][vagrant-downloads] and grab the appropr
 The primary CLI tool used to interact with the Kubernetes API is called `kubectl`.
 This tool is not yet available through the typical means of software distribution, so it is suggested that you download the binary directly from the Kubernetes release artifact site:
 
-First, download the binary using a command-line tool such as `wget` or `curl` from `https://storage.googleapis.com/kubernetes-release/release/v1.0.7/bin/${ARCH}/amd64/kubectl`.
+First, download the binary using a command-line tool such as `wget` or `curl` from `https://storage.googleapis.com/kubernetes-release/release/v1.1.1/bin/${ARCH}/amd64/kubectl`.
 Set the ARCH environment variable to "linux" or "darwin" based on your workstation operating system:
 
 ```sh
-ARCH=linux; wget https://storage.googleapis.com/kubernetes-release/release/v1.0.7/bin/$ARCH/amd64/kubectl
+ARCH=linux; wget https://storage.googleapis.com/kubernetes-release/release/v1.1.1/bin/$ARCH/amd64/kubectl
 ```
 
 After downloading the binary, ensure it is executable and move it into your PATH:
@@ -81,6 +81,6 @@ NAME          LABELS                               STATUS
 <div class="co-m-docs-next-step">
   <p><strong>Is kubectl working correctly?</strong></p>
   <p>Now that you've got a working Kubernetes cluster with a functional CLI tool, you are free to deploy Kubernetes-ready applications.
-Start with a <a href="http://kubernetes.io/v1.0/examples/guestbook-go/README.html" data-category="Docs Next" data-event="kubernetes.io: Guestbook">multi-tier web application</a> from the official Kubernetes documentation to visualize how the various Kubernetes components fit together.</p>
-  <a href="http://kubernetes.io/v1.0/examples/guestbook-go/README.html" class="btn btn-default btn-icon-right" data-category="Docs Next" data-event="kubernetes.io: Guestbook">View the Guestbook example app</a>
+Start with a <a href="http://kubernetes.io/v1.1/examples/guestbook-go/README.html" data-category="Docs Next" data-event="kubernetes.io: Guestbook">multi-tier web application</a> from the official Kubernetes documentation to visualize how the various Kubernetes components fit together.</p>
+  <a href="http://kubernetes.io/v1.1/examples/guestbook-go/README.html" class="btn btn-default btn-icon-right" data-category="Docs Next" data-event="kubernetes.io: Guestbook">View the Guestbook example app</a>
 </div>

@@ -20,6 +20,7 @@ type Config struct {
 	Region                   string `yaml:"region"`
 	AvailabilityZone         string `yaml:"availabilityZone"`
 	ArtifactURL              string `yaml:"artifactURL"`
+	ControllerCount          int    `yaml:"controllerCount"`
 	ControllerRootVolumeSize int    `yaml:"controllerRootVolumeSize"`
 	WorkerCount              int    `yaml:"workerCount"`
 	WorkerRootVolumeSize     int    `yaml:"workerRootVolumeSize"`
@@ -65,6 +66,7 @@ func NewDefaultConfig(ver string) *Config {
 	return &Config{
 		ClusterName: "kubernetes",
 		ArtifactURL: DefaultArtifactURL(ver),
+		ControllerCount: 1,
 		WorkerCount: 1,
 	}
 }

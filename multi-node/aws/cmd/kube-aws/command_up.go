@@ -191,10 +191,10 @@ func initTLS(cfg *cluster.Config, dir string) (*cluster.TLSConfig, error) {
 			"kubernetes.default",
 			"kubernetes.default.svc",
 			"kubernetes.default.svc.cluster.local",
+			fmt.Sprintf("kubernetes.%s.cluster.local", cfg.ClusterName),
 			cfg.ExternalDNSName,
 		},
 		IPAddresses: []string{
-			"10.0.0.50",
 			"10.3.0.1",
 		},
 	}

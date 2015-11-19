@@ -18,6 +18,9 @@ region:
 # is responsible for making this name routable
 externalDNSName:
 
+# Number of controller nodes to create.
+#controllerCount: 1
+
 # Disk size (GB) for controller node
 #controllerRootVolumeSize: 30
 

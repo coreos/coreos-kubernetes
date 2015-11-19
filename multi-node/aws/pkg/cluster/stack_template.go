@@ -16,11 +16,14 @@ const (
 	resNameSubnet                       = "Subnet"
 	resNameSubnetRouteTableAssociation  = "SubnetRouteTableAssociation"
 	resNameSecurityGroupController      = "SecurityGroupController"
+	resNameSecurityGroupLoadBalancerController = "SecurityGroupLoadBalancerController"
 	resNameSecurityGroupWorker          = "SecurityGroupWorker"
-	resNameInstanceController           = "InstanceController"
-	resNameEIPController                = "EIPController"
-	resNameAlarmControllerRecover       = "AlarmControllerRecover"
+	resNameLoadBalancerController       = "LoadBalancerController"
+	resNameHostedZone                   = "HostedZone"
+	resNameRecordSetController          = "RecordSetController"
+	resNameAutoScaleController          = "AutoScaleController"
 	resNameAutoScaleWorker              = "AutoScaleWorker"
+	resNameLaunchConfigurationController= "LaunchConfigurationController"
 	resNameLaunchConfigurationWorker    = "LaunchConfigurationWorker"
 	resNameIAMRoleController            = "IAMRoleController"
 	resNameIAMInstanceProfileController = "IAMInstanceProfileController"
@@ -32,6 +35,7 @@ const (
 	parNameReleaseChannel           = "ReleaseChannel"
 	parNameControllerInstanceType   = "ControllerInstanceType"
 	parNameControllerRootVolumeSize = "ControllerRootVolumeSize"
+	parNameControllerCount          = "ControllerCount"
 	parNameWorkerInstanceType       = "WorkerInstanceType"
 	parNameKeyName                  = "KeyName"
 	parArtifactURL                  = "ArtifactURL"
@@ -231,14 +235,37 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 			},
 		},
 	}
-	res[resNameSecurityGroupController+"IngressFromWorkerToEtcd"] = map[string]interface{}{
+	res[resNameSecurityGroupController+"IngressFromControllerToEtcd"] = map[string]interface{}{
 		"Type": "AWS::EC2::SecurityGroupIngress",
 		"Properties": map[string]interface{}{
 			"GroupId":               newRef(resNameSecurityGroupController),
-			"SourceSecurityGroupId": newRef(resNameSecurityGroupWorker),
+			"SourceSecurityGroupId": newRef(resNameSecurityGroupController),
 			"FromPort":              2379,
-			"ToPort":                2379,
+			"ToPort":                2380,
 			"IpProtocol":            sgProtoTCP,
+		},
+	}
+
+	res[resNameSecurityGroupLoadBalancerController] = map[string]interface{}{
+		"Type": "AWS::EC2::SecurityGroup",
+		"Properties": map[string]interface{}{
+			"GroupDescription": newRef("AWS::StackName"),
+			"VpcId":            newRef(resNameVPC),
+			"SecurityGroupEgress": []map[string]interface{}{
+				map[string]interface{}{
+					"IpProtocol": sgProtoTCP, 
+					"FromPort":   0, 
+					"ToPort":     sgPortMax, 
+					"DestinationSecurityGroupId": newRef(resNameSecurityGroupController),
+				},
+			},
+			"SecurityGroupIngress": []map[string]interface{}{
+				map[string]interface{}{"IpProtocol": sgProtoTCP, "FromPort": 443, "ToPort": 443, "CidrIp": vpcCidr},
+				map[string]interface{}{"IpProtocol": sgProtoTCP, "FromPort": 443, "ToPort": 443, "CidrIp": podCidr},
+			},
+			"Tags": []map[string]interface{}{
+				newTag(tagKubernetesCluster, newRef(parClusterName)),
+			},
 		},
 	}
 
@@ -312,7 +339,14 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 					"PolicyDocument": map[string]interface{}{
 						"Version": "2012-10-17",
 						"Statement": []map[string]interface{}{
+							/* ec2:Describe* required by ectd-aws-cluster to describe controllers to manage etcd membership.
+							   Other permissiosn required by Kubernetes to manage routing table for Pod IP addresses and
+							   security groups to make services accessible by the service load balancers.
+							   This could be tightened. Tracked in kubernetes/kubernetes@11936 */
 							newIAMPolicyStatement("ec2:*", "*"),
+							/* Required by etcd-aws-cluster to describe controllers to manage etcd membership. */
+							newIAMPolicyStatement("autoscaling:Describe*", "*"),
+							/* Required by Kubernetes to create load balanced services. */
 							newIAMPolicyStatement("elasticloadbalancing:*", "*"),
 						},
 					},
@@ -373,16 +407,103 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 		},
 	}
 
-	res[resNameEIPController] = map[string]interface{}{
-		"Type": "AWS::EC2::EIP",
-		"Properties": map[string]interface{}{
-			"InstanceId": newRef(resNameInstanceController),
-			"Domain":     "vpc",
+	res[resNameLoadBalancerController] = map[string]interface{}{
+		"Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+		"Properties":  map[string]interface{}{
+			"Scheme": "internal",
+			"Subnets": []interface{}{
+				newRef(resNameSubnet),
+			},
+			"SecurityGroups": []interface{}{newRef(resNameSecurityGroupLoadBalancerController)},
+			"Listeners": []interface{}{
+				map[string]interface{}{
+					"Protocol":         "TCP",
+					"LoadBalancerPort": "443",
+					"InstanceProtocol": "TCP",
+					"InstancePort":     "443",
+				},
+			},
+			"HealthCheck": map[string]interface{}{
+				"HealthyThreshold":   "2",
+				"Interval":           "60",
+				"Target":             "SSL:443",
+				"Timeout":            "30",
+				"UnhealthyThreshold": "2",
+			},
+			"Tags": []interface{}{
+				newTag(tagKubernetesCluster, newRef(parClusterName)),
+			},
 		},
 	}
 
-	res[resNameInstanceController] = map[string]interface{}{
-		"Type": "AWS::EC2::Instance",
+	res[resNameHostedZone] = map[string]interface{}{
+		"Type": "AWS::Route53::HostedZone",
+		"Properties": map[string]interface{}{
+			"Name": map[string]interface{}{
+				"Fn::Join": []interface{}{
+					"",
+					[]interface{}{
+						newRef(parClusterName),
+						".cluster.local",
+					},
+				},
+			},
+			"VPCs": []interface{}{
+				map[string]interface{}{
+					"VPCId": 		 newRef(resNameVPC),
+					"VPCRegion": newRef("AWS::Region"),
+				},
+			},
+		},
+	}
+
+	res[resNameRecordSetController] = map[string]interface{}{
+		"Type": "AWS::Route53::RecordSet",
+		"Properties": map[string]interface{}{
+			"HostedZoneId": newRef(resNameHostedZone),
+			"Name": map[string]interface{}{
+				"Fn::Join": []interface{}{
+					"",
+					[]interface{}{
+						"kubernetes.",
+						newRef(parClusterName),
+						".cluster.local",
+					},
+				},
+			},
+			"Type": "A",
+			"AliasTarget": map[string]interface{}{
+				"HostedZoneId": map[string]interface{}{
+					"Fn::GetAtt": []string{ resNameLoadBalancerController, "CanonicalHostedZoneNameID", },
+				},
+				"DNSName": map[string]interface{}{
+					"Fn::GetAtt": []string{ resNameLoadBalancerController, "DNSName", },
+				},
+			},
+		},
+	}
+
+	res[resNameAutoScaleController] = map[string]interface{}{
+		"Type": "AWS::AutoScaling::AutoScalingGroup",
+		"Properties": map[string]interface{}{
+			"AvailabilityZones":       []interface{}{availabilityZone},
+			"LaunchConfigurationName": newRef(resNameLaunchConfigurationController),
+			"DesiredCapacity":         newRef(parNameControllerCount),
+			"MinSize":                 newRef(parNameControllerCount),
+			"MaxSize":                 newRef(parNameControllerCount),
+			"HealthCheckGracePeriod":  600,
+			"HealthCheckType":         "EC2",
+			"VPCZoneIdentifier":       []interface{}{newRef(resNameSubnet)},
+			"LoadBalancerNames":       []interface{}{newRef(resNameLoadBalancerController)},
+			"Tags": []interface{}{
+				newPropagatingTag(tagKubernetesCluster, newRef(parClusterName)),
+				newPropagatingTag("Name", "kube-aws-controller"),
+			},
+		},
+	}
+
+	res[resNameLaunchConfigurationController] = map[string]interface{}{
+		"Type": "AWS::AutoScaling::LaunchConfiguration",
 		"Properties": map[string]interface{}{
 			"ImageId":      imageID,
 			"InstanceType": newRef(parNameControllerInstanceType),
@@ -390,62 +511,14 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 			"UserData": map[string]interface{}{
 				"Fn::Base64": renderTemplate(baseControllerCloudConfig),
 			},
+			"SecurityGroups":     []interface{}{newRef(resNameSecurityGroupController)},
 			"IamInstanceProfile": newRef(resNameIAMInstanceProfileController),
-			"NetworkInterfaces": []map[string]interface{}{
-				map[string]interface{}{
-					"PrivateIpAddress":         "10.0.0.50",
-					"AssociatePublicIpAddress": false,
-					"DeleteOnTermination":      true,
-					"DeviceIndex":              "0",
-					"SubnetId":                 newRef(resNameSubnet),
-					"GroupSet": []map[string]interface{}{
-						newRef(resNameSecurityGroupController),
-					},
-				},
-			},
 			"BlockDeviceMappings": []map[string]interface{}{
 				map[string]interface{}{
 					"DeviceName": "/dev/xvda",
 					"Ebs": map[string]interface{}{
 						"VolumeSize": newRef(parNameControllerRootVolumeSize),
 					},
-				},
-			},
-			"AvailabilityZone": availabilityZone,
-			"Tags": []map[string]interface{}{
-				newTag(tagKubernetesCluster, newRef(parClusterName)),
-				newTag("Name", "kube-aws-controller"),
-			},
-		},
-	}
-
-	res[resNameAlarmControllerRecover] = map[string]interface{}{
-		"Type": "AWS::CloudWatch::Alarm",
-		"Properties": map[string]interface{}{
-			"AlarmDescription":   "Trigger a recovery when system check fails for 5 consecutive minutes.",
-			"Namespace":          "AWS/EC2",
-			"MetricName":         "StatusCheckFailed_System",
-			"Statistic":          "Minimum",
-			"Period":             "60",
-			"EvaluationPeriods":  "5",
-			"ComparisonOperator": "GreaterThanThreshold",
-			"Threshold":          "0",
-			"AlarmActions": []interface{}{
-				map[string]interface{}{
-					"Fn::Join": []interface{}{
-						"",
-						[]interface{}{
-							"arn:aws:automate:",
-							newRef("AWS::Region"),
-							":ec2:recover",
-						},
-					},
-				},
-			},
-			"Dimensions": []interface{}{
-				map[string]interface{}{
-					"Name":  "InstanceId",
-					"Value": newRef(resNameInstanceController),
 				},
 			},
 		},
@@ -475,6 +548,7 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 
 	res[resNameAutoScaleWorker] = map[string]interface{}{
 		"Type": "AWS::AutoScaling::AutoScalingGroup",
+		"DependsOn": []interface{}{resNameAutoScaleController},
 		"Properties": map[string]interface{}{
 			"AvailabilityZones":       []interface{}{availabilityZone},
 			"LaunchConfigurationName": newRef(resNameLaunchConfigurationWorker),
@@ -511,6 +585,12 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 		"Type":        "String",
 		"Default":     "m3.medium",
 		"Description": "EC2 instance type used for each controller instance",
+	}
+
+	par[parNameControllerCount] = map[string]interface{}{
+		"Type":        "String",
+		"Default":     "1",
+		"Description": "Number of controller instances to create, may be modified later",
 	}
 
 	par[parNameControllerRootVolumeSize] = map[string]interface{}{

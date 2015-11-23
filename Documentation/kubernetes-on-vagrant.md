@@ -41,22 +41,25 @@ $ cd coreos-kubernetes/multi-node/vagrant
 
 ## Start the Machines
 
-The default cluster configuration is to start a virtual machine for each role &mdash; controller, worker, and etcd server. However, you can modify the default cluster settings by copying `config.rb.sample` to `config.rb` and modifying configuration values.
+The default cluster configuration is to start a virtual machine for each role &mdash; controller, worker, and etcd server. However, you can modify the default cluster settings by copying `config.rb.sample` to `config.rb` and modifying the configuration values, e.g.:
 
+```ruby
+$update_channel="beta"
+
+# Leave defaults for the controller
+# $controller_count=1
+# $controller_vm_memory=512
+
+# More workers, each with more memory
+$worker_count=3
+$worker_vm_memory=1024
+
+# More etcd instances, and increase memory for each
+$etcd_count=3
+$etcd_vm_memory=1024
 ```
-#$update_channel="alpha"
 
-#$controller_count=1
-#$controller_vm_memory=512
-
-#$worker_count=1
-#$worker_vm_memory=512
-
-#$etcd_count=1
-#$etcd_vm_memory=512
-```
-
-Next, simply run `vagrant up` and wait for the command to succeed.
+Next, run `vagrant up` and wait for the command to succeed. (If you get `No usable default provider could be found for your system.`, then you need to install/specify a provider as described [here](https://docs.vagrantup.com/v2/getting-started/providers.html)).
 Once Vagrant is finished booting and provisioning your machine, your cluster is good to go.
 
 ## Configure kubectl

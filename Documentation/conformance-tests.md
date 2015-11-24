@@ -44,16 +44,5 @@ The command below expects a kubeconfig with the current context set to the clust
 KUBECONFIG=$HOME/.kube/config hack/conformance-test.sh 2>&1 | tee conformance.$(date +%FT%T%z).log
 ```
 
-## Expected Test Case Failures
-
-Either due to single-node installations, or installation default settings, a couple tests are expected to fail:
-
-### Single Node
-
-- *should proxy to cadvisor*: We disable cadvisor from listening on all interfaces: `--cadvisor-port=0`
-- *should function for intra-pod communication*: Single node installation has no additional workers to communicate with.
-
-### Multi Node
-
-- *should proxy to cadvisor*: We disable cadvisor from listening on all interfaces: `--cadvisor-port=0`
+**NOTE:** In single-node installations the test `should function for intra-pod communication`, will not pass because there are no additional workers to communicate with.
 

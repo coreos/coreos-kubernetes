@@ -24,6 +24,32 @@ $ aws s3 cp --recursive --acl=public-read artifacts/ s3://<bucket>/
 
 Then, simply create a cluster using `artifactURL: https://<bucket>.s3.amazonaws.com`.
 
+### Accessing the Kubernetes Cluster Locally
+
+```
+$ ssh -f -nNT -L 8080:127.0.0.1:8080 -i <private-key> core@<cluster-external-dns-name>
+
+```
+The Kubernetes Cluster API is now available on localhost:8080 and can be directly accessesed using the kubectl command.
+
+```
+$ kubectl cluster-info
+
+```
+
+### Kube UI Setup
+
+Once the Kubernetes Cluster API is available locally the Kube-UI can be deployed using the below.
+
+```
+$ git clone https://github.com/kubernetes/kubernetes
+$ cd kubernetes && git checkout v1.1.1
+$ kubectl create -f kubernetes/cluster/addons/kube-ui/
+
+```
+# Load kube-UI in browser at: http://127.0.0.1:8080/ui
+
+
 ### Useful Resources
 
 The following links can be useful for development:

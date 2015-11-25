@@ -64,15 +64,25 @@ Next, simply run `vagrant up` and wait for the command to succeed.
 Once Vagrant is finished booting and provisioning your machine, your cluster is good to go.
 
 ## Configure kubectl
+You can choose from one of the two following options.
 
-Configure your local Kubernetes client using the following commands:
+1. **Use a custom KUBECONFIG path**
 
-```sh
-$ kubectl config set-cluster vagrant --server=https://172.17.4.101:443 --certificate-authority=${PWD}/ssl/ca.pem
-$ kubectl config set-credentials vagrant-admin --certificate-authority=${PWD}/ssl/ca.pem --client-key=${PWD}/ssl/admin-key.pem --client-certificate=${PWD}/ssl/admin.pem
-$ kubectl config set-context vagrant --cluster=vagrant --user=vagrant-admin
-$ kubectl config use-context vagrant
-```
+	```sh
+	export KUBECONFIG="${KUBECONFIG}:$(pwd)/kubeconfig"
+	kubectl config use-context vagrant-multi
+	```
+
+2. **Update the local-user kubeconfig**
+
+	Configure your local Kubernetes client using the following commands:
+
+	```sh
+	$ kubectl config set-cluster vagrant-multi-cluster --server=https://172.17.4.101:443 --certificate-authority=${PWD}/ssl/ca.pem
+	$ kubectl config set-credentials vagrant-multi-admin --certificate-authority=${PWD}/ssl/ca.pem --client-key=${PWD}/ssl/admin-key.pem --client-certificate=${PWD}/ssl/admin.pem
+	$ kubectl config set-context vagrant-multi --cluster=vagrant-multi-cluster --user=vagrant-multi-admin
+	$ kubectl config use-context vagrant-multi
+	```
 
 Check that your client is configured properly by using `kubectl` to inspect your cluster:
 

@@ -102,7 +102,7 @@ ExecStart=/usr/bin/kubelet \
   --config=/etc/kubernetes/manifests \
   --cluster_dns=${DNS_SERVICE_IP} \
   --cluster_domain=cluster.local \
-  --cadvisor-port=4194
+  --cadvisor-port=0
 Restart=always
 RestartSec=10
 
@@ -123,8 +123,6 @@ EOF
 	template manifests/cluster/kube-system.json /srv/kubernetes/manifests/kube-system.json
 	template manifests/cluster/kube-dns-rc.json /srv/kubernetes/manifests/kube-dns-rc.json
 	template manifests/cluster/kube-dns-svc.json /srv/kubernetes/manifests/kube-dns-svc.json
-	template manifests/cluster/kube-ui-rc.json /srv/kubernetes/manifests/kube-ui-rc.json
-	template manifests/cluster/kube-ui-svc.json /srv/kubernetes/manifests/kube-ui-svc.json
 
 	local TEMPLATE=/etc/flannel/options.env
 	[ -f $TEMPLATE ] || {
@@ -170,8 +168,6 @@ function start_addons {
 	echo "K8S: DNS addon"
 	curl --silent -XPOST -d"$(cat /srv/kubernetes/manifests/kube-dns-rc.json)" "http://127.0.0.1:8080/api/v1/namespaces/kube-system/replicationcontrollers" > /dev/null
 	curl --silent -XPOST -d"$(cat /srv/kubernetes/manifests/kube-dns-svc.json)" "http://127.0.0.1:8080/api/v1/namespaces/kube-system/services" > /dev/null
-	curl --silent -XPOST -d"$(cat /srv/kubernetes/manifests/kube-ui-rc.json)" "http://127.0.0.1:8080/api/v1/namespaces/kube-system/replicationcontrollers" > /dev/null
-	curl --silent -XPOST -d"$(cat /srv/kubernetes/manifests/kube-ui-svc.json)" "http://127.0.0.1:8080/api/v1/namespaces/kube-system/services" > /dev/null
 }
 
 init_config

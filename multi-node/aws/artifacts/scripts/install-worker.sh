@@ -88,7 +88,7 @@ ExecStart=/usr/bin/kubelet \
   --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml \
   --tls-cert-file=/etc/kubernetes/ssl/worker.pem \
   --tls-private-key-file=/etc/kubernetes/ssl/worker-key.pem \
-  --cadvisor-port=4194
+  --cadvisor-port=0
 Restart=always
 RestartSec=10
 [Install]

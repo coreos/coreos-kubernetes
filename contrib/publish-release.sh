@@ -1,4 +1,16 @@
 #!/bin/bash -e
+#
+# Example usage:
+#
+# $ export S3_BUCKET=kube-aws-v0.2.0-patch
+# $ aws s3 mb $S3_BUCKET
+# make_bucket: s3://kube-aws-v0.2.0-patch/
+# $ contrib/publish-release.sh v0.2.0-patch
+# Building kube-aws a3d5cdb560cc94cb4b1c65bbc5db24a2077f1fd1...
+# ...
+# Finished building release artifacts for v0.2.0-patch
+# $ ls release/
+# kube-aws-darwin-amd64.tar.gz kube-aws-linux-amd64.tar.gz
 
 function usage {
    echo "$0 <version>"
@@ -10,7 +22,7 @@ if [ $# -ne 1 ]; then
 fi
 
 VERSION=$1
-S3_BUCKET="coreos-kubernetes"
+S3_BUCKET=${S3_BUCKET:-coreos-kubernetes}
 
 echo "Preparing release artifacts for $VERSION"
 

@@ -33,6 +33,10 @@ https://coreos.com/kubernetes/docs/latest/
 - [Multi-Node AWS Cluster](multi-node/aws/README.md)
 - [Multi-Node Bare Metal Cluster](Documentation/kubernetes-on-baremetal.md)
 
+## Deploying Kube-UI Addon on Kubernetes
+
+- [Mutli-Node AWS Cluster](multi-node/aws/README.md)
+
 ## Running Kubernetes Conformance Tests
 
 - [Conformance Tests](Documentation/conformance-tests.md)

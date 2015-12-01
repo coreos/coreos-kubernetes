@@ -128,7 +128,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-apiserver
-    image: gcr.io/google_containers/hyperkube:v1.1.1
+    image: gcr.io/google_containers/hyperkube:v1.1.2
     command:
     - /hyperkube
     - apiserver
@@ -186,7 +186,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-proxy
-    image: gcr.io/google_containers/hyperkube:v1.1.1
+    image: gcr.io/google_containers/hyperkube:v1.1.2
     command:
     - /hyperkube
     - proxy
@@ -288,7 +288,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-controller-manager
-    image: gcr.io/google_containers/hyperkube:v1.1.1
+    image: gcr.io/google_containers/hyperkube:v1.1.2
     command:
     - /hyperkube
     - controller-manager
@@ -336,7 +336,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-scheduler
-    image: gcr.io/google_containers/hyperkube:v1.1.1
+    image: gcr.io/google_containers/hyperkube:v1.1.2
     command:
     - /hyperkube
     - scheduler
@@ -406,7 +406,7 @@ A successful response should look something like:
 {
   "major": "1",
   "minor": "0",
-  "gitVersion": "v1.1.1",
+  "gitVersion": "v1.1.2",
   "gitCommit": "388061f00f0d9e4d641f9ed4971c775e1654579d",
   "gitTreeState": "clean"
 }

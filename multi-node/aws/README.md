@@ -11,6 +11,8 @@ Run the `./build` script to compile `kube-aws` locally.
 This depends on having golang available on your workstation.
 The compiled binary will be available at `./bin/kube-aws`.
 
+_To use the packages from `Godeps/`, execute ```GOPATH=`godep path`:$GOPATH``` before `./build`_
+
 ### Custom Kubernetes Manifests
 
 You may deploy a cluster using a custom CloudFormation template, Kubernetes manifests and install scripts using the `artifactURL` option in your cluster config.

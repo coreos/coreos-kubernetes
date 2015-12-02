@@ -8,7 +8,7 @@ import (
 var templateRef *regexp.Regexp
 
 func init() {
-	templateRef = regexp.MustCompile(`{{\s*[a-zA-Z0-9]+(\|[a-zA-Z0-9]+)*\s*}}`)
+	templateRef = regexp.MustCompile(`{{\s*[a-zA-Z0-9\:]+(\|[a-zA-Z0-9]+)*\s*}}`)
 }
 
 // renderTemplate creates an AWS template from a rudimentary templating language

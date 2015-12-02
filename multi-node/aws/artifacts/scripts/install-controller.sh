@@ -30,6 +30,12 @@ export DNS_SERVICE_IP=10.3.0.10
 # The HTTP(S) host serving the necessary Kubernetes artifacts
 export ARTIFACT_URL=
 
+# For etcd backup & restore
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_DEFAULT_REGION=
+AWS_BUCKET=
+
 # The above settings can optionally be overridden using an environment file:
 ENV_FILE=/run/coreos-kubernetes/options.env
 
@@ -87,7 +93,38 @@ function init_flannel {
 	fi
 }
 
+function restore_etcd {
+	docker run --net=host --rm -e ETCD_IP=127.0.0.1 -e ETCD_PORT=2379 -e S3_BUCKET=$AWS_BUCKET -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY -e AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION tpett/etcd-backup restore /registry || true
+}
+
 function init_templates {
+	local TEMPLATE=/etc/systemd/system/etcd-backup.service
+	[ -f $TEMPLATE ] || {
+		echo "TEMPLATE: $TEMPLATE"
+		mkdir -p $(dirname $TEMPLATE)
+		cat << EOF > $TEMPLATE
+[Service]
+ExecStart=/usr/bin/docker run --rm --net=host -e ETCD_IP=127.0.0.1 -e ETCD_PORT=2379 -e S3_BUCKET=$AWS_BUCKET -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY -e AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION tpett/etcd-backup backup
+Type=oneshot
+
+[Install]
+WantedBy=multi-user.target
+EOF
+	}
+
+	local TEMPLATE=/etc/systemd/system/etcd-backup.timer
+	[ -f $TEMPLATE ] || {
+		echo "TEMPLATE: $TEMPLATE"
+		mkdir -p $(dirname $TEMPLATE)
+		cat << EOF > $TEMPLATE
+[Timer]
+OnCalendar=*:0/10
+
+[Install]
+WantedBy=multi-user.target
+EOF
+	}
+
 	local TEMPLATE=/etc/systemd/system/kubelet.service
 	[ -f $TEMPLATE ] || {
 		echo "TEMPLATE: $TEMPLATE"
@@ -175,10 +212,13 @@ init_templates
 
 init_flannel
 
-systemctl daemon-reload
-systemctl stop update-engine; systemctl mask update-engine
-echo "REBOOT_STRATEGY=off" >> /etc/coreos/update.conf
+restore_etcd
 
-systemctl enable kubelet; systemctl start kubelet
+systemctl daemon-reload
+
+#systemctl stop update-engine; systemctl mask update-engine
+#echo "REBOOT_STRATEGY=off" >> /etc/coreos/update.conf
+
+systemctl enable kubelet; systemctl start kubelet; systemctl start etcd-backup.timer
 start_addons
 echo "DONE"

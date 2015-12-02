@@ -2,9 +2,6 @@ package cluster
 
 var baseControllerCloudConfig = `#cloud-config
 coreos:
-  update:
-    reboot-strategy: "off"
-
   flannel:
     interface: $private_ipv4
 
@@ -32,6 +29,10 @@ write_files:
   content: |
     ETCD_ENDPOINTS=http://127.0.0.1:2379
     ARTIFACT_URL={{ ArtifactURL }}
+    AWS_DEFAULT_REGION= {{ AWS::Region }}
+    AWS_BUCKET= {{ EtcdBackupBucket }}
+    AWS_ACCESS_KEY_ID= {{ EtcdBackupKeyId }}
+    AWS_SECRET_ACCESS_KEY= {{ EtcdBackupAccessKey }}
 
 - path: /tmp/install-controller.sh
   content: |

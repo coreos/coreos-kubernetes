@@ -417,7 +417,7 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 			"CrossZone": true,
 			"Scheme": "internal",
 			"HealthCheck": map[string]interface{}{
-				"Target" : "HTTPS:443/",
+				"Target" : "TCP:443",
 				"HealthyThreshold" : "2",
 				"UnhealthyThreshold" : "5",
 				"Interval" : "30",

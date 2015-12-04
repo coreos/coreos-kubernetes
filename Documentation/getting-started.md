@@ -122,9 +122,11 @@ apiserver-key.pem
 
 **Worker Node Public & Private Keys**
 
-worker.pem
+_You should have one certificate/key set for every worker node in the planned cluster._
 
-worker-key.pem
+${WORKER_FQDN}-worker.pem
+
+${WORKER_FQDN}-worker-key.pem
 
 <hr/>
 

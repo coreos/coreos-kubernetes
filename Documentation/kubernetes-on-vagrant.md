@@ -14,14 +14,13 @@ Navigate to the [Vagrant downloads page][vagrant-downloads] and grab the appropr
 ### kubectl
 
 The primary CLI tool used to interact with the Kubernetes API is called `kubectl`.
-This tool is not yet available through the typical means of software distribution, so it is suggested that you download the binary directly from the Kubernetes release artifact site:
-
-First, download the binary using a command-line tool such as `wget` or `curl` from `https://storage.googleapis.com/kubernetes-release/release/v1.1.2/bin/${ARCH}/amd64/kubectl`.
-Set the ARCH environment variable to "linux" or "darwin" based on your workstation operating system:
+This program is not yet widely packaged by distributions, so the current practice is to download it directly from the Kubernetes release artifact site with a tool like `wget` or `curl`. The linux `kubectl` binary can be fetched with a command like:
 
 ```sh
-ARCH=linux; wget https://storage.googleapis.com/kubernetes-release/release/v1.1.2/bin/$ARCH/amd64/kubectl
+wget https://storage.googleapis.com/kubernetes-release/release/v1.1.2/bin/linux/amd64/kubectl
 ```
+
+On an OS X workstation, replace `linux` in the URL above with `darwin`.
 
 After downloading the binary, ensure it is executable and move it into your PATH:
 

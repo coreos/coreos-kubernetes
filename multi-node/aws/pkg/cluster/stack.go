@@ -7,7 +7,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/elb"
 )
 
 func createStackAndWait(svc *cloudformation.CloudFormation, name, templateURL string, parameters []*cloudformation.Parameter) error {
@@ -74,11 +74,11 @@ func getStackResources(svc *cloudformation.CloudFormation, stackID string) ([]cl
 	return resources, nil
 }
 
-func mapStackResourcesToClusterInfo(svc *ec2.EC2, resources []cloudformation.StackResourceSummary) (*ClusterInfo, error) {
+func mapStackResourcesToClusterInfo(svc *elb.ELB, resources []cloudformation.StackResourceSummary) (*ClusterInfo, error) {
 	var info ClusterInfo
 	for _, r := range resources {
 		switch aws.StringValue(r.LogicalResourceId) {
-		case resNameEIPController:
+		case resNameLoadBalancerController:
 			if r.PhysicalResourceId != nil {
 				info.ControllerIP = *r.PhysicalResourceId
 			} else {

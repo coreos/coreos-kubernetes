@@ -39,3 +39,7 @@ externalDNSName:
 # of the kube-aws tool. This parameter is typically
 # overwritten only for development purposes.
 #artifactURL: https://coreos-kubernetes.s3.amazonaws.com/<VERSION>
+
+etcdBackupBucket: etcdbackup.kubernetes
+etcdBackupAccessKey: ""
+etcdBackupKeyId: ""

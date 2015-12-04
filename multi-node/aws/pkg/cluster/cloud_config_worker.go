@@ -2,12 +2,9 @@ package cluster
 
 var baseWorkerCloudConfig = `#cloud-config
 coreos:
-  update:
-    reboot-strategy: "off"
-
   flannel:
     interface: $private_ipv4
-    etcd_endpoints: http://10.0.0.50:2379
+    etcd_endpoints: http://master.kube.internal:2379
 
   units:
   - name: install-worker.service
@@ -20,8 +17,8 @@ coreos:
 write_files:
 - path: /run/coreos-kubernetes/options.env
   content: |
-    ETCD_ENDPOINTS=http://10.0.0.50:2379
-    CONTROLLER_ENDPOINT=https://10.0.0.50
+    ETCD_ENDPOINTS=http://master.kube.internal:2379
+    CONTROLLER_ENDPOINT=https://master.kube.internal
     ARTIFACT_URL={{ ArtifactURL }}
 
 - path: /tmp/install-worker.sh

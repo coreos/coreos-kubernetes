@@ -7,8 +7,9 @@ import (
 	"text/tabwriter"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/elb"
 )
 
 type ClusterInfo struct {
@@ -156,25 +157,42 @@ func (c *Cluster) Create(tlsConfig *TLSConfig) error {
 		})
 	}
 
-	if c.cfg.AvailabilityZone != "" {
+	if c.cfg.EtcdBackupBucket != "" {
 		parameters = append(parameters, &cloudformation.Parameter{
-			ParameterKey:     aws.String(parAvailabilityZone),
-			ParameterValue:   aws.String(c.cfg.AvailabilityZone),
+			ParameterKey:     aws.String(parEtcdBackupBucket),
+			ParameterValue:   aws.String(c.cfg.EtcdBackupBucket),
+			UsePreviousValue: aws.Bool(true),
+		})
+	}
+
+	if c.cfg.EtcdBackupAccessKey != "" {
+		parameters = append(parameters, &cloudformation.Parameter{
+			ParameterKey:     aws.String(parEtcdBackupAccessKey),
+			ParameterValue:   aws.String(c.cfg.EtcdBackupAccessKey),
+			UsePreviousValue: aws.Bool(true),
+		})
+	}
+
+	if c.cfg.EtcdBackupKeyId != "" {
+		parameters = append(parameters, &cloudformation.Parameter{
+			ParameterKey:     aws.String(parEtcdBackupKeyId),
+			ParameterValue:   aws.String(c.cfg.EtcdBackupKeyId),
 			UsePreviousValue: aws.Bool(true),
 		})
 	}
 
 	tmplURL := fmt.Sprintf("%s/template.json", c.cfg.ArtifactURL)
-	return createStackAndWait(cloudformation.New(c.aws), c.stackName(), tmplURL, parameters)
+	return createStackAndWait(cloudformation.New(session.New(c.aws)), c.stackName(), tmplURL, parameters)
 }
 
 func (c *Cluster) Info() (*ClusterInfo, error) {
-	resources, err := getStackResources(cloudformation.New(c.aws), c.stackName())
+	sess := session.New(c.aws)
+	resources, err := getStackResources(cloudformation.New(sess), c.stackName())
 	if err != nil {
 		return nil, err
 	}
 
-	info, err := mapStackResourcesToClusterInfo(ec2.New(c.aws), resources)
+	info, err := mapStackResourcesToClusterInfo(elb.New(sess), resources)
 	if err != nil {
 		return nil, err
 	}
@@ -184,5 +202,5 @@ func (c *Cluster) Info() (*ClusterInfo, error) {
 }
 
 func (c *Cluster) Destroy() error {
-	return destroyStack(cloudformation.New(c.aws), c.stackName())
+	return destroyStack(cloudformation.New(session.New(c.aws)), c.stackName())
 }

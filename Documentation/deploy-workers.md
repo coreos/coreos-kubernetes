@@ -1,6 +1,6 @@
 ## Deploy Worker Node(s)
 
-Boot one or more CoreOS nodes which will be used as Kubernetes Workers. You must use a CoreOS version 773.1.0+ for the `kubelet` to be present in the image.
+Boot one or more CoreOS nodes which will be used as Kubernetes Workers. You must use a CoreOS version 773.1.0+ on the Alpha or Beta channel for the `kubelet` to be present in the image.
 
 See the [CoreOS Documentation](https://coreos.com/os/docs/latest/) for guides on launching nodes on supported platforms.
 

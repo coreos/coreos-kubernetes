@@ -7,7 +7,7 @@ After completing this guide, a deployer will be able to interact with the Kubern
 
 ### CoreOS Installation
 
-For all nodes running Kubernetes components (controller & workers), you must use CoreOS version 773.1.0+ for the kubelet to be present in the image.
+For all nodes running Kubernetes components (controller & workers), you must use CoreOS version 773.1.0+ on the Alpha or Beta channel for the kubelet to be present in the image.
 
 Use the official CoreOS bare metal guides for installation instructions:
 

@@ -96,8 +96,7 @@ ExecStart=/usr/bin/kubelet \
   --config=/etc/kubernetes/manifests \
   --hostname-override=${ADVERTISE_IP} \
   --cluster-dns=${DNS_SERVICE_IP} \
-  --cluster-domain=cluster.local \
-  --cadvisor-port=0
+  --cluster-domain=cluster.local
 Restart=always
 RestartSec=10
 [Install]

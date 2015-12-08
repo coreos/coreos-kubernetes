@@ -1,6 +1,6 @@
 # Deploy Kubernetes Master Machine
 
-Boot a single CoreOS machine which will be used as the Kubernetes master. You must use a CoreOS version 773.1.0+ for the `kubelet` to be present in the image.
+Boot a single CoreOS machine which will be used as the Kubernetes master. You must use a CoreOS version 773.1.0+ on the Alpha or Beta channel for the `kubelet` to be present in the image.
 
 See the [CoreOS Documentation](https://coreos.com/os/docs/latest/) for guides on launching nodes on supported platforms.
 
@@ -96,8 +96,7 @@ ExecStart=/usr/bin/kubelet \
   --config=/etc/kubernetes/manifests \
   --hostname-override=${ADVERTISE_IP} \
   --cluster-dns=${DNS_SERVICE_IP} \
-  --cluster-domain=cluster.local \
-  --cadvisor-port=0
+  --cluster-domain=cluster.local
 Restart=always
 RestartSec=10
 [Install]

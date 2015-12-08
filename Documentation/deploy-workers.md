@@ -1,27 +1,36 @@
-## Deploy Worker Node(s)
+# Deploy Worker Node(s)
 
-Boot one or more CoreOS nodes which will be used as Kubernetes Workers. You must use a CoreOS version 773.1.0+ for the `kubelet` to be present in the image.
+Boot one or more CoreOS nodes which will be used as Kubernetes Workers. You must use a CoreOS version 773.1.0+ on the Alpha or Beta channel for the `kubelet` to be present in the image.
 
 See the [CoreOS Documentation](https://coreos.com/os/docs/latest/) for guides on launching nodes on supported platforms.
 
-### Configure Service Components
+## Configure Service Components
 
-#### TLS Assets
+### TLS Assets
 
-Place the TLS keypairs generated previously in the following locations:
+Place the TLS keypairs generated previously in the following locations. Note that each keypair is unique and should be installed on the worker node it was generated for:
 
 * File: `/etc/kubernetes/ssl/ca.pem`
-* File: `/etc/kubernetes/ssl/worker.pem`
-* File: `/etc/kubernetes/ssl/worker-key.pem`
+* File: `/etc/kubernetes/ssl/${WORKER_FQDN}-worker.pem`
+* File: `/etc/kubernetes/ssl/${WORKER_FQDN}-worker-key.pem`
 
 And make sure you've set proper permission for private key:
 
-```
+```sh
 $ sudo chmod 600 /etc/kubernetes/ssl/*-key.pem
 $ sudo chown root:root /etc/kubernetes/ssl/*-key.pem
 ```
 
-#### flannel Configuration
+Create symlinks to the worker-specific certificate and key so that the remaining configurations on the workers do not have to be unique per worker.
+
+```sh
+$ cd /etc/kubernetes/ssl/
+$ sudo ln -s ${WORKER_FQDN}-worker.pem worker.pem
+$ sudo ln -s ${WORKER_FQDN}-worker-key.pem worker-key.pem
+```
+
+
+### flannel Configuration
 
 *Note:* If the pod-network is being managed independently of flannel, this step can be skipped. See [kubernetes networking](kubernetes-networking.md) for more detail.
 
@@ -48,7 +57,7 @@ ExecStartPre=/usr/bin/ln -sf /etc/flannel/options.env /run/flannel/options.env
 
 [dropins]: https://coreos.com/os/docs/latest/using-systemd-drop-in-units.html
 
-#### Docker Configuration
+### Docker Configuration
 
 *Note:* If the pod-network is being managed independently of flannel, this step can be skipped. See [kubernetes networking](kubernetes-networking.md) for more detail.
 
@@ -64,7 +73,7 @@ Requires=flanneld.service
 After=flanneld.service
 ```
 
-#### Create the kubelet Unit
+### Create the kubelet Unit
 
 Create `/etc/systemd/system/kubelet.service` and substitute the following variables:
 
@@ -86,15 +95,14 @@ ExecStart=/usr/bin/kubelet \
   --cluster-domain=cluster.local \
   --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml \
   --tls-cert-file=/etc/kubernetes/ssl/worker.pem \
-  --tls-private-key-file=/etc/kubernetes/ssl/worker-key.pem \
-  --cadvisor-port=0
+  --tls-private-key-file=/etc/kubernetes/ssl/worker-key.pem
 Restart=always
 RestartSec=10
 [Install]
 WantedBy=multi-user.target
 ```
 
-#### Set Up the kube-proxy Pod
+### Set Up the kube-proxy Pod
 
 Create `/etc/kubernetes/manifests/kube-proxy.yaml`:
 
@@ -142,7 +150,7 @@ spec:
         path: "/etc/kubernetes/ssl"
 ```
 
-#### Set Up kubeconfig
+### Set Up kubeconfig
 
 In order to facilitate secure communication between Kubernetes components, kubeconfig can be used to define authentication settings. In this case, the kubelet and proxy are reading this configuration to communicate with the API.
 
@@ -170,11 +178,11 @@ contexts:
 current-context: kubelet-context
 ```
 
-### Start Services
+## Start Services
 
 Now we can start the Worker services.
 
-#### Load Changed Units
+### Load Changed Units
 
 Tell systemd to rescan the units on disk:
 
@@ -182,7 +190,7 @@ Tell systemd to rescan the units on disk:
 $ sudo systemctl daemon-reload
 ```
 
-#### Start kubelet
+### Start kubelet
 
 Start the kubelet, which will start the proxy as well.
 

@@ -279,6 +279,16 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 			"IpProtocol":            sgProtoUDP,
 		},
 	}
+        res[resNameSecurityGroupWorker+"IngressFromControllerTocAdvisor"] = map[string]interface{}{
+                "Type": "AWS::EC2::SecurityGroupIngress",
+                "Properties": map[string]interface{}{
+                        "GroupId":               newRef(resNameSecurityGroupWorker),
+                        "SourceSecurityGroupId": newRef(resNameSecurityGroupController),
+                        "FromPort":              4194,
+                        "ToPort":                4194,
+                        "IpProtocol":            sgProtoTCP,
+                },
+        }
 	res[resNameSecurityGroupWorker+"IngressFromControllerToKubelet"] = map[string]interface{}{
 		"Type": "AWS::EC2::SecurityGroupIngress",
 		"Properties": map[string]interface{}{
@@ -576,7 +586,7 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 	par[parAvailabilityZone] = map[string]interface{}{
 		"Type":        "String",
 		"Default":     "",
-		"Description": "Specific availability zone",
+		"Description": "Specific availability zone (optional)",
 	}
 
 	regionMap, err := getRegionMap()

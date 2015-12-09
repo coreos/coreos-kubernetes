@@ -7,5 +7,6 @@ install:
 script:
   - cd $TRAVIS_BUILD_DIR/multi-node/aws
   - GOPATH=${PWD}/Godeps/_workspace:${GOPATH} go test -v ./...
+  - test -z "$(find . -path ./Godeps -prune -o -name '*.go' -exec gofmt -d {} + | tee /dev/stderr)"
   - go vet ./...
   - ./build

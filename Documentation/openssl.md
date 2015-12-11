@@ -66,7 +66,7 @@ IP.1 = ${K8S_SERVICE_IP}
 IP.2 = ${MASTER_HOST}
 ```
 
-If you are deploying multiple master nodes in an HA configuration, you may need to add additional IP or DNS SubjectAltNames. What is configured depends on how worker nodes and `kubectl` users will be contact the master nodes (directly, via loadbalancer, via DNS name).
+If you are deploying multiple master nodes in an HA configuration, you may need to add additional IP or DNS SubjectAltNames. What is configured depends on how worker nodes and `kubectl` users will contact the master nodes (directly, via loadbalancer, via DNS name).
 
 Example:
 

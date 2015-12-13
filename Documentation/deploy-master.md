@@ -265,7 +265,7 @@ spec:
     name: manifest-dst
 ```
 
-#### Set Up the kube-controller-manager Pod
+### Set Up the kube-controller-manager Pod
 
 The controller manager is responsible for reconciling any required actions based on changes to [Replication Controllers][rc-overview].
 

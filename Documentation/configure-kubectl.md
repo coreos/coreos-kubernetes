@@ -1,14 +1,21 @@
-## Configure kubectl
+# Setting up `kubectl`
 
-The primary CLI tool used to interact with the Kubernetes API is called `kubectl`.
+`kubectl` is a command-line program for interacting with the Kubernetes API. The following steps should be done from a local workstation to configure `kubectl` to work with a new cluster.
 
-The following steps should be done from your local workstation to configure `kubectl` to work with your new cluster.
+## Download the `kubectl` Executable
 
-First, download the binary using a command-line tool such as `wget` or `curl`:
+Download `kubectl` from the Kubernetes release artifact site with the `curl` tool.
+
+The linux `kubectl` binary can be fetched with a command like:
 
 ```sh
-# Replace ${ARCH} with "linux" or "darwin" based on your workstation operating system
-$ ARCH=linux; wget https://storage.googleapis.com/kubernetes-release/release/v1.1.2/bin/${ARCH}/amd64/kubectl
+curl -O https://storage.googleapis.com/kubernetes-release/release/v1.1.2/bin/linux/amd64/kubectl
+```
+
+On an OS X workstation, replace `linux` in the URL above with `darwin`:
+
+```sh
+curl -O https://storage.googleapis.com/kubernetes-release/release/v1.1.2/bin/darwin/amd64/kubectl
 ```
 
 After downloading the binary, ensure it is executable and move it into your `PATH`:
@@ -18,9 +25,11 @@ $ chmod +x kubectl
 $ mv kubectl /usr/local/bin/kubectl
 ```
 
-Configure your local Kubernetes client using the following commands:
+## Configure `kubectl`
 
-* Replace `${MASTER_HOST}`
+Configure `kubectl` to connect to the target cluster using the following commands, replacing several values as indicated:
+
+* Replace `${MASTER_HOST}` with the address or name of the controller address or name used in previous steps
 * Replace `${CA_CERT}` with the absolute path to the `ca.pem` created in previous steps
 * Replace `${ADMIN_KEY}` with the absolute path to the `admin-key.pem` created in previous steps
 * Replace `${ADMIN_CERT}` with the absolute path to the `admin.pem` created in previous steps
@@ -32,7 +41,9 @@ $ kubectl config set-context default-system --cluster=default-cluster --user=def
 $ kubectl config use-context default-system
 ```
 
-Check that your client is configured properly by using `kubectl` to inspect your cluster:
+## Verify `kubectl` Configuration and Connection
+
+Check that the client is configured properly by using `kubectl` to inspect the cluster:
 
 ```sh
 $ kubectl get nodes

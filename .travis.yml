@@ -1,0 +1,12 @@
+language: go
+go:
+  - 1.4
+  - 1.5
+install:
+  - go get golang.org/x/tools/cmd/vet
+script:
+  - cd $TRAVIS_BUILD_DIR/multi-node/aws
+  - GOPATH=${PWD}/Godeps/_workspace:${GOPATH} go test -v ./...
+  - test -z "$(find . -path ./Godeps -prune -o -name '*.go' -exec gofmt -d {} + | tee /dev/stderr)"
+  - go vet ./...
+  - ./build

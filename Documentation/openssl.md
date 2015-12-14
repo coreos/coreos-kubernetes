@@ -12,7 +12,7 @@ The following variables will be used throughout this guide. The default for `K8S
 
 The address of the master node. In most cases this will be the publicly routable IP or hostname of the master cluster. Worker nodes must be able to reach the master node(s) via this address on port 443. Additionally, external clients (such as an administrator using `kubectl`) will also need access, since this will run the Kubernetes API endpoint.
 
-If you will be running a highly-available control-plane consisting of multiple master nodes, then `MASTER_HOST` will ideally be a network load balancer that sits in front of the master nodes. Alternatively, a DNS name can be configured which will resolve to the master node IPs. In either case, the certificates which are generated below need to have the correct CommonName and/or SubjectAlternateNames.
+If you will be running a highly-available control-plane consisting of multiple master nodes, then `MASTER_HOST` will ideally be a network load balancer that sits in front of the master nodes. Alternatively, a DNS name can be configured to resolve to the master node IPs. In either case, the certificates generated below must have the appropriate CommonName and/or SubjectAlternateNames.
 
 ---
 
@@ -66,7 +66,7 @@ IP.1 = ${K8S_SERVICE_IP}
 IP.2 = ${MASTER_HOST}
 ```
 
-If you are deploying multiple master nodes in an HA configuration, you may need to add additional IP or DNS SubjectAltNames. What is configured depends on how worker nodes and `kubectl` users will be contact the master nodes (directly, via loadbalancer, via DNS name).
+If deploying multiple master nodes in an HA configuration, you may need to add more TLS `subjectAltName`s (SANs). Proper configuration of SANs in each certificate depends on how worker nodes and `kubectl` users contact the master nodes: directly by IP address, via load balancer, or by resolving a DNS name.
 
 Example:
 

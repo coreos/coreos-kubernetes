@@ -7,20 +7,25 @@ After completing this guide, a deployer will be able to interact with the Kubern
 
 ### Vagrant
 
-Navigate to the [Vagrant downloads page][vagrant-downloads] and grab the appropriate package for your system. Install the downloaded software before continuing.
+Navigate to the [Vagrant downloads page][vagrant-downloads] and grab the appropriate package for your system. Install the Vagrant software before continuing.
 
 [vagrant-downloads]: https://www.vagrantup.com/downloads.html
 
 ### kubectl
 
-The primary CLI tool used to interact with the Kubernetes API is called `kubectl`.
-This program is not yet widely packaged by distributions, so the current practice is to download it directly from the Kubernetes release artifact site with a tool like `wget` or `curl`. The linux `kubectl` binary can be fetched with a command like:
+`kubectl` is the main program for interacting with the Kubernetes API. Download `kubectl` from the Kubernetes release artifact site with the `curl` tool.
+
+The linux `kubectl` binary can be fetched with a command like:
 
 ```sh
-wget https://storage.googleapis.com/kubernetes-release/release/v1.1.2/bin/linux/amd64/kubectl
+curl -O https://storage.googleapis.com/kubernetes-release/release/v1.1.2/bin/linux/amd64/kubectl
 ```
 
-On an OS X workstation, replace `linux` in the URL above with `darwin`.
+On an OS X workstation, replace `linux` in the URL above with `darwin`:
+
+```sh
+curl -O https://storage.googleapis.com/kubernetes-release/release/v1.1.2/bin/darwin/amd64/kubectl
+```
 
 After downloading the binary, ensure it is executable and move it into your PATH:
 

@@ -43,7 +43,7 @@ FLANNELD_IFACE=${ADVERTISE_IP}
 FLANNELD_ETCD_ENDPOINTS=${ETCD_ENDPOINTS}
 ```
 
-Next create a [systemd drop-in][dropins], which will use the above configuration when flannel starts
+Next create a [systemd drop-in][dropins], which is a method for appending or overriding parameters of a systemd unit. In this case we're appending two dependency rules. Create the following drop-in, which will use the above configuration when flannel starts:
 
 **/etc/systemd/system/flanneld.service.d/40-ExecStartPre-symlink.conf**
 
@@ -62,7 +62,7 @@ In order for flannel to manage the pod network in the cluster, Docker needs to b
 
 *Note:* If the pod-network is being managed independently of flannel, this step can be skipped. See [kubernetes networking](kubernetes-networking.md) for more detail.
 
-We're going to do this with a [systemd drop-in][dropins], which is a method for appending or overriding parameters of a systemd unit. In this case we're appending two dependency rules. Create the drop-in:
+We're going to do this, like we proceeded above with flannel, using a [systemd drop-in][dropins]:
 
 **/etc/systemd/system/docker.service.d/40-flannel.conf**
 

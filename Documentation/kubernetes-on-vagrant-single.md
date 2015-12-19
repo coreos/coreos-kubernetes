@@ -53,12 +53,21 @@ Once Vagrant is finished booting and provisioning your machine, your cluster is 
 
 Once in the `coreos-kubernetes/single-node/` directory, configure your local Kubernetes client using the following commands:
 
-```sh
-$ kubectl config set-cluster vagrant --server=https://172.17.4.99:443 --certificate-authority=${PWD}/ssl/ca.pem
-$ kubectl config set-credentials vagrant-admin --certificate-authority=${PWD}/ssl/ca.pem --client-key=${PWD}/ssl/admin-key.pem --client-certificate=${PWD}/ssl/admin.pem
-$ kubectl config set-context vagrant --cluster=vagrant --user=vagrant-admin
-$ kubectl config use-context vagrant
-```
+You can choose from one of the two following options.
+
+1. **Use a custom KUBECONFIG path**
+   ```sh
+   export KUBECONFIG="${KUBECONFIG}:$(pwd)/kubeconfig"
+   kubectl config use-context vagrant-single
+   ```
+
+2. **Update the local-user kubeconfig**
+   ```sh
+   $ kubectl config set-cluster vagrant-single-cluster --server=https://172.17.4.99:443 --certificate-authority=${PWD}/ssl/ca.pem
+   $ kubectl config set-credentials vagrant-single-admin --certificate-authority=${PWD}/ssl/ca.pem --client-key=${PWD}/ssl/admin-key.pem --client-certificate=${PWD}/ssl/admin.pem
+   $ kubectl config set-context vagrant-single --cluster=vagrant-single-cluster --user=vagrant-single-admin
+   $ kubectl config use-context vagrant-single
+   ```
 
 Check that your client is configured properly by using `kubectl` to inspect your cluster:
 

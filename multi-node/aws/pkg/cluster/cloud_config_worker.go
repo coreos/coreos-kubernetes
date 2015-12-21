@@ -7,7 +7,7 @@ coreos:
 
   flannel:
     interface: $private_ipv4
-    etcd_endpoints: http://10.0.0.50:2379
+    etcd_endpoints: http://172.20.0.50:2379
 
   units:
   - name: install-worker.service
@@ -20,8 +20,8 @@ coreos:
 write_files:
 - path: /run/coreos-kubernetes/options.env
   content: |
-    ETCD_ENDPOINTS=http://10.0.0.50:2379
-    CONTROLLER_ENDPOINT=https://10.0.0.50
+    ETCD_ENDPOINTS=http://172.20.0.50:2379
+    CONTROLLER_ENDPOINT=https://172.20.0.50
     ARTIFACT_URL={{ ArtifactURL }}
 
 - path: /tmp/install-worker.sh

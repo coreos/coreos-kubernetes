@@ -31,8 +31,8 @@ See the [Kubernetes networking](kubernetes-networking.md) documentation for more
 [coreos-flannel]: https://coreos.com/flannel/docs/latest/flannel-config.html
 [pod-network]: http://kubernetes.io/v1.1/docs/design/networking.html#pod-to-pod
 
-<p><strong>Did you install CoreOS on your machines?</strong> An SSH connection to each machine is all that's needed. We'll start the configuration next.</p>
 <div class="co-m-docs-next-step">
+  <p><strong>Did you install CoreOS on your machines?</strong> An SSH connection to each machine is all that's needed. We'll start the configuration next.</p>
   <a href="getting-started.md" class="btn btn-primary btn-icon-right"  data-category="Getting Started" data-event="Getting Started">I'm ready to get started</a>
 </div>
 

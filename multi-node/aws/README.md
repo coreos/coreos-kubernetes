@@ -1,15 +1,42 @@
 # Kubernetes on AWS
 
 This is the source of the `kube-aws` tool and the installation artifacts used by the official Kubernetes on AWS documentation.
-View the full instructions at https://coreos.com/kubernetes/docs/latest/kubernetes-on-aws.html.
+View the full instructions at [Kubernetes on AWS](https://coreos.com/kubernetes/docs/latest/kubernetes-on-aws.html.)
 
 ## Development
 
-### Build
+### Build locally (requires Go installation)
 
 Run the `./build` script to compile `kube-aws` locally.
 This depends on having golang available on your workstation.
 The compiled binary will be available at `./bin/kube-aws`.
+
+### Build a Docker image :whale:
+
+- Configure AWS credentials using the credentials.example and rename to just **credentials** - for help, see the [AWS CLI Guide](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-config-file)
+```bash
+[default]
+aws_access_key_id=###
+aws_secret_access_key=###
+region=###
+```
+- Configure a cluster.yaml file using the cluster.yaml.example - for help, see the [Kube AWS Cluster Config](https://coreos.com/kubernetes/docs/latest/kubernetes-on-aws.html#kube-aws-cluster-config)
+- Build the image using docker
+```bash
+$ docker build -t kube-aws-docker .
+```
+- This will result in a runnable image with a size of just 23MB.
+```
+kube-aws-docker     latest              57d71b91722f        About a minute ago   23.15 MB
+```
+- Use the image to run kube-aws commands
+```bash
+$ docker run --rm kube-aws-docker kube-aws help
+```
+
+# NOTE
+
+**Please be careful not to push your AWS credentials to Github! :scream:**
 
 ### Custom Kubernetes Manifests
 
@@ -34,5 +61,4 @@ The following links can be useful for development:
 
 Submit a PR to this repository, following the [contributors guide](../../CONTRIBUTING.md).
 The documentation is published from [this source](../../Documentation/kubernetes-on-aws.md).
-
 

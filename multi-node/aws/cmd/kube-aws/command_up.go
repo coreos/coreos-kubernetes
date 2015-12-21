@@ -128,17 +128,21 @@ func mustReadFile(loc string) []byte {
 
 func newKubeconfig(cfg *cluster.Config, tlsConfig *cluster.TLSConfig) ([]byte, error) {
 	data := struct {
-		ClusterName       string
-		APIServerEndpoint string
-		AdminCertFile     string
-		AdminKeyFile      string
-		CACertFile        string
+		ClusterName               string
+		ControllerInstanceType    string
+		WorkerInstanceType        string
+		APIServerEndpoint         string
+		AdminCertFile             string
+		AdminKeyFile              string
+		CACertFile                string
 	}{
-		ClusterName:       cfg.ClusterName,
-		APIServerEndpoint: fmt.Sprintf("https://%s", cfg.ExternalDNSName),
-		AdminCertFile:     tlsConfig.AdminCertFile,
-		AdminKeyFile:      tlsConfig.AdminKeyFile,
-		CACertFile:        tlsConfig.CACertFile,
+		ClusterName:                   cfg.ClusterName,
+		ControllerInstanceType:        cfg.ControllerInstanceType,
+		WorkerInstanceType:            cfg.WorkerInstanceType,
+		APIServerEndpoint:             fmt.Sprintf("https://%s", cfg.ExternalDNSName),
+		AdminCertFile:                 tlsConfig.AdminCertFile,
+		AdminKeyFile:                  tlsConfig.AdminKeyFile,
+		CACertFile:                    tlsConfig.CACertFile,
 	}
 
 	var rendered bytes.Buffer

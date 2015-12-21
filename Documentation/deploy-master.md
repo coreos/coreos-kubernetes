@@ -12,7 +12,11 @@ If you are deploying multiple master nodes in a high-availability cluster, these
 
 ### TLS Assets
 
-Place the keys generated previously in the following locations:
+Create the required directory and place the keys generated previously in the following locations:
+
+```
+$ mkdir -p /etc/kubernetes/ssl
+```
 
 * File: `/etc/kubernetes/ssl/ca.pem`
 * File: `/etc/kubernetes/ssl/apiserver.pem`

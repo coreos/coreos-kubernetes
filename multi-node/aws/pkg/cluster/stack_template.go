@@ -13,19 +13,23 @@ const (
 	resNameVPCGatewayAttachment         = "VPCGatewayAttachment"
 	resNameRouteTable                   = "RouteTable"
 	resNameRouteToInternet              = "RouteToInternet"
-	resNameSubnet                       = "Subnet"
-	resNameSubnetRouteTableAssociation  = "SubnetRouteTableAssociation"
+	resNameSubnetA 						= "SubnetA"
+	resNameSubnetB 						= "SubnetB"
+	resNameSubnetARouteTableAssociation = "SubnetRouteTableAssociationA"
+	resNameSubnetBRouteTableAssociation = "SubnetRouteTableAssociationB"
 	resNameSecurityGroupController      = "SecurityGroupController"
 	resNameSecurityGroupWorker          = "SecurityGroupWorker"
-	resNameInstanceController           = "InstanceController"
-	resNameEIPController                = "EIPController"
-	resNameAlarmControllerRecover       = "AlarmControllerRecover"
 	resNameAutoScaleWorker              = "AutoScaleWorker"
 	resNameLaunchConfigurationWorker    = "LaunchConfigurationWorker"
+	resNameAutoScaleController          = "AutoScaleController"
+	resNameLaunchConfigurationController= "LaunchConfigurationController"
 	resNameIAMRoleController            = "IAMRoleController"
 	resNameIAMInstanceProfileController = "IAMInstanceProfileController"
 	resNameIAMRoleWorker                = "IAMRoleWorker"
 	resNameIAMInstanceProfileWorker     = "IAMInstanceProfileWorker"
+	resNameRoute53Zone					= "VPCZone"
+	resNameRoute53ZoneMasterRecordSet	= "MasterRecordSet"
+	resNameLoadBalancerController		= "LoadBalancerController"
 
 	// parameter names
 	parClusterName                  = "ClusterName"
@@ -41,6 +45,7 @@ const (
 	parWorkerCert                   = "WorkerCert"
 	parWorkerKey                    = "WorkerKey"
 	parWorkerCount                  = "WorkerCount"
+	parControllerCount              = "ControllerCount"
 	parNameWorkerRootVolumeSize     = "WorkerRootVolumeSize"
 	parAvailabilityZone             = "AvailabilityZone"
 	parVPCCIDR                      = "VPCCIDR"
@@ -128,21 +133,21 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 		},
 	}
 
-	defaultAvailabilityZone := map[string]interface{}{
+	availabilityZones := []map[string]interface{}{
+		map[string]interface{}{
 		"Fn::Select": []interface{}{
 			"0",
 			map[string]interface{}{
 				"Fn::GetAZs": newRef("AWS::Region"),
 			},
+		}},
+		map[string]interface{}{
+		"Fn::Select": []interface{}{
+			"1",
+			map[string]interface{}{
+				"Fn::GetAZs": newRef("AWS::Region"),
 		},
-	}
-
-	availabilityZone := map[string]interface{}{
-		"Fn::If": []interface{}{
-			"EmptyAvailabilityZone",
-			defaultAvailabilityZone,
-			newRef(parAvailabilityZone),
-		},
+		}},
 	}
 
 	res := make(map[string]interface{})
@@ -200,10 +205,10 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 		},
 	}
 
-	res[resNameSubnet] = map[string]interface{}{
+	res[resNameSubnetA] = map[string]interface{}{
 		"Type": "AWS::EC2::Subnet",
 		"Properties": map[string]interface{}{
-			"AvailabilityZone":    availabilityZone,
+			"AvailabilityZone":    availabilityZones[0],
 			"CidrBlock":           newRef(parInstanceCIDR),
 			"MapPublicIpOnLaunch": true,
 			"VpcId":               newRef(resNameVPC),
@@ -213,11 +218,32 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 		},
 	}
 
-	res[resNameSubnetRouteTableAssociation] = map[string]interface{}{
+	res[resNameSubnetB] = map[string]interface{}{
+		"Type": "AWS::EC2::Subnet",
+		"Properties": map[string]interface{}{
+			"AvailabilityZone":    availabilityZones[1],
+			"CidrBlock":           "10.0.20.0/24",
+			"MapPublicIpOnLaunch": true,
+			"VpcId":               newRef(resNameVPC),
+			"Tags": []map[string]interface{}{
+				newTag(tagKubernetesCluster, newRef(parClusterName)),
+			},
+		},
+	}
+
+	res[resNameSubnetARouteTableAssociation] = map[string]interface{}{
 		"Type": "AWS::EC2::SubnetRouteTableAssociation",
 		"Properties": map[string]interface{}{
 			"RouteTableId": newRef(resNameRouteTable),
-			"SubnetId":     newRef(resNameSubnet),
+			"SubnetId":     newRef(resNameSubnetA),
+		},
+	}
+
+	res[resNameSubnetBRouteTableAssociation] = map[string]interface{}{
+		"Type": "AWS::EC2::SubnetRouteTableAssociation",
+		"Properties": map[string]interface{}{
+			"RouteTableId": newRef(resNameRouteTable),
+			"SubnetId":     newRef(resNameSubnetB),
 		},
 	}
 
@@ -251,6 +277,16 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 		},
 	}
 
+	res[resNameSecurityGroupController+"IngressFromControllerToEtcd"] = map[string]interface{}{
+		"Type": "AWS::EC2::SecurityGroupIngress",
+		"Properties": map[string]interface{}{
+			"GroupId":               newRef(resNameSecurityGroupController),
+			"SourceSecurityGroupId": newRef(resNameSecurityGroupController),
+			"FromPort":              2379,
+			"ToPort":                2379,
+			"IpProtocol":            sgProtoTCP,
+		},
+	}
 	res[resNameSecurityGroupWorker] = map[string]interface{}{
 		"Type": "AWS::EC2::SecurityGroup",
 		"Properties": map[string]interface{}{
@@ -403,81 +439,85 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 		},
 	}
 
-	res[resNameEIPController] = map[string]interface{}{
-		"Type": "AWS::EC2::EIP",
+	res[resNameLoadBalancerController] = map[string]interface{}{
+		"Type": "AWS::ElasticLoadBalancing::LoadBalancer",
 		"Properties": map[string]interface{}{
-			"InstanceId": newRef(resNameInstanceController),
-			"Domain":     "vpc",
+			"CrossZone": true,
+			"Scheme": "internal",
+			"HealthCheck": map[string]interface{}{
+				"Target" : "TCP:443",
+				"HealthyThreshold" : "2",
+				"UnhealthyThreshold" : "5",
+				"Interval" : "30",
+				"Timeout" : "5",
+		},
+			"Listeners": []map[string]interface{}{
+				map[string]interface{}{
+					"LoadBalancerPort": "8080",
+					"InstancePort": "8080",
+					"Protocol": "TCP",
+					},
+				map[string]interface{}{
+					"LoadBalancerPort": "443",
+					"InstancePort": "443",
+					"Protocol": "TCP",
+					},
+				map[string]interface{}{
+					"LoadBalancerPort": "2379",
+					"InstancePort": "2379",
+					"Protocol": "TCP",
+				},
+				map[string]interface{}{
+					"LoadBalancerPort": "2380",
+					"InstancePort": "2380",
+					"Protocol": "TCP",
+			},
+			},
+			"Subnets": []map[string]interface{}{newRef(resNameSubnetA), newRef(resNameSubnetB)},
+			"SecurityGroups": []map[string]interface{}{newRef(resNameSecurityGroupController)},
+		},
+		"DependsOn": []string{
+			resNameVPC,
 		},
 	}
 
-	res[resNameInstanceController] = map[string]interface{}{
-		"Type": "AWS::EC2::Instance",
+	res[resNameRoute53Zone] = map[string]interface{}{
+		"Type": "AWS::Route53::HostedZone",
 		"Properties": map[string]interface{}{
-			"ImageId":      imageID,
-			"InstanceType": newRef(parNameControllerInstanceType),
-			"KeyName":      newRef(parNameKeyName),
-			"UserData": map[string]interface{}{
-				"Fn::Base64": renderTemplate(baseControllerCloudConfig),
+			"HostedZoneConfig":  map[string]interface{}{
+				"Comment": "The Kubernetes Internal zone",
 			},
-			"IamInstanceProfile": newRef(resNameIAMInstanceProfileController),
-			"NetworkInterfaces": []map[string]interface{}{
+			"Name": "kuber.internal",
+			"VPCs": []map[string]interface{}{
 				map[string]interface{}{
-					"PrivateIpAddress":         newRef(parControllerIP),
-					"AssociatePublicIpAddress": false,
-					"DeleteOnTermination":      true,
-					"DeviceIndex":              "0",
-					"SubnetId":                 newRef(resNameSubnet),
-					"GroupSet": []map[string]interface{}{
-						newRef(resNameSecurityGroupController),
-					},
-				},
-			},
-			"BlockDeviceMappings": []map[string]interface{}{
-				map[string]interface{}{
-					"DeviceName": "/dev/xvda",
-					"Ebs": map[string]interface{}{
-						"VolumeSize": newRef(parNameControllerRootVolumeSize),
-					},
-				},
-			},
-			"AvailabilityZone": availabilityZone,
-			"Tags": []map[string]interface{}{
-				newTag(tagKubernetesCluster, newRef(parClusterName)),
-				newTag("Name", "kube-aws-controller"),
-			},
-		},
-	}
-
-	res[resNameAlarmControllerRecover] = map[string]interface{}{
-		"Type": "AWS::CloudWatch::Alarm",
-		"Properties": map[string]interface{}{
-			"AlarmDescription":   "Trigger a recovery when system check fails for 5 consecutive minutes.",
-			"Namespace":          "AWS/EC2",
-			"MetricName":         "StatusCheckFailed_System",
-			"Statistic":          "Minimum",
-			"Period":             "60",
-			"EvaluationPeriods":  "5",
-			"ComparisonOperator": "GreaterThanThreshold",
-			"Threshold":          "0",
-			"AlarmActions": []interface{}{
-				map[string]interface{}{
-					"Fn::Join": []interface{}{
-						"",
-						[]interface{}{
-							"arn:aws:automate:",
-							newRef("AWS::Region"),
-							":ec2:recover",
+					"VPCId": newRef(resNameVPC),
+					"VPCRegion": newRef("AWS::Region"),
 						},
 					},
 				},
+		"DependsOn": []string{
+			resNameVPC,
 			},
-			"Dimensions": []interface{}{
+	}
+
+	res[resNameRoute53ZoneMasterRecordSet] = map[string]interface{}{
+		"Type": "AWS::Route53::RecordSet",
+		"Properties": map[string]interface{}{
+			"HostedZoneId": newRef(resNameRoute53Zone),
+			"Comment": "DNS name for kubernetes master lb.",
+			"Name": "master.kube.internal.",
+			"Type": "CNAME",
+			"TTL": "900",
+			"ResourceRecords": []map[string]interface{}{
 				map[string]interface{}{
-					"Name":  "InstanceId",
-					"Value": newRef(resNameInstanceController),
+					"Fn::GetAtt": []string{
+						resNameLoadBalancerController, "DNSName",
 				},
 			},
+		},
+		},
+		"DependsOn": []string{
+			resNameLoadBalancerController,
 		},
 	}
 
@@ -506,17 +546,57 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 	res[resNameAutoScaleWorker] = map[string]interface{}{
 		"Type": "AWS::AutoScaling::AutoScalingGroup",
 		"Properties": map[string]interface{}{
-			"AvailabilityZones":       []interface{}{availabilityZone},
+			"AvailabilityZones":       availabilityZones,
 			"LaunchConfigurationName": newRef(resNameLaunchConfigurationWorker),
 			"DesiredCapacity":         newRef(parWorkerCount),
 			"MinSize":                 newRef(parWorkerCount),
 			"MaxSize":                 newRef(parWorkerCount),
 			"HealthCheckGracePeriod":  600,
 			"HealthCheckType":         "EC2",
-			"VPCZoneIdentifier":       []interface{}{newRef(resNameSubnet)},
+			"VPCZoneIdentifier":       []interface{}{newRef(resNameSubnetA), newRef(resNameSubnetB)},
 			"Tags": []interface{}{
 				newPropagatingTag(tagKubernetesCluster, newRef(parClusterName)),
 				newPropagatingTag("Name", "kube-aws-worker"),
+			},
+		},
+	}
+
+	res[resNameLaunchConfigurationController] = map[string]interface{}{
+		"Type": "AWS::AutoScaling::LaunchConfiguration",
+		"Properties": map[string]interface{}{
+			"ImageId":      imageID,
+			"InstanceType": newRef(parNameControllerInstanceType),
+			"KeyName":      newRef(parNameKeyName),
+			"UserData": map[string]interface{}{
+				"Fn::Base64": renderTemplate(baseControllerCloudConfig),
+			},
+			"SecurityGroups":     []interface{}{newRef(resNameSecurityGroupController)},
+			"IamInstanceProfile": newRef(resNameIAMInstanceProfileController),
+			"BlockDeviceMappings": []map[string]interface{}{
+				map[string]interface{}{
+					"DeviceName": "/dev/xvda",
+					"Ebs": map[string]interface{}{
+						"VolumeSize": newRef(parNameControllerRootVolumeSize),
+					},
+				},
+			},
+		},
+	}
+
+	res[resNameAutoScaleController] = map[string]interface{}{
+		"Type": "AWS::AutoScaling::AutoScalingGroup",
+		"Properties": map[string]interface{}{
+			"AvailabilityZones":       availabilityZones,
+			"LaunchConfigurationName": newRef(resNameLaunchConfigurationController),
+			"DesiredCapacity":         newRef(parControllerCount),
+			"MinSize":                 newRef(parControllerCount),
+			"MaxSize":                 newRef(parControllerCount),
+			"HealthCheckGracePeriod":  600,
+			"HealthCheckType":         "EC2",
+			"VPCZoneIdentifier":       []interface{}{newRef(resNameSubnetA), newRef(resNameSubnetB)},
+			"Tags": []interface{}{
+				newPropagatingTag(tagKubernetesCluster, newRef(parClusterName)),
+				newPropagatingTag("Name", "kube-aws-controller"),
 			},
 		},
 	}
@@ -597,17 +677,18 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 		"Description": "Number of worker instances to create, may be modified later",
 	}
 
+	par[parControllerCount] = map[string]interface{}{
+		"Type":        "String",
+		"Default":     "1",
+		"Description": "Number of controller instances to create, may be modified later",
+	}
+
 	par[parNameWorkerRootVolumeSize] = map[string]interface{}{
 		"Type":        "String",
 		"Default":     "30",
 		"Description": "Worker root volume size (GiB)",
 	}
 
-	par[parAvailabilityZone] = map[string]interface{}{
-		"Type":        "String",
-		"Default":     "",
-		"Description": "Specific availability zone (optional)",
-	}
 
 	par[parVPCCIDR] = map[string]interface{}{
 		"Type":        "String",
@@ -661,22 +742,12 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 		"RegionMap": regionMap,
 	}
 
-	conditions := map[string]interface{}{
-		"EmptyAvailabilityZone": map[string]interface{}{
-			"Fn::Equals": []interface{}{
-				newRef(parAvailabilityZone),
-				"",
-			},
-		},
-	}
-
 	tmpl := map[string]interface{}{
 		"AWSTemplateFormatVersion": "2010-09-09",
 		"Description":              "kube-aws Kubernetes cluster",
 		"Resources":                res,
 		"Parameters":               par,
 		"Mappings":                 mappings,
-		"Conditions":               conditions,
 	}
 
 	t, err := json.MarshalIndent(tmpl, "", "    ")

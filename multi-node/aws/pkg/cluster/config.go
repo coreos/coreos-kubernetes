@@ -26,6 +26,9 @@ type Config struct {
 	WorkerCount              int    `yaml:"workerCount"`
 	WorkerInstanceType       string `yaml:"workerInstanceType"`
 	WorkerRootVolumeSize     int    `yaml:"workerRootVolumeSize"`
+	EtcdBackupBucket         string `yaml:"etcdBackupBucket"`
+	EtcdBackupAccessKey      string `yaml:"etcdBackupAccessKey"`
+	EtcdBackupKeyId          string `yaml:"etcdBackupKeyId"`
 }
 
 func (cfg *Config) Valid() error {
@@ -40,6 +43,15 @@ func (cfg *Config) Valid() error {
 	}
 	if cfg.ClusterName == "" {
 		return errors.New("clusterName must be set")
+	}
+	if cfg.EtcdBackupBucket == "" {
+		return errors.New("etcdBackupBucket must be set")
+	}
+	if cfg.EtcdBackupAccessKey == "" {
+		return errors.New("etcdBackupAccessKey must be set")
+	}
+	if cfg.EtcdBackupKeyId == "" {
+		return errors.New("etcdBackupKeyId must be set")
 	}
 	if _, err := url.Parse(cfg.ArtifactURL); err != nil {
 		return fmt.Errorf("invalid artifactURL: %v", err)

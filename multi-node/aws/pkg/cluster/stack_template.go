@@ -43,6 +43,9 @@ const (
 	parWorkerCount                  = "WorkerCount"
 	parNameWorkerRootVolumeSize     = "WorkerRootVolumeSize"
 	parAvailabilityZone             = "AvailabilityZone"
+	parEtcdBackupBucket             = "EtcdBackupBucket"
+	parEtcdBackupAccessKey          = "EtcdBackupAccessKey"
+	parEtcdBackupKeyId              = "EtcdBackupKeyId"
 )
 
 var (
@@ -600,6 +603,22 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 		"Type":        "String",
 		"Default":     "",
 		"Description": "Specific availability zone (optional)",
+	}
+
+	par[parEtcdBackupBucket] = map[string]interface{}{
+		"Type":        "String",
+		"Default":     "etcdbackup.kubernetes",
+		"Description": "Name of the etcd backup S3 bucket",
+	}
+
+	par[parEtcdBackupAccessKey] = map[string]interface{}{
+		"Type":        "String",
+		"Description": "Access Key of the etcd backup S3 bucket",
+	}
+
+	par[parEtcdBackupKeyId] = map[string]interface{}{
+		"Type":        "String",
+		"Description": "Key ID of the etcd backup S3 bucket",
 	}
 
 	regionMap, err := getRegionMap()

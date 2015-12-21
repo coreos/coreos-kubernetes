@@ -156,6 +156,30 @@ func (c *Cluster) Create(tlsConfig *TLSConfig) error {
 		})
 	}
 
+	if c.cfg.EtcdBackupBucket != "" {
+		parameters = append(parameters, &cloudformation.Parameter{
+			ParameterKey:     aws.String(parEtcdBackupBucket),
+			ParameterValue:   aws.String(c.cfg.EtcdBackupBucket),
+			UsePreviousValue: aws.Bool(true),
+		})
+	}
+
+	if c.cfg.EtcdBackupAccessKey != "" {
+		parameters = append(parameters, &cloudformation.Parameter{
+			ParameterKey:     aws.String(parEtcdBackupAccessKey),
+			ParameterValue:   aws.String(c.cfg.EtcdBackupAccessKey),
+			UsePreviousValue: aws.Bool(true),
+		})
+	}
+
+	if c.cfg.EtcdBackupKeyId != "" {
+		parameters = append(parameters, &cloudformation.Parameter{
+			ParameterKey:     aws.String(parEtcdBackupKeyId),
+			ParameterValue:   aws.String(c.cfg.EtcdBackupKeyId),
+			UsePreviousValue: aws.Bool(true),
+		})
+	}
+
 	if c.cfg.AvailabilityZone != "" {
 		parameters = append(parameters, &cloudformation.Parameter{
 			ParameterKey:     aws.String(parAvailabilityZone),

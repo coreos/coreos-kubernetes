@@ -32,6 +32,7 @@ type Config struct {
 	AvailabilityZone         string `yaml:"availabilityZone"`
 	ArtifactURL              string `yaml:"artifactURL"`
 	ReleaseChannel           string `yaml:"releaseChannel"`
+	ControllerCount          int    `yaml:"controllerCount"`
 	ControllerInstanceType   string `yaml:"controllerInstanceType"`
 	ControllerRootVolumeSize int    `yaml:"controllerRootVolumeSize"`
 	WorkerCount              int    `yaml:"workerCount"`

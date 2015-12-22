@@ -27,6 +27,9 @@ externalDNSName:
 # Number of worker nodes to create
 #workerCount: 1
 
+# Number of controller nodes to create
+#controllerCount: 1
+
 # Instance type for worker nodes
 #workerInstanceType: m3.medium
 

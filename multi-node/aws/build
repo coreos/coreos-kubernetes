@@ -15,8 +15,7 @@ if [ -n "$(git diff --shortstat 2> /dev/null | tail -n1)" ]; then
 fi
 
 
-echo "Restoring deps"
-godep restore
+
 echo "Building kube-aws ${VERSION}..."
 GOPATH=${PWD}/Godeps/_workspace:${GOPATH} CGO_ENABLED=0 go build -ldflags "-X main.VERSION ${VERSION}" -a -tags netgo -installsuffix netgo -o bin/kube-aws github.com/coreos/coreos-kubernetes/multi-node/aws/cmd/kube-aws
 echo "done"

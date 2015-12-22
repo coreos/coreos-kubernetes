@@ -155,7 +155,7 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 	res[resNameVPC] = map[string]interface{}{
 		"Type": "AWS::EC2::VPC",
 		"Properties": map[string]interface{}{
-			"CidrBlock":          newRef(parVPCCIDR),
+			"CidrBlock":          "10.0.0.0/16",
 			"EnableDnsSupport":   true,
 			"EnableDnsHostnames": true,
 			"InstanceTenancy":    "default",
@@ -209,7 +209,7 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 		"Type": "AWS::EC2::Subnet",
 		"Properties": map[string]interface{}{
 			"AvailabilityZone":    availabilityZones[0],
-			"CidrBlock":           newRef(parInstanceCIDR),
+			"CidrBlock":           "10.0.10.0/24",
 			"MapPublicIpOnLaunch": true,
 			"VpcId":               newRef(resNameVPC),
 			"Tags": []map[string]interface{}{

@@ -141,6 +141,14 @@ func (c *Cluster) Create(tlsConfig *TLSConfig) error {
 		})
 	}
 
+	if c.cfg.ControllerCount > 0 {
+		parameters = append(parameters, &cloudformation.Parameter{
+			ParameterKey:     aws.String(parControllerCount),
+			ParameterValue:   aws.String(fmt.Sprintf("%d", c.cfg.ControllerCount)),
+			UsePreviousValue: aws.Bool(true),
+		})
+	}
+
 	if c.cfg.WorkerInstanceType != "" {
 		parameters = append(parameters, &cloudformation.Parameter{
 			ParameterKey:     aws.String(parNameWorkerInstanceType),

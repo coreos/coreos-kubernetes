@@ -7,8 +7,9 @@ import (
 	"text/tabwriter"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/elb"
 )
 
 type ClusterInfo struct {
@@ -140,6 +141,14 @@ func (c *Cluster) Create(tlsConfig *TLSConfig) error {
 		})
 	}
 
+	if c.cfg.ControllerCount > 0 {
+		parameters = append(parameters, &cloudformation.Parameter{
+			ParameterKey:     aws.String(parControllerCount),
+			ParameterValue:   aws.String(fmt.Sprintf("%d", c.cfg.ControllerCount)),
+			UsePreviousValue: aws.Bool(true),
+		})
+	}
+
 	if c.cfg.WorkerInstanceType != "" {
 		parameters = append(parameters, &cloudformation.Parameter{
 			ParameterKey:     aws.String(parNameWorkerInstanceType),
@@ -172,18 +181,18 @@ func (c *Cluster) Create(tlsConfig *TLSConfig) error {
 		})
 	}
 
-	if c.cfg.InstanceCIDR != "" {
+	if c.cfg.InstanceCIDRA != "" {
 		parameters = append(parameters, &cloudformation.Parameter{
-			ParameterKey:     aws.String(parInstanceCIDR),
-			ParameterValue:   aws.String(c.cfg.InstanceCIDR),
+			ParameterKey:     aws.String(parInstanceCIDRA),
+			ParameterValue:   aws.String(c.cfg.InstanceCIDRA),
 			UsePreviousValue: aws.Bool(true),
 		})
 	}
 
-	if c.cfg.ControllerIP != "" {
+	if c.cfg.InstanceCIDRB != "" {
 		parameters = append(parameters, &cloudformation.Parameter{
-			ParameterKey:     aws.String(parControllerIP),
-			ParameterValue:   aws.String(c.cfg.ControllerIP),
+			ParameterKey:     aws.String(parInstanceCIDRB),
+			ParameterValue:   aws.String(c.cfg.InstanceCIDRB),
 			UsePreviousValue: aws.Bool(true),
 		})
 	}
@@ -221,16 +230,17 @@ func (c *Cluster) Create(tlsConfig *TLSConfig) error {
 	}
 
 	tmplURL := fmt.Sprintf("%s/template.json", c.cfg.ArtifactURL)
-	return createStackAndWait(cloudformation.New(c.aws), c.stackName(), tmplURL, parameters)
+	return createStackAndWait(cloudformation.New(session.New(c.aws)), c.stackName(), tmplURL, parameters)
 }
 
 func (c *Cluster) Info() (*ClusterInfo, error) {
-	resources, err := getStackResources(cloudformation.New(c.aws), c.stackName())
+	sess := session.New(c.aws)
+	resources, err := getStackResources(cloudformation.New(sess), c.stackName())
 	if err != nil {
 		return nil, err
 	}
 
-	info, err := mapStackResourcesToClusterInfo(ec2.New(c.aws), resources)
+	info, err := mapStackResourcesToClusterInfo(elb.New(sess), resources)
 	if err != nil {
 		return nil, err
 	}
@@ -240,5 +250,5 @@ func (c *Cluster) Info() (*ClusterInfo, error) {
 }
 
 func (c *Cluster) Destroy() error {
-	return destroyStack(cloudformation.New(c.aws), c.stackName())
+	return destroyStack(cloudformation.New(session.New(c.aws)), c.stackName())
 }

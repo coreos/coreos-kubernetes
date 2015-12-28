@@ -12,8 +12,8 @@ import (
 
 const (
 	DefaultVPCCIDR             = "10.0.0.0/16"
-	DefaultInstanceCIDR        = "10.0.0.0/24"
-	DefaultControllerIP        = "10.0.0.50"
+	DefaultInstanceCIDRA       = "10.0.10.0/24"
+	DefaultInstanceCIDRB       = "10.0.20.0/24"
 	DefaultPodCIDR             = "10.2.0.0/16"
 	DefaultServiceCIDR         = "10.3.0.0/24"
 	DefaultKubernetesServiceIP = "10.3.0.1"
@@ -32,14 +32,15 @@ type Config struct {
 	AvailabilityZone         string `yaml:"availabilityZone"`
 	ArtifactURL              string `yaml:"artifactURL"`
 	ReleaseChannel           string `yaml:"releaseChannel"`
+	ControllerCount          int    `yaml:"controllerCount"`
 	ControllerInstanceType   string `yaml:"controllerInstanceType"`
 	ControllerRootVolumeSize int    `yaml:"controllerRootVolumeSize"`
 	WorkerCount              int    `yaml:"workerCount"`
 	WorkerInstanceType       string `yaml:"workerInstanceType"`
 	WorkerRootVolumeSize     int    `yaml:"workerRootVolumeSize"`
 	VPCCIDR                  string `yaml:"vpcCIDR"`
-	InstanceCIDR             string `yaml:"instanceCIDR"`
-	ControllerIP             string `yaml:"controllerIP"`
+	InstanceCIDRA            string `yaml:"instanceCIDRA"`
+	InstanceCIDRB            string `yaml:"instanceCIDRB"`
 	PodCIDR                  string `yaml:"podCIDR"`
 	ServiceCIDR              string `yaml:"serviceCIDR"`
 	KubernetesServiceIP      string `yaml:"kubernetesServiceIP"`
@@ -72,33 +73,33 @@ func (cfg *Config) Valid() error {
 		return fmt.Errorf("invalid vpcCIDR: %v", err)
 	}
 
-	instanceCIDR := cfg.InstanceCIDR
-	if instanceCIDR == "" {
-		instanceCIDR = DefaultInstanceCIDR
+	instanceCIDRA := cfg.InstanceCIDRA
+	if instanceCIDRA == "" {
+		instanceCIDRA = DefaultInstanceCIDRA
 	}
-	instancesNetIP, instancesNet, err := net.ParseCIDR(instanceCIDR)
+	instancesNetIPA, _, err := net.ParseCIDR(instanceCIDRA)
 	if err != nil {
-		return fmt.Errorf("invalid instanceCIDR: %v", err)
+		return fmt.Errorf("invalid instanceCIDR A: %v", err)
 	}
-	if !vpcNet.Contains(instancesNetIP) {
+	if !vpcNet.Contains(instancesNetIPA) {
 		return fmt.Errorf("vpcCIDR (%s) does not contain instanceCIDR (%s)",
 			vpcCIDR,
-			instanceCIDR,
+			instanceCIDRA,
 		)
 	}
 
-	controllerIP := cfg.ControllerIP
-	if controllerIP == "" {
-		controllerIP = DefaultControllerIP
+	instanceCIDRB := cfg.InstanceCIDRB
+	if instanceCIDRB == "" {
+		instanceCIDRB = DefaultInstanceCIDRB
 	}
-	controllerIPAddr := net.ParseIP(controllerIP)
-	if controllerIPAddr == nil {
-		return fmt.Errorf("invalid controllerIP: %s", controllerIP)
+	instancesNetIPB, _, err := net.ParseCIDR(instanceCIDRB)
+	if err != nil {
+		return fmt.Errorf("invalid instanceCIDR B: %v", err)
 	}
-	if !instancesNet.Contains(controllerIPAddr) {
-		return fmt.Errorf("instanceCIDR (%s) does not contain controllerIP (%s)",
-			instanceCIDR,
-			controllerIP,
+	if !vpcNet.Contains(instancesNetIPB) {
+		return fmt.Errorf("vpcCIDR (%s) does not contain instanceCIDR (%s)",
+			vpcCIDR,
+			instanceCIDRB,
 		)
 	}
 

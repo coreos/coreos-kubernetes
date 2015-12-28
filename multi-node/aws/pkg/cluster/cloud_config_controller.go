@@ -31,27 +31,27 @@ write_files:
 - path: /run/coreos-kubernetes/options.env
   content: |
     ETCD_ENDPOINTS=http://127.0.0.1:2379
-    ARTIFACT_URL={{ ArtifactURL }}
-    SERVICE_IP_RANGE={{ ServiceCIDR }}
-    POD_NETWORK={{ PodCIDR }}
-    K8S_SERVICE_IP={{ KubernetesServiceIP }}
-    DNS_SERVICE_IP={{ DNSServiceIP }}
+    ARTIFACT_URL={{ Ref%ArtifactURL }}
+    SERVICE_IP_RANGE={{ Ref%ServiceCIDR }}
+    POD_NETWORK={{ Ref%PodCIDR }}
+    K8S_SERVICE_IP={{ Ref%KubernetesServiceIP }}
+    DNS_SERVICE_IP={{ Ref%DNSServiceIP }}
 
 - path: /tmp/install-controller.sh
   content: |
     #!/bin/bash
 
-    exec bash -c "$(curl --fail --silent --show-error --location '{{ ArtifactURL }}/scripts/install-controller.sh')"
+    exec bash -c "$(curl --fail --silent --show-error --location '{{ Ref%ArtifactURL }}/scripts/install-controller.sh')"
 
 - path: /etc/kubernetes/ssl/ca.pem
   encoding: base64
-  content: {{ CACert }}
+  content: {{ Ref%CACert }}
 
 - path: /etc/kubernetes/ssl/apiserver.pem
   encoding: base64
-  content: {{ APIServerCert }}
+  content: {{ Ref%APIServerCert }}
 
 - path: /etc/kubernetes/ssl/apiserver-key.pem
   encoding: base64
-  content: {{ APIServerKey }}
+  content: {{ Ref%APIServerKey }}
 `

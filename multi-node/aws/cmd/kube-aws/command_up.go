@@ -182,6 +182,11 @@ func initTLS(cfg *cluster.Config, dir string) (*cluster.TLSConfig, error) {
 		return nil, err
 	}
 
+	kubernetesServiceIP := cfg.KubernetesServiceIP
+	if kubernetesServiceIP == "" {
+		kubernetesServiceIP = cluster.DefaultKubernetesServiceIP
+	}
+
 	apiserverCertPath := path.Join(dir, "apiserver.pem")
 	apiserverKeyPath := path.Join(dir, "apiserver-key.pem")
 	apiserverConfig := tlsutil.ServerCertConfig{
@@ -191,11 +196,11 @@ func initTLS(cfg *cluster.Config, dir string) (*cluster.TLSConfig, error) {
 			"kubernetes.default",
 			"kubernetes.default.svc",
 			"kubernetes.default.svc.cluster.local",
+			"*.*.elb.amazonaws.com",
 			cfg.ExternalDNSName,
 		},
 		IPAddresses: []string{
-			cfg.ControllerIP,
-			cfg.KubernetesServiceIP,
+			kubernetesServiceIP,
 		},
 	}
 	if err := initTLSServer(apiserverConfig, caCert, caKey, apiserverKeyPath, apiserverCertPath); err != nil {

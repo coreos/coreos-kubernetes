@@ -22,25 +22,25 @@ func TestRenderTemplate(t *testing.T) {
 	assertDeepEqual(t, renderTemplate("test"), wrapJoin([]interface{}{"test"}))
 	assertDeepEqual(t, renderTemplate(" one two "), wrapJoin([]interface{}{" one two "}))
 
-	assertDeepEqual(t, renderTemplate("{{ test }}"), wrapJoin([]interface{}{
+	assertDeepEqual(t, renderTemplate("{{ Ref%test }}"), wrapJoin([]interface{}{
 		"",
 		map[string]interface{}{"Ref": "test"},
 		"",
 	}))
 
-	assertDeepEqual(t, renderTemplate("{{test}}"), wrapJoin([]interface{}{
+	assertDeepEqual(t, renderTemplate("{{Ref%test}}"), wrapJoin([]interface{}{
 		"",
 		map[string]interface{}{"Ref": "test"},
 		"",
 	}))
 
-	assertDeepEqual(t, renderTemplate(" one{{ two }} three "), wrapJoin([]interface{}{
+	assertDeepEqual(t, renderTemplate(" one{{ Ref%two }} three "), wrapJoin([]interface{}{
 		" one",
 		map[string]interface{}{"Ref": "two"},
 		" three ",
 	}))
 
-	assertDeepEqual(t, renderTemplate(" one {{ two|base64 }}three "), wrapJoin([]interface{}{
+	assertDeepEqual(t, renderTemplate(" one {{ Ref%two|base64 }}three "), wrapJoin([]interface{}{
 		" one ",
 		map[string]interface{}{
 			"Fn::Base64": map[string]interface{}{"Ref": "two"},

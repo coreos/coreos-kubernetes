@@ -7,7 +7,7 @@ coreos:
 
   flannel:
     interface: $private_ipv4
-    etcd_endpoints: http://{{ ControllerIP }}:2379
+    etcd_endpoints: http://{{ GetAtt%LoadBalancerController%DNSName }}:2379
 
   units:
   - name: install-worker.service
@@ -20,25 +20,25 @@ coreos:
 write_files:
 - path: /run/coreos-kubernetes/options.env
   content: |
-    ETCD_ENDPOINTS=http://{{ ControllerIP }}:2379
-    CONTROLLER_ENDPOINT=https://{{ ControllerIP }}
-    ARTIFACT_URL={{ ArtifactURL }}
-    DNS_SERVICE_IP={{ DNSServiceIP }}
+    ETCD_ENDPOINTS=http://{{ GetAtt%LoadBalancerController%DNSName }}:2379
+    CONTROLLER_ENDPOINT=https://{{ GetAtt%LoadBalancerController%DNSName }}
+    ARTIFACT_URL={{ Ref%ArtifactURL }}
+    DNS_SERVICE_IP={{ Ref%DNSServiceIP }}
 - path: /tmp/install-worker.sh
   content: |
     #!/bin/bash
 
-    exec bash -c "$(curl --fail --silent --show-error --location '{{ ArtifactURL }}/scripts/install-worker.sh')"
+    exec bash -c "$(curl --fail --silent --show-error --location '{{ Ref%ArtifactURL }}/scripts/install-worker.sh')"
 
 - path: /etc/kubernetes/ssl/ca.pem
   encoding: base64
-  content: {{ CACert }}
+  content: {{ Ref%CACert }}
 
 - path: /etc/kubernetes/ssl/worker.pem
   encoding: base64
-  content: {{ WorkerCert }}
+  content: {{ Ref%WorkerCert }}
 
 - path: /etc/kubernetes/ssl/worker-key.pem
   encoding: base64
-  content: {{ WorkerKey }}
+  content: {{ Ref%WorkerKey }}
 `

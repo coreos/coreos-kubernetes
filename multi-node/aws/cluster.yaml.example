@@ -10,9 +10,6 @@ keyName:
 # Region to provision Kubernetes cluster
 region:
 
-# Availability Zone to provision Kubernetes cluster
-#availabilityZone:
-
 # DNS name routable to the Kubernetes controller nodes
 # from worker nodes and external clients. The deployer
 # is responsible for making this name routable
@@ -46,8 +43,11 @@ externalDNSName:
 # CIDR for Kubernetes VPC
 # vpcCIDR: "10.0.0.0/16"
 
-# CIDR for Kubernetes subnet
-# instanceCIDR: "10.0.0.0/24"
+# CIDR for Kubernetes subnet A
+# instanceCIDR: "10.0.10.0/24"
+
+# CIDR for Kubernetes subnet B
+# instanceCIDR: "10.0.20.0/24"
 
 # IP Address for controller in Kubernetes subnet
 # controllerIP: 10.0.0.50

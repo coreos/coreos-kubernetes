@@ -8,28 +8,26 @@ import (
 
 const (
 	// resource names
-	resNameVPC                          = "VPC"
-	resNameInternetGateway              = "InternetGateway"
-	resNameVPCGatewayAttachment         = "VPCGatewayAttachment"
-	resNameRouteTable                   = "RouteTable"
-	resNameRouteToInternet              = "RouteToInternet"
-	resNameSubnetA 						= "SubnetA"
-	resNameSubnetB 						= "SubnetB"
-	resNameSubnetARouteTableAssociation = "SubnetRouteTableAssociationA"
-	resNameSubnetBRouteTableAssociation = "SubnetRouteTableAssociationB"
-	resNameSecurityGroupController      = "SecurityGroupController"
-	resNameSecurityGroupWorker          = "SecurityGroupWorker"
-	resNameAutoScaleWorker              = "AutoScaleWorker"
-	resNameLaunchConfigurationWorker    = "LaunchConfigurationWorker"
-	resNameAutoScaleController          = "AutoScaleController"
-	resNameLaunchConfigurationController= "LaunchConfigurationController"
-	resNameIAMRoleController            = "IAMRoleController"
-	resNameIAMInstanceProfileController = "IAMInstanceProfileController"
-	resNameIAMRoleWorker                = "IAMRoleWorker"
-	resNameIAMInstanceProfileWorker     = "IAMInstanceProfileWorker"
-	resNameRoute53Zone					= "VPCZone"
-	resNameRoute53ZoneMasterRecordSet	= "MasterRecordSet"
-	resNameLoadBalancerController		= "LoadBalancerController"
+	resNameVPC                           = "VPC"
+	resNameInternetGateway               = "InternetGateway"
+	resNameVPCGatewayAttachment          = "VPCGatewayAttachment"
+	resNameRouteTable                    = "RouteTable"
+	resNameRouteToInternet               = "RouteToInternet"
+	resNameSubnetA                       = "SubnetA"
+	resNameSubnetB                       = "SubnetB"
+	resNameSubnetARouteTableAssociation  = "SubnetRouteTableAssociationA"
+	resNameSubnetBRouteTableAssociation  = "SubnetRouteTableAssociationB"
+	resNameSecurityGroupController       = "SecurityGroupController"
+	resNameSecurityGroupWorker           = "SecurityGroupWorker"
+	resNameAutoScaleWorker               = "AutoScaleWorker"
+	resNameLaunchConfigurationWorker     = "LaunchConfigurationWorker"
+	resNameAutoScaleController           = "AutoScaleController"
+	resNameLaunchConfigurationController = "LaunchConfigurationController"
+	resNameIAMRoleController             = "IAMRoleController"
+	resNameIAMInstanceProfileController  = "IAMInstanceProfileController"
+	resNameIAMRoleWorker                 = "IAMRoleWorker"
+	resNameIAMInstanceProfileWorker      = "IAMInstanceProfileWorker"
+	resNameLoadBalancerController        = "LoadBalancerController"
 
 	// parameter names
 	parClusterName                  = "ClusterName"
@@ -49,8 +47,8 @@ const (
 	parNameWorkerRootVolumeSize     = "WorkerRootVolumeSize"
 	parAvailabilityZone             = "AvailabilityZone"
 	parVPCCIDR                      = "VPCCIDR"
-	parInstanceCIDR                 = "InstanceCIDR"
-	parControllerIP                 = "ControllerIP"
+	parInstanceCIDRA                = "InstanceCIDRA"
+	parInstanceCIDRB                = "InstanceCIDRB"
 	parServiceCIDR                  = "ServiceCIDR"
 	parPodCIDR                      = "PodCIDR"
 	parKubernetesServiceIP          = "KubernetesServiceIP"
@@ -135,19 +133,19 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 
 	availabilityZones := []map[string]interface{}{
 		map[string]interface{}{
-		"Fn::Select": []interface{}{
-			"0",
-			map[string]interface{}{
-				"Fn::GetAZs": newRef("AWS::Region"),
-			},
-		}},
+			"Fn::Select": []interface{}{
+				"0",
+				map[string]interface{}{
+					"Fn::GetAZs": newRef("AWS::Region"),
+				},
+			}},
 		map[string]interface{}{
-		"Fn::Select": []interface{}{
-			"1",
-			map[string]interface{}{
-				"Fn::GetAZs": newRef("AWS::Region"),
-		},
-		}},
+			"Fn::Select": []interface{}{
+				"1",
+				map[string]interface{}{
+					"Fn::GetAZs": newRef("AWS::Region"),
+				},
+			}},
 	}
 
 	res := make(map[string]interface{})
@@ -155,7 +153,7 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 	res[resNameVPC] = map[string]interface{}{
 		"Type": "AWS::EC2::VPC",
 		"Properties": map[string]interface{}{
-			"CidrBlock":          "10.0.0.0/16",
+			"CidrBlock":          newRef(parVPCCIDR),
 			"EnableDnsSupport":   true,
 			"EnableDnsHostnames": true,
 			"InstanceTenancy":    "default",
@@ -209,7 +207,7 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 		"Type": "AWS::EC2::Subnet",
 		"Properties": map[string]interface{}{
 			"AvailabilityZone":    availabilityZones[0],
-			"CidrBlock":           "10.0.10.0/24",
+			"CidrBlock":           newRef(parInstanceCIDRA),
 			"MapPublicIpOnLaunch": true,
 			"VpcId":               newRef(resNameVPC),
 			"Tags": []map[string]interface{}{
@@ -222,7 +220,7 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 		"Type": "AWS::EC2::Subnet",
 		"Properties": map[string]interface{}{
 			"AvailabilityZone":    availabilityZones[1],
-			"CidrBlock":           "10.0.20.0/24",
+			"CidrBlock":           newRef(parInstanceCIDRB),
 			"MapPublicIpOnLaunch": true,
 			"VpcId":               newRef(resNameVPC),
 			"Tags": []map[string]interface{}{
@@ -443,81 +441,41 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 		"Type": "AWS::ElasticLoadBalancing::LoadBalancer",
 		"Properties": map[string]interface{}{
 			"CrossZone": true,
-			"Scheme": "internal",
+			"Scheme":    "internal",
 			"HealthCheck": map[string]interface{}{
-				"Target" : "TCP:443",
-				"HealthyThreshold" : "2",
-				"UnhealthyThreshold" : "5",
-				"Interval" : "30",
-				"Timeout" : "5",
-		},
+				"Target":             "TCP:443",
+				"HealthyThreshold":   "2",
+				"UnhealthyThreshold": "5",
+				"Interval":           "30",
+				"Timeout":            "5",
+			},
 			"Listeners": []map[string]interface{}{
 				map[string]interface{}{
 					"LoadBalancerPort": "8080",
-					"InstancePort": "8080",
-					"Protocol": "TCP",
-					},
+					"InstancePort":     "8080",
+					"Protocol":         "TCP",
+				},
 				map[string]interface{}{
 					"LoadBalancerPort": "443",
-					"InstancePort": "443",
-					"Protocol": "TCP",
-					},
+					"InstancePort":     "443",
+					"Protocol":         "TCP",
+				},
 				map[string]interface{}{
 					"LoadBalancerPort": "2379",
-					"InstancePort": "2379",
-					"Protocol": "TCP",
+					"InstancePort":     "2379",
+					"Protocol":         "TCP",
 				},
 				map[string]interface{}{
 					"LoadBalancerPort": "2380",
-					"InstancePort": "2380",
-					"Protocol": "TCP",
+					"InstancePort":     "2380",
+					"Protocol":         "TCP",
+				},
 			},
-			},
-			"Subnets": []map[string]interface{}{newRef(resNameSubnetA), newRef(resNameSubnetB)},
+			"Subnets":        []map[string]interface{}{newRef(resNameSubnetA), newRef(resNameSubnetB)},
 			"SecurityGroups": []map[string]interface{}{newRef(resNameSecurityGroupController)},
 		},
 		"DependsOn": []string{
 			resNameVPC,
-		},
-	}
-
-	res[resNameRoute53Zone] = map[string]interface{}{
-		"Type": "AWS::Route53::HostedZone",
-		"Properties": map[string]interface{}{
-			"HostedZoneConfig":  map[string]interface{}{
-				"Comment": "The Kubernetes Internal zone",
-			},
-			"Name": "kuber.internal",
-			"VPCs": []map[string]interface{}{
-				map[string]interface{}{
-					"VPCId": newRef(resNameVPC),
-					"VPCRegion": newRef("AWS::Region"),
-						},
-					},
-				},
-		"DependsOn": []string{
-			resNameVPC,
-			},
-	}
-
-	res[resNameRoute53ZoneMasterRecordSet] = map[string]interface{}{
-		"Type": "AWS::Route53::RecordSet",
-		"Properties": map[string]interface{}{
-			"HostedZoneId": newRef(resNameRoute53Zone),
-			"Comment": "DNS name for kubernetes master lb.",
-			"Name": "master.kube.internal.",
-			"Type": "CNAME",
-			"TTL": "900",
-			"ResourceRecords": []map[string]interface{}{
-				map[string]interface{}{
-					"Fn::GetAtt": []string{
-						resNameLoadBalancerController, "DNSName",
-				},
-			},
-		},
-		},
-		"DependsOn": []string{
-			resNameLoadBalancerController,
 		},
 	}
 
@@ -589,6 +547,7 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 			"AvailabilityZones":       availabilityZones,
 			"LaunchConfigurationName": newRef(resNameLaunchConfigurationController),
 			"DesiredCapacity":         newRef(parControllerCount),
+			"LoadBalancerNames":       []interface{}{newRef(resNameLoadBalancerController)},
 			"MinSize":                 newRef(parControllerCount),
 			"MaxSize":                 newRef(parControllerCount),
 			"HealthCheckGracePeriod":  600,
@@ -689,6 +648,11 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 		"Description": "Worker root volume size (GiB)",
 	}
 
+	par[parAvailabilityZone] = map[string]interface{}{
+		"Type":        "String",
+		"Default":     "",
+		"Description": "Specific availability zone (optional)",
+	}
 
 	par[parVPCCIDR] = map[string]interface{}{
 		"Type":        "String",
@@ -696,16 +660,16 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 		"Description": "CIDR for Kubernetes vpc",
 	}
 
-	par[parInstanceCIDR] = map[string]interface{}{
+	par[parInstanceCIDRA] = map[string]interface{}{
 		"Type":        "String",
-		"Default":     DefaultInstanceCIDR,
-		"Description": "CIDR for Kubernetes subnet",
+		"Default":     DefaultInstanceCIDRA,
+		"Description": "CIDR for Kubernetes subnet A",
 	}
 
-	par[parControllerIP] = map[string]interface{}{
+	par[parInstanceCIDRB] = map[string]interface{}{
 		"Type":        "String",
-		"Default":     DefaultControllerIP,
-		"Description": "IP address for controller in Kubernetes subnet",
+		"Default":     DefaultInstanceCIDRB,
+		"Description": "CIDR for Kubernetes subnet B",
 	}
 
 	par[parServiceCIDR] = map[string]interface{}{

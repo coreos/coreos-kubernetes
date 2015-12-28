@@ -181,18 +181,18 @@ func (c *Cluster) Create(tlsConfig *TLSConfig) error {
 		})
 	}
 
-	if c.cfg.InstanceCIDR != "" {
+	if c.cfg.InstanceCIDRA != "" {
 		parameters = append(parameters, &cloudformation.Parameter{
-			ParameterKey:     aws.String(parInstanceCIDR),
-			ParameterValue:   aws.String(c.cfg.InstanceCIDR),
+			ParameterKey:     aws.String(parInstanceCIDRA),
+			ParameterValue:   aws.String(c.cfg.InstanceCIDRA),
 			UsePreviousValue: aws.Bool(true),
 		})
 	}
 
-	if c.cfg.ControllerIP != "" {
+	if c.cfg.InstanceCIDRB != "" {
 		parameters = append(parameters, &cloudformation.Parameter{
-			ParameterKey:     aws.String(parControllerIP),
-			ParameterValue:   aws.String(c.cfg.ControllerIP),
+			ParameterKey:     aws.String(parInstanceCIDRB),
+			ParameterValue:   aws.String(c.cfg.InstanceCIDRB),
 			UsePreviousValue: aws.Bool(true),
 		})
 	}

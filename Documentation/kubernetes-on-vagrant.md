@@ -45,7 +45,7 @@ $ cd coreos-kubernetes/multi-node/vagrant
 
 ## Start the Machines
 
-The default cluster configuration is to start a virtual machine for each role &mdash; controller, worker, and etcd server. However, you can modify the default cluster settings by copying `config.rb.sample` to `config.rb` and modifying configuration values.
+The default cluster configuration is to start a virtual machine for each role &mdash; master node, worker node, and etcd server. However, you can modify the default cluster settings by copying `config.rb.sample` to `config.rb` and modifying configuration values.
 
 ```
 #$update_channel="alpha"
@@ -73,7 +73,7 @@ You can choose from one of the two following options.
 	kubectl config use-context vagrant-multi
 	```
 
-2. **Update the local-user kubeconfig**
+1. **Update the local-user kubeconfig**
 
 	Configure your local Kubernetes client using the following commands:
 

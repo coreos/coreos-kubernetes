@@ -4,8 +4,8 @@ This guide will walk you through a deployment of a single-master/multi-worker Ku
 
 - configure an etcd cluster for Kubernetes to use
 - generate the required certificates for communication between Kubernetes components
-- deploy our Master nodes
-- deploy our Worker nodes
+- deploy a master node
+- deploy worker nodes
 - configure `kubectl` to work with our cluster
 - deploy the DNS add-on
 
@@ -17,9 +17,9 @@ The following variables will be used throughout this guide. Most of the provided
 
 **MASTER_HOST**=_no default_
 
-The address of the master node. In most cases this will be the publicly routable IP of the master node. Worker nodes must be able to reach the master via this address on port 443. Additionally, external clients (such as an administrator using `kubectl`) will also need access, since this will run the Kubernetes API endpoint.
+The address of the master node. In most cases this will be the publicly routable IP of the node. Worker nodes must be able to reach the master node(s) via this address on port 443. Additionally, external clients (such as an administrator using `kubectl`) will also need access, since this will run the Kubernetes API endpoint.
 
-If you will be running a high-availability control-plane consisting of multiple master nodes, then `MASTER_HOST` will ideally be a network load balancer that sits in front of the master nodes. Alternatively, a DNS name can be configured which will resolve to the master node IPs. How requests are routed to the master nodes will be an important consideration when creating the TLS certificates.
+If you will be running a high-availability control-plane consisting of multiple master nodes, then `MASTER_HOST` will ideally be a network load balancer that sits in front of them. Alternatively, a DNS name can be configured which will resolve to the master IPs. How requests are routed to the master nodes will be an important consideration when creating the TLS certificates.
 
 <hr/>
 
@@ -33,13 +33,13 @@ List of etcd machines (`http://ip:port`), comma separated. If you're running a c
 
 The CIDR network to use for pod IPs.
 Each pod launched in the cluster will be assigned an IP out of this range.
-This network must be routable between all nodes in the cluster. In a default installation, the flannel overlay network will provide routing to this network.
+This network must be routable between all hosts in the cluster. In a default installation, the flannel overlay network will provide routing to this network.
 
 <hr/>
 
 **SERVICE_IP_RANGE**=10.3.0.0/24
 
-The CIDR network to use for service cluster VIPs (Virtual IPs). Each service will be assigned a cluster IP out of this range. This must not overlap with any IP ranges assigned to the `POD_NETWORK`, or other existing network infrastructure. Routing to these VIPs is handled by a local kube-proxy service to each node, and are not required to be routable between nodes.
+The CIDR network to use for service cluster VIPs (Virtual IPs). Each service will be assigned a cluster IP out of this range. This must not overlap with any IP ranges assigned to the `POD_NETWORK`, or other existing network infrastructure. Routing to these VIPs is handled by a local kube-proxy service to each host, and are not required to be routable between hosts.
 
 <hr/>
 
@@ -139,5 +139,5 @@ admin-key.pem
 <div class="co-m-docs-next-step">
   <p><strong>Is your etcd cluster up and running?</strong> You need the IPs for the next step.</p>
   <p><strong>Did you generate all of the certificates?</strong> You will place these on disk next.</p>
-  <a href="deploy-master.md" class="btn btn-primary btn-icon-right"  data-category="Docs Next" data-event="Kubernetes: Master">Yes, ready to deploy the Master</a>
+  <a href="deploy-master.md" class="btn btn-primary btn-icon-right"  data-category="Docs Next" data-event="Kubernetes: Master">Yes, ready to deploy the master node</a>
 </div>

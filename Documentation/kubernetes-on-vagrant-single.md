@@ -61,7 +61,7 @@ You can choose from one of the two following options.
    kubectl config use-context vagrant-single
    ```
 
-2. **Update the local-user kubeconfig**
+1. **Update the local-user kubeconfig**
    ```sh
    $ kubectl config set-cluster vagrant-single-cluster --server=https://172.17.4.99:443 --certificate-authority=${PWD}/ssl/ca.pem
    $ kubectl config set-credentials vagrant-single-admin --certificate-authority=${PWD}/ssl/ca.pem --client-key=${PWD}/ssl/admin-key.pem --client-certificate=${PWD}/ssl/admin.pem

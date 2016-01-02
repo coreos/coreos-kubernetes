@@ -29,7 +29,7 @@ $ mv kubectl /usr/local/bin/kubectl
 
 Configure `kubectl` to connect to the target cluster using the following commands, replacing several values as indicated:
 
-* Replace `${MASTER_HOST}` with the address or name of the controller address or name used in previous steps
+* Replace `${MASTER_HOST}` with the master node address or name used in previous steps
 * Replace `${CA_CERT}` with the absolute path to the `ca.pem` created in previous steps
 * Replace `${ADMIN_KEY}` with the absolute path to the `admin-key.pem` created in previous steps
 * Replace `${ADMIN_CERT}` with the absolute path to the `admin.pem` created in previous steps

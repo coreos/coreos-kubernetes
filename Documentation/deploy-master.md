@@ -1,12 +1,19 @@
-# Deploy Kubernetes Master Machine
+# Deploy Kubernetes Master Node(s)
 
-Boot a single CoreOS machine which will be used as the Kubernetes master. You must use a CoreOS version 773.1.0+ on the Alpha or Beta channel for the `kubelet` to be present in the image.
+Boot a single CoreOS machine which will be used as the Kubernetes master node. You must use a CoreOS version 773.1.0+ on the Alpha or Beta channel for the `kubelet` to be present in the image.
 
 See the [CoreOS Documentation](https://coreos.com/os/docs/latest/) for guides on launching nodes on supported platforms.
 
-Manual configuration of the required Master services is explained below, but most of the configuration could also be done with cloud-config, aside from placing the TLS assets on disk. These secrets shouldn't be stored in cloud-config for enhanced security.
+Manual configuration of the required master node services is explained below, but most of the configuration could also be done with cloud-config, aside from placing the TLS assets on disk. These secrets shouldn't be stored in cloud-config for enhanced security.
 
-If you are deploying multiple master nodes in a high-availability cluster, these instructions can be repeated for each master node you wish to launch.
+The instructions below configure the required master node services using two main directories:
+
+* `/etc/kubernetes/manifests` for services that the kubelet should run on every master node
+* `/srv/kubernetes/manifests` for services that should run only on a single master node at a time (determined by a leader election).  The podmaster on that node manages the startup of these services by copying their manifests from here to the `/etc/kubernetes/manifests` directory, and the kubelet picks them up from there.
+
+It is vital to understand the distinction between the two and ensure that the scheduler and controller manager manifests are not accidentally placed directly in the `/etc/kubernetes/manifests` directory.
+
+If you are deploying multiple master nodes in a high-availability cluster, these instructions can be repeated for each one you wish to launch.
 
 ## Configure Service Components
 
@@ -80,7 +87,7 @@ After=flanneld.service
 
 ### Create the kubelet Unit
 
-The [kubelet](http://kubernetes.io/v1.1/docs/admin/kubelet.html) is the agent on each machine that starts and stops Pods and other machine-level tasks. The kubelet communicates with the API server (also running on the master machines) with the TLS certificates we placed on disk earlier.
+The [kubelet](http://kubernetes.io/v1.1/docs/admin/kubelet.html) is the agent on each machine that starts and stops Pods and other machine-level tasks. The kubelet communicates with the API server (also running on the master nodes) with the TLS certificates we placed on disk earlier.
 
 On the master node, the kubelet is configured to communicate with the API server, but not register for cluster work, as shown in the `--register-node=false` line in the YAML excerpt below. This prevents user pods being scheduled on the master nodes, and ensures cluster work is routed only to task-specific worker nodes.
 
@@ -173,7 +180,7 @@ spec:
 
 We're going to run the proxy just like we did the API server. The proxy is responsible for directing traffic destined for specific services and pods to the correct location. The proxy communicates with the API server periodically to keep up to date.
 
-Both the Master and Workers in your cluster will run the proxy.
+Both the master and worker nodes in your cluster will run the proxy.
 
 All you have to do is create `/etc/kubernetes/manifests/kube-proxy.yaml`, there are no settings that need to be configured.
 
@@ -209,9 +216,9 @@ spec:
 
 ### Set up the kube-podmaster Pod
 
-The kube-podmaster is responsible for implementing master-election for the kube-controller-manager and kube-scheduler. Because these services modify the cluster state, we only want to have one actor making modifications at a time.
+The kube-podmaster is responsible for implementing leader-election for the kube-controller-manager and kube-scheduler. Because these services modify the cluster state, we only want to have one master node making modifications at a time.
 
-In a single-master deployment, the kube-podmaster will simply run the kube-scheduler and kube-controller-manager on the current node. In a multi-master deployment, the kube-podmaster will be responsible for starting a new instance of the Kubernetes components in the case of a machine dying.
+In a single-master deployment, the kube-podmaster will simply run the kube-scheduler and kube-controller-manager on the only master node. In a multi-master deployment, the kube-podmaster will be responsible for starting a new instance of the Kubernetes components in the case of a machine dying.
 
 When creating `/etc/kubernetes/manifests/kube-podmaster.yaml`:
 
@@ -323,7 +330,7 @@ spec:
 
 ### Set Up the kube-scheduler Pod
 
-The scheduler is the last major piece of our Master. It monitors the API for unscheduled pods, finds them a machine to run on, and communicates the decision back to the API.
+The scheduler is the last major piece of our master node. It monitors the API for unscheduled pods, finds them a machine to run on, and communicates the decision back to the API.
 
 Create File `/srv/kubernetes/manifests/kube-scheduler.yaml`:
 
@@ -355,7 +362,7 @@ spec:
 
 ## Start Services
 
-Now that we've defined all of our units and written our TLS certificates to disk, we're ready to start the Master components.
+Now that we've defined all of our units and written our TLS certificates to disk, we're ready to start the master components.
 
 ### Load Changed Units
 
@@ -393,7 +400,7 @@ Created symlink from /etc/systemd/system/multi-user.target.wants/kubelet.service
 
 ### Create kube-system Namespace
 
-The Kubernetes Pods that make up the Master node will exist in their own namespace. We need to create this namespace so these components are discoverable by other nodes in the cluster.
+The Kubernetes Pods that make up the control plane will exist in their own namespace. We need to create this namespace so these components are discoverable by other hosts in the cluster.
 
 **Note**: You will only need to do this once per-cluster. If deploying multiple master nodes, this step needs to happen only once.
 

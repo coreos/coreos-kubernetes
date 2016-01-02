@@ -8,7 +8,7 @@ The Kubernetes network model outlines four methods of component communication:
     * Each Pod in a Kubernetes cluster is assigned an IP in a flat shared networking namespace. This allows for a clean network model where Pods, from a networking perspective, can be treated much like VMs or physical hosts.
 
 * Pod-to-Service Communication
-    * Services are implemented by assigning Virtual IPs which clients can access and are transparently proxied to the Pods grouped by that service. Requests to the Service IPs are intercepted by a kube-proxy process running on all nodes, which is then responsible for routing to the correct Pod.
+    * Services are implemented by assigning Virtual IPs which clients can access and are transparently proxied to the Pods grouped by that service. Requests to the Service IPs are intercepted by a kube-proxy process running on all hosts, which is then responsible for routing to the correct Pod.
 
 * External-to-Internal Communication
     * Accessing services from outside the cluster is generally implemented by configuring external loadbalancers which target all nodes in the cluster. Once traffic arrives at a node, it is routed to the correct Service backends via the kube-proxy.
@@ -21,7 +21,7 @@ See [Kubernetes Networking][kubernetes-network] for more detailed information on
 
 The information below describes a minimum set of port allocations used by Kubernetes components. Some of these allocations will be optional depending on the deployment (e.g. if flannel is being used). Additionally, there are likely additional ports a deployer will need to open on their infrastructure (e.g. 22/ssh).
 
-Controller Node Inbound
+Master Node Inbound
 
 | Protocol | Port Range | Source                                    | Purpose                |
 -----------|------------|-------------------------------------------|------------------------|
@@ -31,9 +31,9 @@ Worker Node Inbound
 
 | Protocol | Port Range  | Source                         | Purpose                                                                |
 -----------|-------------|--------------------------------|------------------------------------------------------------------------|
-| TCP      | 10250       | Control Nodes                  | Worker node Kubelet healthcheck port.                                  |
+| TCP      | 10250       | Master Nodes                   | Worker node Kubelet healthcheck port.                                  |
 | TCP      | 30000-32767 | External Application Consumers | Default port range for [external service][external-service] ports. Typically, these ports would need to be exposed to external load-balancers, or other external consumers of the application itself. |
-| TCP      | ALL         | Worker & Control Nodes         | Intra-cluster communication (unnecessary if flannel is used)           |
+| TCP      | ALL         | Master & Worker Nodes          | Intra-cluster communication (unnecessary if flannel is used)           |
 | UDP      | 8285        | Worker Nodes                   | flannel overlay network - *udp backend*. This is the default netowrk configuration (only required if using flannel) |
 | UDP      | 8472        | Worker Nodes                   | flannel overlay network - *vxlan backend* (only required if using flannel) |
 
@@ -41,7 +41,7 @@ etcd Node Inbound
 
 | Protocol | Port Range | Source        | Purpose                                                  |
 -----------|------------|---------------|----------------------------------------------------------|
-| TCP      | 2379-2380  | Control Nodes | etcd server client API                                   |
+| TCP      | 2379-2380  | Master Nodes  | etcd server client API                                   |
 | TCP      | 2379-2380  | Worker Nodes  | etcd server client API (only required if using flannel). |
 
 [external-service]: http://kubernetes.io/v1.1/docs/user-guide/services.html#external-services

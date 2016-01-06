@@ -24,6 +24,8 @@ coreos:
     command: start
     content: |
       [Service]
+      ExecStartPre=/usr/bin/tar -xf /tmp/cluster-manifests.tar -C /tmp
+      ExecStartPre=/usr/bin/tar -xf /tmp/controller-manifests.tar -C /tmp
       ExecStart=/bin/bash /tmp/install-controller.sh
       Type=oneshot
 
@@ -31,27 +33,32 @@ write_files:
 - path: /run/coreos-kubernetes/options.env
   content: |
     ETCD_ENDPOINTS=http://127.0.0.1:2379
-    ARTIFACT_URL={{ ArtifactURL }}
     SERVICE_IP_RANGE={{ ServiceCIDR }}
     POD_NETWORK={{ PodCIDR }}
     K8S_SERVICE_IP={{ KubernetesServiceIP }}
     DNS_SERVICE_IP={{ DNSServiceIP }}
 
 - path: /tmp/install-controller.sh
-  content: |
-    #!/bin/bash
+  encoding: gzip+base64
+  content: {{ InstallControllerScript }}
 
-    exec bash -c "$(curl --fail --silent --show-error --location '{{ ArtifactURL }}/scripts/install-controller.sh')"
+- path: /tmp/cluster-manifests.tar
+  encoding: gzip+base64
+  content: {{ ClusterManifestsTar }}
+
+- path: /tmp/controller-manifests.tar
+  encoding: gzip+base64
+  content: {{ ControllerManifestsTar }}
 
 - path: /etc/kubernetes/ssl/ca.pem
-  encoding: base64
+  encoding: gzip+base64
   content: {{ CACert }}
 
 - path: /etc/kubernetes/ssl/apiserver.pem
-  encoding: base64
+  encoding: gzip+base64
   content: {{ APIServerCert }}
 
 - path: /etc/kubernetes/ssl/apiserver-key.pem
-  encoding: base64
+  encoding: gzip+base64
   content: {{ APIServerKey }}
 `

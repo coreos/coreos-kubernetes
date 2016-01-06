@@ -2,13 +2,15 @@ package cluster
 
 import (
 	"bytes"
-	"encoding/base64"
+
 	"fmt"
 	"text/tabwriter"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"io/ioutil"
+	"path/filepath"
 )
 
 type ClusterInfo struct {
@@ -77,33 +79,53 @@ func (c *Cluster) Create(tlsConfig *TLSConfig) error {
 			UsePreviousValue: aws.Bool(true),
 		},
 		{
-			ParameterKey:     aws.String(parArtifactURL),
-			ParameterValue:   aws.String(c.cfg.ArtifactURL),
+			ParameterKey:     aws.String(parInstallWorkerScript),
+			ParameterValue:   aws.String(string(c.cfg.InstallWorkerScript)),
+			UsePreviousValue: aws.Bool(true),
+		},
+		{
+			ParameterKey:     aws.String(parInstallControllerScript),
+			ParameterValue:   aws.String(string(c.cfg.InstallControllerScript)),
+			UsePreviousValue: aws.Bool(true),
+		},
+		{
+			ParameterKey:     aws.String(parClusterManifestsTar),
+			ParameterValue:   aws.String(string(c.cfg.ClusterManifestsTar)),
+			UsePreviousValue: aws.Bool(true),
+		},
+		{
+			ParameterKey:     aws.String(parControllerManifestsTar),
+			ParameterValue:   aws.String(string(c.cfg.ControllerManifestsTar)),
+			UsePreviousValue: aws.Bool(true),
+		},
+		{
+			ParameterKey:     aws.String(parWorkerManifestsTar),
+			ParameterValue:   aws.String(string(c.cfg.WorkerManifestsTar)),
 			UsePreviousValue: aws.Bool(true),
 		},
 		{
 			ParameterKey:     aws.String(parCACert),
-			ParameterValue:   aws.String(base64.StdEncoding.EncodeToString(tlsConfig.CACert)),
+			ParameterValue:   aws.String(string(tlsConfig.CACert)),
 			UsePreviousValue: aws.Bool(true),
 		},
 		{
 			ParameterKey:     aws.String(parAPIServerCert),
-			ParameterValue:   aws.String(base64.StdEncoding.EncodeToString(tlsConfig.APIServerCert)),
+			ParameterValue:   aws.String(string(tlsConfig.APIServerCert)),
 			UsePreviousValue: aws.Bool(true),
 		},
 		{
 			ParameterKey:     aws.String(parAPIServerKey),
-			ParameterValue:   aws.String(base64.StdEncoding.EncodeToString(tlsConfig.APIServerKey)),
+			ParameterValue:   aws.String(string(tlsConfig.APIServerKey)),
 			UsePreviousValue: aws.Bool(true),
 		},
 		{
 			ParameterKey:     aws.String(parWorkerCert),
-			ParameterValue:   aws.String(base64.StdEncoding.EncodeToString(tlsConfig.WorkerCert)),
+			ParameterValue:   aws.String(string(tlsConfig.WorkerCert)),
 			UsePreviousValue: aws.Bool(true),
 		},
 		{
 			ParameterKey:     aws.String(parWorkerKey),
-			ParameterValue:   aws.String(base64.StdEncoding.EncodeToString(tlsConfig.WorkerKey)),
+			ParameterValue:   aws.String(string(tlsConfig.WorkerKey)),
 			UsePreviousValue: aws.Bool(true),
 		},
 	}
@@ -220,8 +242,12 @@ func (c *Cluster) Create(tlsConfig *TLSConfig) error {
 		})
 	}
 
-	tmplURL := fmt.Sprintf("%s/template.json", c.cfg.ArtifactURL)
-	return createStackAndWait(cloudformation.New(c.aws), c.stackName(), tmplURL, parameters)
+	tmplBody, err := ioutil.ReadFile(filepath.Join(c.cfg.ArtifactPath, "template.json"))
+	if err != nil {
+		return err
+	}
+
+	return createStackAndWait(cloudformation.New(c.aws), c.stackName(), string(tmplBody), parameters)
 }
 
 func (c *Cluster) Info() (*ClusterInfo, error) {

@@ -14,8 +14,12 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"archive/tar"
+	"compress/gzip"
+	"encoding/base64"
 	"github.com/coreos/coreos-kubernetes/multi-node/aws/pkg/cluster"
 	"github.com/coreos/coreos-kubernetes/multi-node/aws/pkg/tlsutil"
+	"io"
 )
 
 var (
@@ -53,6 +57,16 @@ func runCmdUp(cmd *cobra.Command, args []string) {
 
 	if err := os.MkdirAll(clusterDir, 0700); err != nil {
 		stderr("Failed creating cluster workspace %s: %v", clusterDir, err)
+		os.Exit(1)
+	}
+
+	artifactsDir, err := filepath.Abs(cfg.ArtifactPath)
+	if err != nil {
+		stderr("Unable to expand artifacts directory to absolute path: %v", err)
+		os.Exit(1)
+	}
+	if err := initArtifacts(cfg, artifactsDir); err != nil {
+		stderr("Failed initializing artifacts from %s: %v", artifactsDir, err)
 		os.Exit(1)
 	}
 
@@ -116,14 +130,89 @@ func getCloudFormation(url string) (string, error) {
 
 	return string(tmpl), nil
 }
+func mustTarDirectory(basepath, path string) *bytes.Buffer {
+	buf := &bytes.Buffer{}
 
-func mustReadFile(loc string) []byte {
-	b, err := ioutil.ReadFile(loc)
+	b64Writer := base64.NewEncoder(base64.StdEncoding, buf)
+	defer b64Writer.Close()
+
+	gzWriter, err := gzip.NewWriterLevel(b64Writer, gzip.BestCompression)
 	if err != nil {
+		stderr("Error creating gzip writer: %s", err)
+		os.Exit(1)
+	}
+	defer gzWriter.Close()
+
+	tarWriter := tar.NewWriter(gzWriter)
+	defer tarWriter.Close()
+
+	tarHandler := func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			//Terminate on error
+			return err
+		}
+		hdr, err := tar.FileInfoHeader(info, "")
+		if err != nil {
+			return err
+		}
+		relPath, err := filepath.Rel(basepath, path)
+		if err != nil {
+			return err
+		}
+
+		hdr.Name = relPath
+
+		if err = tarWriter.WriteHeader(hdr); err != nil {
+			return err
+		}
+
+		if !info.IsDir() {
+			f, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			if _, err := io.Copy(tarWriter, f); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+
+	if err := filepath.Walk(path, tarHandler); err != nil {
+		stderr("Error tar-ing directory %s: %s", path, err)
+		os.Exit(1)
+	}
+	return buf
+}
+
+func mustReadFile(loc string) *bytes.Buffer {
+	f, err := os.Open(loc)
+	if err != nil {
+		stderr("Failed opening file %s: %s", loc, err)
+		os.Exit(1)
+	}
+	defer f.Close()
+
+	buf := &bytes.Buffer{}
+
+	b64Writer := base64.NewEncoder(base64.StdEncoding, buf)
+	defer b64Writer.Close()
+
+	gzWriter, err := gzip.NewWriterLevel(b64Writer, gzip.BestCompression)
+	if err != nil {
+		stderr("Failed creating gzip context: %s", err)
+		os.Exit(1)
+	}
+	defer gzWriter.Close()
+
+	if _, err := io.Copy(gzWriter, f); err != nil {
 		stderr("Failed reading file %s: %s", loc, err)
 		os.Exit(1)
 	}
-	return b
+
+	return buf
 }
 
 func newKubeconfig(cfg *cluster.Config, tlsConfig *cluster.TLSConfig) ([]byte, error) {
@@ -170,6 +259,20 @@ users:
 current-context: kube-aws-{{ .ClusterName }}-context
 `
 
+func initArtifacts(cfg *cluster.Config, artifactPath string) error {
+
+	cfg.InstallWorkerScript = mustReadFile(filepath.Join(artifactPath, "scripts", "install-worker.sh")).Bytes()
+
+	cfg.InstallControllerScript = mustReadFile(filepath.Join(artifactPath, "scripts", "install-controller.sh")).Bytes()
+
+	manifestPath := filepath.Join(artifactPath, "manifests")
+
+	cfg.ClusterManifestsTar = mustTarDirectory(artifactPath, filepath.Join(manifestPath, "cluster")).Bytes()
+	cfg.ControllerManifestsTar = mustTarDirectory(artifactPath, filepath.Join(manifestPath, "controller")).Bytes()
+	cfg.WorkerManifestsTar = mustTarDirectory(artifactPath, filepath.Join(manifestPath, "worker")).Bytes()
+
+	return nil
+}
 func initTLS(cfg *cluster.Config, dir string) (*cluster.TLSConfig, error) {
 	caCertPath := path.Join(dir, "ca.pem")
 	caKeyPath := path.Join(dir, "ca-key.pem")
@@ -226,19 +329,19 @@ func initTLS(cfg *cluster.Config, dir string) (*cluster.TLSConfig, error) {
 
 	tlsConfig := cluster.TLSConfig{
 		CACertFile:        caCertPath,
-		CACert:            mustReadFile(caCertPath),
+		CACert:            mustReadFile(caCertPath).Bytes(),
 		APIServerCertFile: apiserverCertPath,
-		APIServerCert:     mustReadFile(apiserverCertPath),
+		APIServerCert:     mustReadFile(apiserverCertPath).Bytes(),
 		APIServerKeyFile:  apiserverKeyPath,
-		APIServerKey:      mustReadFile(apiserverKeyPath),
+		APIServerKey:      mustReadFile(apiserverKeyPath).Bytes(),
 		WorkerCertFile:    workerCertPath,
-		WorkerCert:        mustReadFile(workerCertPath),
+		WorkerCert:        mustReadFile(workerCertPath).Bytes(),
 		WorkerKeyFile:     workerKeyPath,
-		WorkerKey:         mustReadFile(workerKeyPath),
+		WorkerKey:         mustReadFile(workerKeyPath).Bytes(),
 		AdminCertFile:     adminCertPath,
-		AdminCert:         mustReadFile(adminCertPath),
+		AdminCert:         mustReadFile(adminCertPath).Bytes(),
 		AdminKeyFile:      adminKeyPath,
-		AdminKey:          mustReadFile(adminKeyPath),
+		AdminKey:          mustReadFile(adminKeyPath).Bytes(),
 	}
 
 	return &tlsConfig, nil

@@ -18,19 +18,17 @@ var (
 	}
 
 	renderOpts struct {
-		Output                      string
-		ParameterDefaultArtifactURL string
+		Output string
 	}
 )
 
 func init() {
 	cmdRoot.AddCommand(cmdRender)
 	cmdRender.Flags().StringVar(&renderOpts.Output, "output", "", "Write output to file instead of stdout")
-	cmdRender.Flags().StringVar(&renderOpts.ParameterDefaultArtifactURL, "parameter-default-artifact-url", cluster.DefaultArtifactURL(VERSION), "Set the default location of kube-aws deployment artifacts in the rendered template")
 }
 
 func runCmdRender(cmd *cobra.Command, args []string) {
-	tmpl, err := cluster.StackTemplateBody(renderOpts.ParameterDefaultArtifactURL)
+	tmpl, err := cluster.StackTemplateBody()
 	if err != nil {
 		stderr("Failed to generate template: %v", err)
 		os.Exit(1)

@@ -10,13 +10,13 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
-func createStackAndWait(svc *cloudformation.CloudFormation, name, templateURL string, parameters []*cloudformation.Parameter) error {
+func createStackAndWait(svc *cloudformation.CloudFormation, name, templateBody string, parameters []*cloudformation.Parameter) error {
 	creq := &cloudformation.CreateStackInput{
 		StackName:    aws.String(name),
 		OnFailure:    aws.String("DO_NOTHING"),
 		Capabilities: []*string{aws.String(cloudformation.CapabilityCapabilityIam)},
 		Parameters:   parameters,
-		TemplateURL:  aws.String(templateURL),
+		TemplateBody: aws.String(templateBody),
 	}
 
 	resp, err := svc.CreateStack(creq)

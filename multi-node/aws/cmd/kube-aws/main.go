@@ -12,9 +12,7 @@ import (
 
 var (
 	// set by build script
-	VERSION                    = "UNKNOWN"
-	DefaultArtifactURLTemplate = "https://coreos-kubernetes.s3.amazonaws.com/%s"
-
+	VERSION = "UNKNOWN"
 	cmdRoot = &cobra.Command{
 		Use:   "kube-aws",
 		Short: "Manage Kubernetes clusters on AWS",

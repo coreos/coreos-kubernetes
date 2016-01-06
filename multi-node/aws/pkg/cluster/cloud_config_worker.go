@@ -14,6 +14,8 @@ coreos:
     command: start
     content: |
       [Service]
+      ExecStartPre=/usr/bin/tar -xf /tmp/cluster-manifests.tar -C /tmp
+      ExecStartPre=/usr/bin/tar -xf /tmp/worker-manifests.tar -C /tmp
       ExecStart=/bin/bash /tmp/install-worker.sh
       Type=oneshot
 
@@ -22,23 +24,29 @@ write_files:
   content: |
     ETCD_ENDPOINTS=http://{{ ControllerIP }}:2379
     CONTROLLER_ENDPOINT=https://{{ ControllerIP }}
-    ARTIFACT_URL={{ ArtifactURL }}
     DNS_SERVICE_IP={{ DNSServiceIP }}
-- path: /tmp/install-worker.sh
-  content: |
-    #!/bin/bash
 
-    exec bash -c "$(curl --fail --silent --show-error --location '{{ ArtifactURL }}/scripts/install-worker.sh')"
+- path: /tmp/install-worker.sh
+  encoding: gzip+base64
+  content: {{ InstallWorkerScript }}
+
+- path: /tmp/cluster-manifests.tar
+  encoding: gzip+base64
+  content: {{ ClusterManifestsTar }}
+
+- path: /tmp/worker-manifests.tar
+  encoding: gzip+base64
+  content: {{ WorkerManifestsTar }}
 
 - path: /etc/kubernetes/ssl/ca.pem
-  encoding: base64
+  encoding: gzip+base64
   content: {{ CACert }}
 
 - path: /etc/kubernetes/ssl/worker.pem
-  encoding: base64
+  encoding: gzip+base64
   content: {{ WorkerCert }}
 
 - path: /etc/kubernetes/ssl/worker-key.pem
-  encoding: base64
+  encoding: gzip+base64
   content: {{ WorkerKey }}
 `

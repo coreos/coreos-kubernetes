@@ -3,11 +3,9 @@ package cluster
 import (
 	"errors"
 	"fmt"
+	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"net"
-	"net/url"
-
-	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -30,7 +28,7 @@ type Config struct {
 	KeyName                  string `yaml:"keyName"`
 	Region                   string `yaml:"region"`
 	AvailabilityZone         string `yaml:"availabilityZone"`
-	ArtifactURL              string `yaml:"artifactURL"`
+	ArtifactPath             string `yaml:"artifactPath"`
 	ReleaseChannel           string `yaml:"releaseChannel"`
 	ControllerInstanceType   string `yaml:"controllerInstanceType"`
 	ControllerRootVolumeSize int    `yaml:"controllerRootVolumeSize"`
@@ -44,6 +42,12 @@ type Config struct {
 	ServiceCIDR              string `yaml:"serviceCIDR"`
 	KubernetesServiceIP      string `yaml:"kubernetesServiceIP"`
 	DNSServiceIP             string `yaml:"dnsServiceIP"`
+
+	InstallWorkerScript     []byte
+	InstallControllerScript []byte
+	ClusterManifestsTar     []byte
+	ControllerManifestsTar  []byte
+	WorkerManifestsTar      []byte
 }
 
 func (cfg *Config) Valid() error {
@@ -58,9 +62,6 @@ func (cfg *Config) Valid() error {
 	}
 	if cfg.ClusterName == "" {
 		return errors.New("clusterName must be set")
-	}
-	if _, err := url.Parse(cfg.ArtifactURL); err != nil {
-		return fmt.Errorf("invalid artifactURL: %v", err)
 	}
 
 	_, vpcNet, err := net.ParseCIDR(cfg.VPCCIDR)
@@ -152,7 +153,7 @@ func decodeConfigBytes(out *Config, d []byte) error {
 func NewDefaultConfig(ver string) *Config {
 	return &Config{
 		ClusterName:         "kubernetes",
-		ArtifactURL:         DefaultArtifactURL(ver),
+		ArtifactPath:        "./artifacts",
 		VPCCIDR:             DefaultVPCCIDR,
 		InstanceCIDR:        DefaultInstanceCIDR,
 		ControllerIP:        DefaultControllerIP,
@@ -161,8 +162,4 @@ func NewDefaultConfig(ver string) *Config {
 		KubernetesServiceIP: DefaultKubernetesServiceIP,
 		DNSServiceIP:        DefaultDNSServiceIP,
 	}
-}
-
-func DefaultArtifactURL(ver string) string {
-	return fmt.Sprintf("https://coreos-kubernetes.s3.amazonaws.com/%s", ver)
 }

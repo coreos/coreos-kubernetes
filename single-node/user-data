@@ -490,6 +490,25 @@ After=flanneld.service
 EOF
     }
 
+    local TEMPLATE=/etc/systemd/system/docker.service.d/50-proxy.conf
+    [ -z $HTTP_PROXY ] && [ -f $TEMPLATE ] || {
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+[Service]
+EnvironmentFile=/etc/environment
+EOF
+    }
+
+    local TEMPLATE=/etc/systemd/system/early-docker.service.d/50-proxy.conf
+    [ -z $HTTP_PROXY ] && [ -f $TEMPLATE ] || {
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+[Service]
+EnvironmentFile=/etc/environment
+EOF
+    }
 }
 
 function start_addons {

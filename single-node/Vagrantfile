@@ -25,6 +25,13 @@ Vagrant.configure("2") do |config|
   config.vm.box_version = ">= 766.0.0"
   config.vm.box_url = "http://alpha.release.core-os.net/amd64-usr/current/coreos_production_vagrant.json"
 
+  if Vagrant.has_plugin?("vagrant-proxyconf") && !(ENV['HTTP_PROXY'] || ENV['http_proxy'] || '').empty?
+    config.proxy.http     = ENV['HTTP_PROXY'] || ENV['http_proxy']
+    config.proxy.https    = ENV['HTTPS_PROXY'] || ENV['https_proxy']
+    config.proxy.no_proxy = ENV['NO_PROXY'] || ENV['no_proxy'] || "localhost,127.0.0.1"
+    config.proxy.enabled = { docker: false }
+  end
+
   ["vmware_fusion", "vmware_workstation"].each do |vmware|
     config.vm.provider vmware do |v, override|
       v.vmx['numvcpus'] = 1

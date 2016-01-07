@@ -12,13 +12,17 @@ $update_channel = "alpha"
 $controller_count = 1
 $controller_vm_memory = 512
 $worker_count = 1
-$worker_vm_memory = 512
+$worker_vm_memory = 1024
 $etcd_count = 1
 $etcd_vm_memory = 512
 
 CONFIG = File.expand_path("config.rb")
 if File.exist?(CONFIG)
   require CONFIG
+end
+
+if $worker_vm_memory < 1024
+  puts "Workers should have at least 1024 MB of memory"
 end
 
 CONTROLLER_CLUSTER_IP="10.3.0.1"

@@ -5,11 +5,14 @@ coreos:
   update:
     reboot-strategy: "off"
 
-  flannel:
-    interface: $private_ipv4
-    etcd_endpoints: http://{{ ControllerIP }}:2379
-
   units:
+  - name: docker.service
+    command: start
+    drop-ins:
+      - name: 10-cbr0.conf
+        content: |
+          [Service]
+          Environment="DOCKER_OPTS=--bridge=cbr0 --iptables=false --ip-masq=false"
   - name: install-worker.service
     command: start
     content: |
@@ -23,7 +26,9 @@ write_files:
     ETCD_ENDPOINTS=http://{{ ControllerIP }}:2379
     CONTROLLER_ENDPOINT=https://{{ ControllerIP }}
     ARTIFACT_URL={{ ArtifactURL }}
+    POD_NETWORK={{ PodCIDR }}
     DNS_SERVICE_IP={{ DNSServiceIP }}
+    AWS_DNS_IP={{ AWSDNSIP }}
 - path: /tmp/install-worker.sh
   content: |
     #!/bin/bash

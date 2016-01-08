@@ -50,6 +50,7 @@ const (
 	parPodCIDR                      = "PodCIDR"
 	parKubernetesServiceIP          = "KubernetesServiceIP"
 	parDNSServiceIP                 = "DNSServiceIP"
+	parAWSDNSIP                     = "AWSDNSIP"
 )
 
 var (
@@ -263,20 +264,11 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 			"SecurityGroupIngress": []map[string]interface{}{
 				map[string]interface{}{"IpProtocol": sgProtoICMP, "FromPort": 3, "ToPort": -1, "CidrIp": sgAllIPs},
 				map[string]interface{}{"IpProtocol": sgProtoTCP, "FromPort": 22, "ToPort": 22, "CidrIp": sgAllIPs},
+				map[string]interface{}{"IpProtocol": "-1", "FromPort": 0, "ToPort": sgPortMax, "CidrIp": newRef(parPodCIDR)},
 			},
 			"Tags": []map[string]interface{}{
 				newTag(tagKubernetesCluster, newRef(parClusterName)),
 			},
-		},
-	}
-	res[resNameSecurityGroupWorker+"IngressFromWorkerToFlannel"] = map[string]interface{}{
-		"Type": "AWS::EC2::SecurityGroupIngress",
-		"Properties": map[string]interface{}{
-			"GroupId":               newRef(resNameSecurityGroupWorker),
-			"SourceSecurityGroupId": newRef(resNameSecurityGroupWorker),
-			"FromPort":              8285,
-			"ToPort":                8285,
-			"IpProtocol":            sgProtoUDP,
 		},
 	}
 	res[resNameSecurityGroupWorker+"IngressFromWorkerToKubeletReadOnly"] = map[string]interface{}{
@@ -287,16 +279,6 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 			"FromPort":              10255,
 			"ToPort":                10255,
 			"IpProtocol":            sgProtoTCP,
-		},
-	}
-	res[resNameSecurityGroupWorker+"IngressFromControllerToFlannel"] = map[string]interface{}{
-		"Type": "AWS::EC2::SecurityGroupIngress",
-		"Properties": map[string]interface{}{
-			"GroupId":               newRef(resNameSecurityGroupWorker),
-			"SourceSecurityGroupId": newRef(resNameSecurityGroupController),
-			"FromPort":              8285,
-			"ToPort":                8285,
-			"IpProtocol":            sgProtoUDP,
 		},
 	}
 	res[resNameSecurityGroupWorker+"IngressFromControllerTocAdvisor"] = map[string]interface{}{
@@ -651,8 +633,13 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 		"Description": "IP address of the Kubernetes DNS service (must be contained by serviceCIDR)",
 	}
 
-	regionMap, err := getRegionMap()
+	par[parAWSDNSIP] = map[string]interface{}{
+		"Type":        "String",
+		"Default":     DefaultAWSDNSIP,
+		"Description": "The address of the AWS provided DNS server in the cluster subnet (must be contained by instanceCIDR)",
+	}
 
+	regionMap, err := getRegionMap()
 	if err != nil {
 		return "", err
 	}

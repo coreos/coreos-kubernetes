@@ -33,6 +33,7 @@ write_files:
     ETCD_ENDPOINTS=http://127.0.0.1:2379
     ARTIFACT_URL={{ ArtifactURL }}
     SERVICE_IP_RANGE={{ ServiceCIDR }}
+    CLUSTER_NAME={{ ClusterName }}
     POD_NETWORK={{ PodCIDR }}
     K8S_SERVICE_IP={{ KubernetesServiceIP }}
     DNS_SERVICE_IP={{ DNSServiceIP }}

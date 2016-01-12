@@ -160,6 +160,7 @@ spec:
     - --tls-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
     - --client-ca-file=/etc/kubernetes/ssl/ca.pem
     - --service-account-key-file=/etc/kubernetes/ssl/apiserver-key.pem
+    - --runtime-config=extensions/v1beta1/deployments=true,extensions/v1beta1/daemonsets=true
     ports:
     - containerPort: 443
       hostPort: 443

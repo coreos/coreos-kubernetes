@@ -39,16 +39,16 @@ Configure your local workstation with AWS credentials using one of the following
 1. Environment Variables
 
 	Set `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` to the values of your AWS access and secret keys, respectively:
-	
+
 	```
 	export AWS_ACCESS_KEY_ID=AKID1234567890
 	export AWS_SECRET_ACCESS_KEY=MY-SECRET-KEY
-	```	
+	```
 
 2. Config File
 
 	Write your credentials into the file `~/.aws/credentials` using the following template:
-	
+
 	```
 	[default]
 	aws_access_key_id = AKID1234567890
@@ -126,7 +126,7 @@ This will be used to identify all AWS resources that make the cluster, and must 
 
 #### region
 
-Deploy the CloudFormation stack into a specific region.
+Deploy the CloudFormation stack into a specific EC2 region, for example "us-east-1". You can see the regions, along with their canonical names, in the [AWS Documentation](http://docs.aws.amazon.com/general/latest/gr/rande.html#ec2_region)
 
 #### availabilityZone
 
@@ -135,8 +135,7 @@ If not set, a zone will be chosen for you in the region being used to deploy the
 
 #### keyName
 
-Decide what SSH keypair to authorize across all instances in the cluster.
-The value of this field is the name of a keypair already loaded into the AWS account in use.
+Decide what SSH keypair to authorize across all instances in the cluster.  The value of this field is the name of a keypair already loaded into the AWS account in use. You can see instructions about how to generate or import a keypair into AWS in the [AWS Documentation](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html).
 
 #### workerCount
 
@@ -150,7 +149,8 @@ The coreos-kubernetes artifacts are available at a default location, but the loc
 #### externalDNSName
 
 This DNS name is assumed to be routable from outside the cluster to the Kubernetes API.
-It is automatically added as a Subject Alternative Names (SANs) to the kube-apiserver TLS certificate.
+It is automatically added as a Subject Alternative Names (SANs) to the kube-apiserver TLS certificate. You may not know the IP you want to associate with the name to start with - once your cluster is up and running, you can get the IP you'll need to configure your DNS with `kube-aws status`.
+
 
 ### CloudFormation Template Parameters
 

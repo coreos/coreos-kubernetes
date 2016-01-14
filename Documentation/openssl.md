@@ -10,9 +10,9 @@ The following variables will be used throughout this guide. The default for `K8S
 
 **MASTER_HOST**=_no default_
 
-The address of the master node. In most cases this will be the publicly routable IP or hostname of the master cluster. Worker nodes must be able to reach the master node(s) via this address on port 443. Additionally, external clients (such as an administrator using `kubectl`) will also need access, since this will run the Kubernetes API endpoint.
+The address of the master node. In most cases this will be the publicly routable IP or hostname of the node. Worker nodes must be able to reach the master node(s) via this address on port 443. Additionally, external clients (such as an administrator using `kubectl`) will also need access, since this will run the Kubernetes API endpoint.
 
-If you will be running a highly-available control-plane consisting of multiple master nodes, then `MASTER_HOST` will ideally be a network load balancer that sits in front of the master nodes. Alternatively, a DNS name can be configured to resolve to the master node IPs. In either case, the certificates generated below must have the appropriate CommonName and/or SubjectAlternateNames.
+If you will be running a highly-available control-plane consisting of multiple master nodes, then `MASTER_HOST` will ideally be a network load balancer that sits in front of them. Alternatively, a DNS name can be configured to resolve to the master IPs. In either case, the certificates generated below must have the appropriate CommonName and/or SubjectAlternateNames.
 
 ---
 
@@ -127,6 +127,6 @@ $ openssl req -new -key admin-key.pem -out admin.csr -subj "/CN=kube-admin"
 $ openssl x509 -req -in admin.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out admin.pem -days 365
 ```
 
-You are now ready to return to the [deployment guide][deployment-guide] and configure your Master machine, Workers, and `kubectl` on your local machine.
+You are now ready to return to the [deployment guide][deployment-guide] and configure your master node(s), worker nodes, and `kubectl` on your local machine.
 
 [deployment-guide]: getting-started.md

@@ -11,7 +11,7 @@ Choose one of the following paths to get started:
 
 	Use the `kube-aws` CLI tool to automate cluster deployment. See the [kube-aws Quickstart section](#kube-aws-quickstart) below.
 
-2. Launch Stack & Configuration Guide
+1. Launch Stack & Configuration Guide
 
 	Click the following Launch Stack button, then use the [Configuration Guide](#cloudformation-template-parameters) later in this document to decide how to set the CloudFormation template parameters:
 
@@ -45,7 +45,7 @@ Configure your local workstation with AWS credentials using one of the following
 	export AWS_SECRET_ACCESS_KEY=MY-SECRET-KEY
 	```
 
-2. Config File
+1. Config File
 
 	Write your credentials into the file `~/.aws/credentials` using the following template:
 
@@ -77,7 +77,7 @@ Once the AWS resources are created, Kubernetes will start up automatically.
 Each component certificate is only valid for 90 days, while the CA is valid for 365 days.
 If deploying a production Kubernetes cluster, consider establishing PKI independently of this tool first.
 
-Navigate to the DNS registrar hosting the zone for the provided external DNS name and ensure a single A record exists, routing the value of `externalDNSName` defined in `cluster.yaml` to the externally-accessible IP of the controller instance.
+Navigate to the DNS registrar hosting the zone for the provided external DNS name and ensure a single A record exists, routing the value of `externalDNSName` defined in `cluster.yaml` to the externally-accessible IP of the master node instance.
 You may use `kube-aws status` to get this value after cluster creation, if necessary.
 
 A kubectl config file will be written to `./clusters/<cluster-name>/kubeconfig`, which can be used to interact with your Kubernetes cluster like so:
@@ -98,7 +98,7 @@ This includes the certificate authority, signed server certificates for the Kube
 The API server certificate will be valid for the value of `externalDNSName`, as well as a the DNS names used to route Kubernetes API requests inside the cluster.
 
 `kube-aws` does *not* manage a DNS zone for the cluster.
-This means that the deployer is responsible for ensuring the routability of the external DNS name to the public IP of the controller instance.
+This means that the deployer is responsible for ensuring the routability of the external DNS name to the public IP of the master node instance.
 
 After generating the necessary TLS infrastructure, `kube-aws` creates a new CloudFormation, pointing to a CloudFormation template managed by this project.
 The CloudFormation template encompasses everything necessary to deploy the cluster.
@@ -173,7 +173,7 @@ The value of this field is the name of a keypair already loaded into the AWS acc
 
 #### ControllerInstanceType, WorkerInstanceType
 
-These fields are the names of the EC2 instance types to use for the controller and worker instances, respectively.
+These fields are the names of the EC2 instance types to use for the master node and worker node instances, respectively.
 It is recommended that instances have 3GB+ of RAM.
 More resources allocated to the worker instances directly increases the scheduleable capacity of the Kubernetes cluster.
 

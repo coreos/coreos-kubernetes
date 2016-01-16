@@ -11,18 +11,30 @@ Run the `./build` script to compile `kube-aws` locally.
 This depends on having golang available on your workstation.
 The compiled binary will be available at `./bin/kube-aws`.
 
-### Custom Kubernetes Manifests
+## Render a new cluster asset directory
 
-You may deploy a cluster using a custom CloudFormation template, Kubernetes manifests and install scripts using the `artifactURL` option in your cluster config.
+Create a yaml file describing your cluster configuration based on [this example](cluster.yaml.example)
 
-For example, you might upload a modified set of manifests to a custom S3 bucket (making the files publicly-readable) using the following commands:
+Render that configuration into an asset directory.
 
+Feel free to place either `--config` or `--asset-dir` outside the project repository.
+
+Be aware that `--asset-dir` (the asset directory) will contain unencrypted TLS assets after `render` completes. Having these in hand will grant access to your cluster.
+
+```sh
+$ ./bin/kube-aws render --config=./my-cluster.yaml --asset-dir=./assets/my-cluster
 ```
-$ kube-aws render --output=artifacts/template.json
-$ aws s3 cp --recursive --acl=public-read artifacts/ s3://<bucket>/
-```
 
-Then, simply create a cluster using `artifactURL: https://<bucket>.s3.amazonaws.com`.
+Your config yaml has been rendered to `./assets/my-cluster/cluster.yaml`. At this point, the asset directory contains everything that is needed to create a cluster.
+
+## Create a cluster from asset directory
+
+```sh
+$ ./bin/kube-aws up --asset-dir=./assets/my-cluster
+```
+## How it works
+
+Check out [this diagram](./kube-aws.png)
 
 ### Useful Resources
 

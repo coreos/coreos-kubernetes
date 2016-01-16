@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 	"path"
-
-	"github.com/spf13/cobra"
+	"path/filepath"
 
 	"github.com/coreos/coreos-kubernetes/multi-node/aws/pkg/cluster"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -24,8 +24,9 @@ func init() {
 }
 
 func runCmdDestroy(cmd *cobra.Command, args []string) {
+	cfgPath := filepath.Join(rootOpts.AssetDir, "cluster.yaml")
 	cfg := cluster.NewDefaultConfig(VERSION)
-	err := cluster.DecodeConfigFromFile(cfg, rootOpts.ConfigPath)
+	err := cluster.DecodeConfigFromFile(cfg, cfgPath)
 	if err != nil {
 		stderr("Unable to load cluster config: %v", err)
 		os.Exit(1)
@@ -38,8 +39,8 @@ func runCmdDestroy(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	clusterDir := path.Join("clusters", cfg.ClusterName)
-	if err := os.RemoveAll(clusterDir); err != nil {
+	credentialsDir := path.Join(rootOpts.AssetDir, "credentials")
+	if err := os.RemoveAll(credentialsDir); err != nil {
 		stderr("Failed removing local cluster directory: %v", err)
 		os.Exit(1)
 	}

@@ -28,7 +28,6 @@ type Config struct {
 	KeyName                  string `yaml:"keyName"`
 	Region                   string `yaml:"region"`
 	AvailabilityZone         string `yaml:"availabilityZone"`
-	ArtifactPath             string `yaml:"artifactPath"`
 	ReleaseChannel           string `yaml:"releaseChannel"`
 	ControllerInstanceType   string `yaml:"controllerInstanceType"`
 	ControllerRootVolumeSize int    `yaml:"controllerRootVolumeSize"`
@@ -153,7 +152,6 @@ func decodeConfigBytes(out *Config, d []byte) error {
 func NewDefaultConfig(ver string) *Config {
 	return &Config{
 		ClusterName:         "kubernetes",
-		ArtifactPath:        "./artifacts",
 		VPCCIDR:             DefaultVPCCIDR,
 		InstanceCIDR:        DefaultInstanceCIDR,
 		ControllerIP:        DefaultControllerIP,

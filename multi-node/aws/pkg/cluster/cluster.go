@@ -2,15 +2,16 @@ package cluster
 
 import (
 	"bytes"
-
 	"fmt"
+	"io/ioutil"
+	"path"
+	"path/filepath"
 	"text/tabwriter"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"io/ioutil"
-	"path/filepath"
+	"github.com/coreos/coreos-kubernetes/multi-node/aws/pkg/blobutil"
 )
 
 type ClusterInfo struct {
@@ -33,6 +34,8 @@ func (c *ClusterInfo) String() string {
 type TLSConfig struct {
 	CACertFile string
 	CACert     []byte
+	CAKeyFile  string
+	CAKey      []byte
 
 	APIServerCertFile string
 	APIServerCert     []byte
@@ -48,6 +51,30 @@ type TLSConfig struct {
 	AdminCert     []byte
 	AdminKeyFile  string
 	AdminKey      []byte
+}
+
+func NewTLSConfig(clusterDir string) *TLSConfig {
+	return &TLSConfig{
+		CACertFile:        path.Join(clusterDir, "ca.pem"),
+		CAKeyFile:         path.Join(clusterDir, "ca-key.pem"),
+		APIServerCertFile: path.Join(clusterDir, "apiserver.pem"),
+		APIServerKeyFile:  path.Join(clusterDir, "apiserver-key.pem"),
+		WorkerCertFile:    path.Join(clusterDir, "worker.pem"),
+		WorkerKeyFile:     path.Join(clusterDir, "worker-key.pem"),
+		AdminCertFile:     path.Join(clusterDir, "admin.pem"),
+		AdminKeyFile:      path.Join(clusterDir, "admin-key.pem"),
+	}
+}
+
+func (tc *TLSConfig) ReadFilesFromPaths() {
+	tc.CACert = blobutil.MustReadFile(tc.CACertFile).Bytes()
+	tc.CAKey = blobutil.MustReadFile(tc.CAKeyFile).Bytes()
+	tc.APIServerCert = blobutil.MustReadFile(tc.APIServerCertFile).Bytes()
+	tc.APIServerKey = blobutil.MustReadFile(tc.APIServerKeyFile).Bytes()
+	tc.WorkerCert = blobutil.MustReadFile(tc.WorkerCertFile).Bytes()
+	tc.WorkerKey = blobutil.MustReadFile(tc.WorkerKeyFile).Bytes()
+	tc.AdminCert = blobutil.MustReadFile(tc.AdminCertFile).Bytes()
+	tc.AdminKey = blobutil.MustReadFile(tc.AdminKeyFile).Bytes()
 }
 
 func New(cfg *Config, awsConfig *aws.Config) *Cluster {
@@ -66,7 +93,26 @@ func (c *Cluster) stackName() string {
 	return c.cfg.ClusterName
 }
 
-func (c *Cluster) Create(tlsConfig *TLSConfig) error {
+func (c *Cluster) initAssets(assetDir string) *TLSConfig {
+
+	c.cfg.InstallWorkerScript = blobutil.MustReadFile(filepath.Join(assetDir, "scripts", "install-worker.sh")).Bytes()
+	c.cfg.InstallControllerScript = blobutil.MustReadFile(filepath.Join(assetDir, "scripts", "install-controller.sh")).Bytes()
+
+	manifestPath := filepath.Join(assetDir, "manifests")
+	c.cfg.ClusterManifestsTar = blobutil.MustTarDirectory(assetDir, filepath.Join(manifestPath, "cluster")).Bytes()
+	c.cfg.ControllerManifestsTar = blobutil.MustTarDirectory(assetDir, filepath.Join(manifestPath, "controller")).Bytes()
+	c.cfg.WorkerManifestsTar = blobutil.MustTarDirectory(assetDir, filepath.Join(manifestPath, "worker")).Bytes()
+
+	credentialsDir := filepath.Join(assetDir, "credentials")
+	tlsConfig := NewTLSConfig(credentialsDir)
+	tlsConfig.ReadFilesFromPaths()
+	return tlsConfig
+}
+
+func (c *Cluster) Create(assetDir string) error {
+
+	tlsConfig := c.initAssets(assetDir)
+	fmt.Printf("Cluster assets initialized from '%s'\n", assetDir)
 	parameters := []*cloudformation.Parameter{
 		{
 			ParameterKey:     aws.String(parClusterName),
@@ -242,7 +288,7 @@ func (c *Cluster) Create(tlsConfig *TLSConfig) error {
 		})
 	}
 
-	tmplBody, err := ioutil.ReadFile(filepath.Join(c.cfg.ArtifactPath, "template.json"))
+	tmplBody, err := ioutil.ReadFile(filepath.Join(assetDir, "template.json"))
 	if err != nil {
 		return err
 	}

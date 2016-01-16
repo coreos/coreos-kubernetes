@@ -20,14 +20,14 @@ var (
 	}
 
 	rootOpts struct {
-		AWSDebug   bool
-		ConfigPath string
+		AWSDebug bool
+		AssetDir string
 	}
 )
 
 func init() {
-	cmdRoot.PersistentFlags().StringVar(&rootOpts.ConfigPath, "config", "cluster.yaml", "Location of kube-aws cluster config file")
 	cmdRoot.PersistentFlags().BoolVar(&rootOpts.AWSDebug, "aws-debug", false, "Log debug information from aws-sdk-go library")
+	cmdRoot.PersistentFlags().StringVar(&rootOpts.AssetDir, "asset-dir", "", "Folder (to be) created by 'render' command for this cluster's assets.")
 }
 
 func main() {

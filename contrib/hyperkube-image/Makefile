@@ -1,4 +1,4 @@
-KUBERNETES_VERSION = 1.1.2
+KUBERNETES_VERSION = 1.1.3
 KUBERNETES_RELEASE = https://github.com/kubernetes/kubernetes/archive/v$(KUBERNETES_VERSION).tar.gz
 
 TAG = quay.io/coreos/hyperkube:v$(KUBERNETES_VERSION)
@@ -12,10 +12,7 @@ hyperkube: $(BIN)
 
 # Patches to apply when building hyperkube from kubernetes release
 PATCHES = \
-	files/0001-kubelet-report-NodeReady-last-in-status-list.patch \
-	files/0002-explicitly-check-Ready-condition-in-validate-cluster.patch \
-	files/0003-kubelet-check-node-condition-by-type-rather-than-by-.patch \
-	files/0004-pkg-kubelet-force-NodeReady-condition-to-be-last-on-.patch
+	files/0001-pkg-kubelet-force-NodeReady-condition-to-be-last-on-.patch
 
 # Build hyperkube from release version & apply $PATCHES
 $(WORKDIR)/$(KUBERNETES_VERSION)/_output/local/bin/linux/amd64/hyperkube: $(WORKDIR)/$(KUBERNETES_VERSION) $(PATCHES)

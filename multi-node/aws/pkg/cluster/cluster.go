@@ -67,14 +67,14 @@ func NewTLSConfig(clusterDir string) *TLSConfig {
 }
 
 func (tc *TLSConfig) ReadFilesFromPaths() {
-	tc.CACert = blobutil.MustReadFile(tc.CACertFile).Bytes()
-	tc.CAKey = blobutil.MustReadFile(tc.CAKeyFile).Bytes()
-	tc.APIServerCert = blobutil.MustReadFile(tc.APIServerCertFile).Bytes()
-	tc.APIServerKey = blobutil.MustReadFile(tc.APIServerKeyFile).Bytes()
-	tc.WorkerCert = blobutil.MustReadFile(tc.WorkerCertFile).Bytes()
-	tc.WorkerKey = blobutil.MustReadFile(tc.WorkerKeyFile).Bytes()
-	tc.AdminCert = blobutil.MustReadFile(tc.AdminCertFile).Bytes()
-	tc.AdminKey = blobutil.MustReadFile(tc.AdminKeyFile).Bytes()
+	tc.CACert = blobutil.MustReadCompressFile(tc.CACertFile)
+	tc.CAKey = blobutil.MustReadCompressFile(tc.CAKeyFile)
+	tc.APIServerCert = blobutil.MustReadCompressFile(tc.APIServerCertFile)
+	tc.APIServerKey = blobutil.MustReadCompressFile(tc.APIServerKeyFile)
+	tc.WorkerCert = blobutil.MustReadCompressFile(tc.WorkerCertFile)
+	tc.WorkerKey = blobutil.MustReadCompressFile(tc.WorkerKeyFile)
+	tc.AdminCert = blobutil.MustReadCompressFile(tc.AdminCertFile)
+	tc.AdminKey = blobutil.MustReadCompressFile(tc.AdminKeyFile)
 }
 
 func New(cfg *Config, awsConfig *aws.Config) *Cluster {
@@ -95,13 +95,13 @@ func (c *Cluster) stackName() string {
 
 func (c *Cluster) initAssets(assetDir string) *TLSConfig {
 
-	c.cfg.InstallWorkerScript = blobutil.MustReadFile(filepath.Join(assetDir, "scripts", "install-worker.sh")).Bytes()
-	c.cfg.InstallControllerScript = blobutil.MustReadFile(filepath.Join(assetDir, "scripts", "install-controller.sh")).Bytes()
+	c.cfg.InstallWorkerScript = blobutil.MustReadCompressFile(filepath.Join(assetDir, "scripts", "install-worker.sh"))
+	c.cfg.InstallControllerScript = blobutil.MustReadCompressFile(filepath.Join(assetDir, "scripts", "install-controller.sh"))
 
 	manifestPath := filepath.Join(assetDir, "manifests")
-	c.cfg.ClusterManifestsTar = blobutil.MustTarDirectory(assetDir, filepath.Join(manifestPath, "cluster")).Bytes()
-	c.cfg.ControllerManifestsTar = blobutil.MustTarDirectory(assetDir, filepath.Join(manifestPath, "controller")).Bytes()
-	c.cfg.WorkerManifestsTar = blobutil.MustTarDirectory(assetDir, filepath.Join(manifestPath, "worker")).Bytes()
+	c.cfg.ClusterManifestsTar = blobutil.MustTarCompressDirectory(assetDir, filepath.Join(manifestPath, "cluster"))
+	c.cfg.ControllerManifestsTar = blobutil.MustTarCompressDirectory(assetDir, filepath.Join(manifestPath, "controller"))
+	c.cfg.WorkerManifestsTar = blobutil.MustTarCompressDirectory(assetDir, filepath.Join(manifestPath, "worker"))
 
 	credentialsDir := filepath.Join(assetDir, "credentials")
 	tlsConfig := NewTLSConfig(credentialsDir)

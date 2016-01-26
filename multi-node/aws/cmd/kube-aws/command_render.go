@@ -86,7 +86,7 @@ func initAssetDirectory(cfg *cluster.Config) error {
 	defer inCfg.Close()
 
 	outCfgPath := filepath.Join(rootOpts.AssetDir, "cluster.yaml")
-	outCfg, err := os.OpenFile(outCfgPath, os.O_WRONLY|os.O_CREATE, 0700)
+	outCfg, err := os.OpenFile(outCfgPath, os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
 		return err
 	}

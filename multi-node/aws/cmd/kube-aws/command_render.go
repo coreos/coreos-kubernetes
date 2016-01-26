@@ -102,22 +102,19 @@ func initAssetDirectory(cfg *cluster.Config) error {
 	}
 
 	if err := initTLS(cfg, credentialsDir); err != nil {
-		stderr("Failed initializing TLS infrastructure: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("Failed initializing TLS infrastructure: %v", err)
 	}
 
 	fmt.Println("Initialized TLS infrastructure")
 
 	kubeconfig, err := newKubeconfig(cfg)
 	if err != nil {
-		stderr("Failed rendering kubeconfig: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("Failed rendering kubeconfig: %v", err)
 	}
 
 	kubeconfigPath := path.Join(credentialsDir, "kubeconfig")
 	if err := ioutil.WriteFile(kubeconfigPath, kubeconfig, 0600); err != nil {
-		stderr("Failed writing kubeconfig to %s: %v", kubeconfigPath, err)
-		os.Exit(1)
+		return fmt.Errorf("Failed writing kubeconfig to %s: %v", kubeconfigPath, err)
 	}
 
 	fmt.Printf("Wrote kubeconfig to %s\n", kubeconfigPath)

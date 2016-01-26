@@ -19,7 +19,7 @@ func MustTarCompressDirectory(basepath, path string) []byte {
 
 	gzWriter, err := gzip.NewWriterLevel(b64Writer, gzip.BestCompression)
 	if err != nil {
-		stderr("Error creating gzip writer: %s", err)
+		stderr("Error creating gzip writer: %v", err)
 		os.Exit(1)
 	}
 	defer gzWriter.Close()
@@ -62,7 +62,7 @@ func MustTarCompressDirectory(basepath, path string) []byte {
 	}
 
 	if err := filepath.Walk(path, tarHandler); err != nil {
-		stderr("Error tar-ing directory %s: %s", path, err)
+		stderr("Error tar-ing directory %s: %v", path, err)
 		os.Exit(1)
 	}
 	return buf.Bytes()
@@ -71,7 +71,7 @@ func MustTarCompressDirectory(basepath, path string) []byte {
 func MustReadCompressFile(loc string) []byte {
 	f, err := os.Open(loc)
 	if err != nil {
-		stderr("Failed opening file %s: %s", loc, err)
+		stderr("Failed opening file %s: %v", loc, err)
 		os.Exit(1)
 	}
 	defer f.Close()
@@ -83,13 +83,13 @@ func MustReadCompressFile(loc string) []byte {
 
 	gzWriter, err := gzip.NewWriterLevel(b64Writer, gzip.BestCompression)
 	if err != nil {
-		stderr("Failed creating gzip context: %s", err)
+		stderr("Failed creating gzip context: %v", err)
 		os.Exit(1)
 	}
 	defer gzWriter.Close()
 
 	if _, err := io.Copy(gzWriter, f); err != nil {
-		stderr("Failed reading file %s: %s", loc, err)
+		stderr("Failed reading file %s: %v", loc, err)
 		os.Exit(1)
 	}
 

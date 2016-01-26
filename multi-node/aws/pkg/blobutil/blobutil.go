@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 )
 
-func MustTarCompressDirectory(basepath, path string) []byte {
+func MustTarAndCompressDirectory(basepath, path string) []byte {
 	buf := &bytes.Buffer{}
 
 	b64Writer := base64.NewEncoder(base64.StdEncoding, buf)
@@ -68,7 +68,7 @@ func MustTarCompressDirectory(basepath, path string) []byte {
 	return buf.Bytes()
 }
 
-func MustReadCompressFile(loc string) []byte {
+func MustReadAndCompressFile(loc string) []byte {
 	f, err := os.Open(loc)
 	if err != nil {
 		stderr("Failed opening file %s: %v", loc, err)

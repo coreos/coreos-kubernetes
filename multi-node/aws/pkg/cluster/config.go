@@ -3,9 +3,10 @@ package cluster
 import (
 	"errors"
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"net"
+
+	"gopkg.in/yaml.v2"
 )
 
 const (

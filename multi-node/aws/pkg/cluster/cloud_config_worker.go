@@ -30,10 +30,6 @@ write_files:
   encoding: gzip+base64
   content: {{ InstallWorkerScript }}
 
-- path: /tmp/cluster-manifests.tar
-  encoding: gzip+base64
-  content: {{ ClusterManifestsTar }}
-
 - path: /tmp/worker-manifests.tar
   encoding: gzip+base64
   content: {{ WorkerManifestsTar }}

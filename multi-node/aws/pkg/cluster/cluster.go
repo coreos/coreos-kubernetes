@@ -14,6 +14,9 @@ import (
 	"github.com/coreos/coreos-kubernetes/multi-node/aws/pkg/blobutil"
 )
 
+// set by build script
+var VERSION = "UNKNOWN"
+
 type ClusterInfo struct {
 	Name         string
 	ControllerIP string
@@ -77,42 +80,57 @@ func (tc *TLSConfig) ReadFilesFromPaths() {
 	tc.AdminKey = blobutil.MustReadAndCompressFile(tc.AdminKeyFile)
 }
 
-func New(cfg *Config, awsConfig *aws.Config) *Cluster {
-	return &Cluster{
-		cfg: cfg,
-		aws: awsConfig,
+func New(assetDir string, awsDebug bool) (*Cluster, error) {
+	cfgPath := filepath.Join(assetDir, "cluster.yaml")
+	cfg := NewDefaultConfig()
+	if err := DecodeConfigFromFile(cfg, cfgPath); err != nil {
+		return nil, fmt.Errorf("Unable to load cluster config: %v", err)
 	}
+
+	awsConfig := aws.NewConfig()
+	awsConfig = awsConfig.WithRegion(cfg.Region)
+	if awsDebug {
+		awsConfig = awsConfig.WithLogLevel(aws.LogDebug)
+	}
+
+	c := &Cluster{
+		cfg:      cfg,
+		aws:      awsConfig,
+		assetDir: assetDir,
+	}
+	return c, nil
 }
 
 type Cluster struct {
-	cfg *Config
-	aws *aws.Config
+	cfg      *Config
+	aws      *aws.Config
+	assetDir string
 }
 
 func (c *Cluster) stackName() string {
 	return c.cfg.ClusterName
 }
 
-func (c *Cluster) initAssets(assetDir string) *TLSConfig {
+func (c *Cluster) initAssets() *TLSConfig {
 
-	c.cfg.InstallWorkerScript = blobutil.MustReadAndCompressFile(filepath.Join(assetDir, "scripts", "install-worker.sh"))
-	c.cfg.InstallControllerScript = blobutil.MustReadAndCompressFile(filepath.Join(assetDir, "scripts", "install-controller.sh"))
+	c.cfg.InstallWorkerScript = blobutil.MustReadAndCompressFile(filepath.Join(c.assetDir, "scripts", "install-worker.sh"))
+	c.cfg.InstallControllerScript = blobutil.MustReadAndCompressFile(filepath.Join(c.assetDir, "scripts", "install-controller.sh"))
 
-	manifestPath := filepath.Join(assetDir, "manifests")
-	c.cfg.ClusterManifestsTar = blobutil.MustTarAndCompressDirectory(assetDir, filepath.Join(manifestPath, "cluster"))
-	c.cfg.ControllerManifestsTar = blobutil.MustTarAndCompressDirectory(assetDir, filepath.Join(manifestPath, "controller"))
-	c.cfg.WorkerManifestsTar = blobutil.MustTarAndCompressDirectory(assetDir, filepath.Join(manifestPath, "worker"))
+	manifestPath := filepath.Join(c.assetDir, "manifests")
+	c.cfg.ClusterManifestsTar = blobutil.MustTarAndCompressDirectory(c.assetDir, filepath.Join(manifestPath, "cluster"))
+	c.cfg.ControllerManifestsTar = blobutil.MustTarAndCompressDirectory(c.assetDir, filepath.Join(manifestPath, "controller"))
+	c.cfg.WorkerManifestsTar = blobutil.MustTarAndCompressDirectory(c.assetDir, filepath.Join(manifestPath, "worker"))
 
-	credentialsDir := filepath.Join(assetDir, "credentials")
+	credentialsDir := filepath.Join(c.assetDir, "credentials")
 	tlsConfig := NewTLSConfig(credentialsDir)
 	tlsConfig.ReadFilesFromPaths()
 	return tlsConfig
 }
 
-func (c *Cluster) Create(assetDir string) error {
+func (c *Cluster) Create() error {
 
-	tlsConfig := c.initAssets(assetDir)
-	fmt.Printf("Cluster assets initialized from '%s'\n", assetDir)
+	tlsConfig := c.initAssets()
+	fmt.Printf("Cluster assets initialized from '%s'\n", c.assetDir)
 	parameters := []*cloudformation.Parameter{
 		{
 			ParameterKey:     aws.String(parClusterName),
@@ -288,7 +306,7 @@ func (c *Cluster) Create(assetDir string) error {
 		})
 	}
 
-	tmplBody, err := ioutil.ReadFile(filepath.Join(assetDir, "template.json"))
+	tmplBody, err := ioutil.ReadFile(filepath.Join(c.assetDir, "template.json"))
 	if err != nil {
 		return err
 	}

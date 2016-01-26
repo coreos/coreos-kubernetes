@@ -149,7 +149,7 @@ func decodeConfigBytes(out *Config, d []byte) error {
 	return nil
 }
 
-func NewDefaultConfig(ver string) *Config {
+func NewDefaultConfig() *Config {
 	return &Config{
 		ClusterName:         "kubernetes",
 		VPCCIDR:             DefaultVPCCIDR,

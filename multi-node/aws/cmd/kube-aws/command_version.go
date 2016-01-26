@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-
+	"github.com/coreos/coreos-kubernetes/multi-node/aws/pkg/cluster"
 	"github.com/spf13/cobra"
 )
 
@@ -20,5 +20,5 @@ func init() {
 }
 
 func runCmdVersion(cmd *cobra.Command, args []string) {
-	fmt.Printf("kube-aws version %s\n", VERSION)
+	fmt.Printf("kube-aws version %s\n", cluster.VERSION)
 }

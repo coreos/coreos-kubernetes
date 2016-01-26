@@ -3,11 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
-
-	"github.com/spf13/cobra"
 
 	"github.com/coreos/coreos-kubernetes/multi-node/aws/pkg/cluster"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -24,18 +22,12 @@ func init() {
 }
 
 func runCmdUp(cmd *cobra.Command, args []string) {
-	cfgPath := filepath.Join(rootOpts.AssetDir, "cluster.yaml")
-
-	cfg := cluster.NewDefaultConfig(VERSION)
-	err := cluster.DecodeConfigFromFile(cfg, cfgPath)
+	c, err := cluster.New(rootOpts.AssetDir, rootOpts.AWSDebug)
 	if err != nil {
-		stderr("Unable to load cluster config: %v", err)
+		stderr("Invalid cluster assets: %v", err)
 		os.Exit(1)
 	}
-
-	c := cluster.New(cfg, newAWSConfig(cfg))
-
-	if err := c.Create(rootOpts.AssetDir); err != nil {
+	if err := c.Create(); err != nil {
 		stderr("Failed creating cluster: %v", err)
 		os.Exit(1)
 	}

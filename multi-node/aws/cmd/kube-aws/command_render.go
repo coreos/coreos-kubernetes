@@ -39,7 +39,7 @@ func init() {
 }
 
 func runCmdRender(cmd *cobra.Command, args []string) {
-	cfg := cluster.NewDefaultConfig(VERSION)
+	cfg := cluster.NewDefaultConfig()
 	err := cluster.DecodeConfigFromFile(cfg, renderOpts.ConfigPath)
 	if err != nil {
 		stderr("Unable to load cluster config: %v", err)

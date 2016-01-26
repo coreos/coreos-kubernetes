@@ -1,5 +1,5 @@
 /artifacts/template.json
 /bin
 /assets
-*.yaml
+/*.yaml
 *~

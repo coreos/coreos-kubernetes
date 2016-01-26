@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 
 	"github.com/coreos/coreos-kubernetes/multi-node/aws/pkg/cluster"
@@ -39,8 +38,7 @@ func runCmdDestroy(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	credentialsDir := path.Join(rootOpts.AssetDir, "credentials")
-	if err := os.RemoveAll(credentialsDir); err != nil {
+	if err := os.RemoveAll(rootOpts.AssetDir); err != nil {
 		stderr("Failed removing local cluster directory: %v", err)
 		os.Exit(1)
 	}

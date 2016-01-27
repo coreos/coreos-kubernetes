@@ -21,7 +21,7 @@ If you are deploying multiple master nodes in a high-availability cluster, these
 
 Create the required directory and place the keys generated previously in the following locations:
 
-```
+```sh
 $ mkdir -p /etc/kubernetes/ssl
 ```
 
@@ -31,7 +31,7 @@ $ mkdir -p /etc/kubernetes/ssl
 
 And make sure you've set proper permission for private key:
 
-```
+```sh
 $ sudo chmod 600 /etc/kubernetes/ssl/*-key.pem
 $ sudo chown root:root /etc/kubernetes/ssl/*-key.pem
 ```
@@ -368,7 +368,7 @@ Now that we've defined all of our units and written our TLS certificates to disk
 
 First, we need to tell systemd that we've changed units on disk and it needs to rescan everything:
 
-```
+```sh
 $ sudo systemctl daemon-reload
 ```
 
@@ -406,8 +406,8 @@ The Kubernetes Pods that make up the control plane will exist in their own names
 
 First, we need to make sure the Kubernetes API is available (this could take a few minutes after starting the kubelet.service)
 
-```
-curl http://127.0.0.1:8080/version
+```sh
+$ curl http://127.0.0.1:8080/version
 ```
 
 A successful response should look something like:
@@ -424,8 +424,8 @@ A successful response should look something like:
 
 Now we can create the `kube-system` namespace:
 
-```
-curl -XPOST -d'{"apiVersion":"v1","kind":"Namespace","metadata":{"name":"kube-system"}}' "http://127.0.0.1:8080/api/v1/namespaces"
+```sh
+$ curl -XPOST -d'{"apiVersion":"v1","kind":"Namespace","metadata":{"name":"kube-system"}}' "http://127.0.0.1:8080/api/v1/namespaces"
 ```
 
 Our Pods should now be starting up and downloading their containers. To check the download progress, you can run `docker ps`.

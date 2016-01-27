@@ -18,13 +18,13 @@ Navigate to the [Vagrant downloads page][vagrant-downloads] and grab the appropr
 The linux `kubectl` binary can be fetched with a command like:
 
 ```sh
-curl -O https://storage.googleapis.com/kubernetes-release/release/v1.1.2/bin/linux/amd64/kubectl
+$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.1.2/bin/linux/amd64/kubectl
 ```
 
 On an OS X workstation, replace `linux` in the URL above with `darwin`:
 
 ```sh
-curl -O https://storage.googleapis.com/kubernetes-release/release/v1.1.2/bin/darwin/amd64/kubectl
+$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.1.2/bin/darwin/amd64/kubectl
 ```
 
 After downloading the binary, ensure it is executable and move it into your PATH:
@@ -68,21 +68,21 @@ You can choose from one of the two following options.
 
 1. **Use a custom KUBECONFIG path**
 
-	```sh
-	export KUBECONFIG="${KUBECONFIG}:$(pwd)/kubeconfig"
-	kubectl config use-context vagrant-multi
-	```
+    ```sh
+    $ export KUBECONFIG="${KUBECONFIG}:$(pwd)/kubeconfig"
+    $ kubectl config use-context vagrant-multi
+    ```
 
 1. **Update the local-user kubeconfig**
 
-	Configure your local Kubernetes client using the following commands:
+    Configure your local Kubernetes client using the following commands:
 
-	```sh
-	$ kubectl config set-cluster vagrant-multi-cluster --server=https://172.17.4.101:443 --certificate-authority=${PWD}/ssl/ca.pem
-	$ kubectl config set-credentials vagrant-multi-admin --certificate-authority=${PWD}/ssl/ca.pem --client-key=${PWD}/ssl/admin-key.pem --client-certificate=${PWD}/ssl/admin.pem
-	$ kubectl config set-context vagrant-multi --cluster=vagrant-multi-cluster --user=vagrant-multi-admin
-	$ kubectl config use-context vagrant-multi
-	```
+    ```sh
+    $ kubectl config set-cluster vagrant-multi-cluster --server=https://172.17.4.101:443 --certificate-authority=${PWD}/ssl/ca.pem
+    $ kubectl config set-credentials vagrant-multi-admin --certificate-authority=${PWD}/ssl/ca.pem --client-key=${PWD}/ssl/admin-key.pem --client-certificate=${PWD}/ssl/admin.pem
+    $ kubectl config set-context vagrant-multi --cluster=vagrant-multi-cluster --user=vagrant-multi-admin
+    $ kubectl config use-context vagrant-multi
+    ```
 
 Check that your client is configured properly by using `kubectl` to inspect your cluster:
 

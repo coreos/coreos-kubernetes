@@ -11,21 +11,21 @@ Make sure only the essential pods are running, and there are no failed or pendin
 ## Clone Kubernetes
 
 ```sh
-git clone https://github.com/kubernetes/kubernetes.git
+$ git clone https://github.com/kubernetes/kubernetes.git
 ```
 
 ## Checkout Conformance Test branch
 
 ```sh
-cd kubernetes
-git checkout conformance-test-v1
+$ cd kubernetes
+$ git checkout conformance-test-v1
 ```
 
 ## Create Kubernetes Binaries
 
 ```sh
-make clean
-make quick-release
+$ make clean
+$ make quick-release
 ```
 
 ## Set Worker Count
@@ -33,7 +33,7 @@ make quick-release
 Modify the `WORKERS` count to match the deployment you are testing.
 
 ```sh
-WORKERS=1; sed -i '' "s/NUM_MINIONS=[0-9]/NUM_MINIONS=${WORKERS}/" hack/conformance-test.sh
+$ WORKERS=1; sed -i '' "s/NUM_MINIONS=[0-9]/NUM_MINIONS=${WORKERS}/" hack/conformance-test.sh
 ```
 
 ## Run Conformance Tests
@@ -41,8 +41,7 @@ WORKERS=1; sed -i '' "s/NUM_MINIONS=[0-9]/NUM_MINIONS=${WORKERS}/" hack/conforma
 The command below expects a kubeconfig with the current context set to the cluster you wish to test. To set the path, update `KUBECONFIG` in the command below.
 
 ```sh
-KUBECONFIG=$HOME/.kube/config hack/conformance-test.sh 2>&1 | tee conformance.$(date +%FT%T%z).log
+$ KUBECONFIG=$HOME/.kube/config hack/conformance-test.sh 2>&1 | tee conformance.$(date +%FT%T%z).log
 ```
 
 **NOTE:** In single-node installations the test `should function for intra-pod communication`, will not pass because there are no additional workers to communicate with.
-

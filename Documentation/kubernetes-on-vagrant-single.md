@@ -19,13 +19,13 @@ Navigate to the [Vagrant downloads page][vagrant-downloads] and grab the appropr
 The linux `kubectl` binary can be fetched with a command like:
 
 ```sh
-curl -O https://storage.googleapis.com/kubernetes-release/release/v1.1.2/bin/linux/amd64/kubectl
+$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.1.2/bin/linux/amd64/kubectl
 ```
 
 On an OS X workstation, replace `linux` in the URL above with `darwin`:
 
 ```sh
-curl -O https://storage.googleapis.com/kubernetes-release/release/v1.1.2/bin/darwin/amd64/kubectl
+$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.1.2/bin/darwin/amd64/kubectl
 ```
 
 After downloading the binary, ensure it is executable and move it into your PATH:
@@ -58,8 +58,8 @@ You can choose from one of the two following options.
 1. **Use a custom KUBECONFIG path**
 
    ```sh
-   export KUBECONFIG="${KUBECONFIG}:$(pwd)/kubeconfig"
-   kubectl config use-context vagrant-single
+   $ export KUBECONFIG="${KUBECONFIG}:$(pwd)/kubeconfig"
+   $ kubectl config use-context vagrant-single
    ```
 
 1. **Update the local-user kubeconfig**

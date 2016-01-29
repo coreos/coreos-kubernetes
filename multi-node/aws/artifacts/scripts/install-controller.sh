@@ -27,9 +27,6 @@ export K8S_SERVICE_IP=
 # This same IP must be configured on all worker nodes to enable DNS service discovery.
 export DNS_SERVICE_IP=
 
-# The HTTP(S) host serving the necessary Kubernetes artifacts
-export ARTIFACT_URL=
-
 # The above settings can optionally be overridden using an environment file:
 ENV_FILE=/run/coreos-kubernetes/options.env
 
@@ -37,16 +34,16 @@ ENV_FILE=/run/coreos-kubernetes/options.env
 
 function template {
 	# use a heredoc so the quoting & whitespace in the
-	# downloaded artifact is preserved, but env variables
+	# artifact is preserved, but env variables
 	# can still be evaluated
 	eval "cat <<EOF
-$(curl --silent -L "${ARTIFACT_URL}/$1")
+$(cat $1)
 EOF
 " > $2
 }
 
 function init_config {
-	local REQUIRED=('ADVERTISE_IP' 'POD_NETWORK' 'ETCD_ENDPOINTS' 'SERVICE_IP_RANGE' 'K8S_SERVICE_IP' 'DNS_SERVICE_IP' 'K8S_VER' 'ARTIFACT_URL' )
+	local REQUIRED=('ADVERTISE_IP' 'POD_NETWORK' 'ETCD_ENDPOINTS' 'SERVICE_IP_RANGE' 'K8S_SERVICE_IP' 'DNS_SERVICE_IP' 'K8S_VER')
 
 	if [ -f $ENV_FILE ]; then
 		export $(cat $ENV_FILE | xargs)
@@ -111,17 +108,17 @@ EOF
 	}
 
 	mkdir -p /etc/kubernetes/manifests
-	template manifests/controller/kube-proxy.yaml /etc/kubernetes/manifests/kube-proxy.yaml
-	template manifests/controller/kube-apiserver.yaml /etc/kubernetes/manifests/kube-apiserver.yaml
-	template manifests/controller/kube-podmaster.yaml /etc/kubernetes/manifests/kube-podmaster.yaml
+	template /tmp/manifests/controller/kube-proxy.yaml /etc/kubernetes/manifests/kube-proxy.yaml
+	template /tmp/manifests/controller/kube-apiserver.yaml /etc/kubernetes/manifests/kube-apiserver.yaml
+	template /tmp/manifests/controller/kube-podmaster.yaml /etc/kubernetes/manifests/kube-podmaster.yaml
 
 	mkdir -p /srv/kubernetes/manifests
-	template manifests/controller/kube-controller-manager.yaml /srv/kubernetes/manifests/kube-controller-manager.yaml
-	template manifests/controller/kube-scheduler.yaml /srv/kubernetes/manifests/kube-scheduler.yaml
+	template /tmp/manifests/controller/kube-controller-manager.yaml /srv/kubernetes/manifests/kube-controller-manager.yaml
+	template /tmp/manifests/controller/kube-scheduler.yaml /srv/kubernetes/manifests/kube-scheduler.yaml
 
-	template manifests/cluster/kube-system.json /srv/kubernetes/manifests/kube-system.json
-	template manifests/cluster/kube-dns-rc.json /srv/kubernetes/manifests/kube-dns-rc.json
-	template manifests/cluster/kube-dns-svc.json /srv/kubernetes/manifests/kube-dns-svc.json
+	template /tmp/manifests/cluster/kube-system.json /srv/kubernetes/manifests/kube-system.json
+	template /tmp/manifests/cluster/kube-dns-rc.json /srv/kubernetes/manifests/kube-dns-rc.json
+	template /tmp/manifests/cluster/kube-dns-svc.json /srv/kubernetes/manifests/kube-dns-svc.json
 
 	template manifests/cluster/heapster-rc.json /srv/kubernetes/manifests/heapster-rc.json
 	template manifests/cluster/heapster-svc.json /srv/kubernetes/manifests/heapster-svc.json

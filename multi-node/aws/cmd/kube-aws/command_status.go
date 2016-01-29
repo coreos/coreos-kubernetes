@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
-
 	"github.com/coreos/coreos-kubernetes/multi-node/aws/pkg/cluster"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -23,14 +22,11 @@ func init() {
 }
 
 func runCmdStatus(cmd *cobra.Command, args []string) {
-	cfg := cluster.NewDefaultConfig(VERSION)
-	err := cluster.DecodeConfigFromFile(cfg, rootOpts.ConfigPath)
+	c, err := cluster.New(rootOpts.AssetDir, rootOpts.AWSDebug)
 	if err != nil {
-		stderr("Unable to load cluster config: %v", err)
+		stderr("Invalid cluster assets: %v", err)
 		os.Exit(1)
 	}
-
-	c := cluster.New(cfg, newAWSConfig(cfg))
 
 	info, err := c.Info()
 	if err != nil {

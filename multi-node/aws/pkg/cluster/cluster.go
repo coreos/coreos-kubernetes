@@ -2,14 +2,20 @@ package cluster
 
 import (
 	"bytes"
-	"encoding/base64"
 	"fmt"
+	"io/ioutil"
+	"path"
+	"path/filepath"
 	"text/tabwriter"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/coreos/coreos-kubernetes/multi-node/aws/pkg/blobutil"
 )
+
+// set by build script
+var VERSION = "UNKNOWN"
 
 type ClusterInfo struct {
 	Name         string
@@ -31,6 +37,8 @@ func (c *ClusterInfo) String() string {
 type TLSConfig struct {
 	CACertFile string
 	CACert     []byte
+	CAKeyFile  string
+	CAKey      []byte
 
 	APIServerCertFile string
 	APIServerCert     []byte
@@ -48,23 +56,81 @@ type TLSConfig struct {
 	AdminKey      []byte
 }
 
-func New(cfg *Config, awsConfig *aws.Config) *Cluster {
-	return &Cluster{
-		cfg: cfg,
-		aws: awsConfig,
+func NewTLSConfig(clusterDir string) *TLSConfig {
+	return &TLSConfig{
+		CACertFile:        path.Join(clusterDir, "ca.pem"),
+		CAKeyFile:         path.Join(clusterDir, "ca-key.pem"),
+		APIServerCertFile: path.Join(clusterDir, "apiserver.pem"),
+		APIServerKeyFile:  path.Join(clusterDir, "apiserver-key.pem"),
+		WorkerCertFile:    path.Join(clusterDir, "worker.pem"),
+		WorkerKeyFile:     path.Join(clusterDir, "worker-key.pem"),
+		AdminCertFile:     path.Join(clusterDir, "admin.pem"),
+		AdminKeyFile:      path.Join(clusterDir, "admin-key.pem"),
 	}
 }
 
+func (tc *TLSConfig) ReadFilesFromPaths() {
+	tc.CACert = blobutil.MustReadAndCompressFile(tc.CACertFile)
+	tc.CAKey = blobutil.MustReadAndCompressFile(tc.CAKeyFile)
+	tc.APIServerCert = blobutil.MustReadAndCompressFile(tc.APIServerCertFile)
+	tc.APIServerKey = blobutil.MustReadAndCompressFile(tc.APIServerKeyFile)
+	tc.WorkerCert = blobutil.MustReadAndCompressFile(tc.WorkerCertFile)
+	tc.WorkerKey = blobutil.MustReadAndCompressFile(tc.WorkerKeyFile)
+	tc.AdminCert = blobutil.MustReadAndCompressFile(tc.AdminCertFile)
+	tc.AdminKey = blobutil.MustReadAndCompressFile(tc.AdminKeyFile)
+}
+
+func New(assetDir string, awsDebug bool) (*Cluster, error) {
+	cfgPath := filepath.Join(assetDir, "cluster.yaml")
+	cfg := NewDefaultConfig()
+	if err := DecodeConfigFromFile(cfg, cfgPath); err != nil {
+		return nil, fmt.Errorf("Unable to load cluster config: %v", err)
+	}
+
+	awsConfig := aws.NewConfig()
+	awsConfig = awsConfig.WithRegion(cfg.Region)
+	if awsDebug {
+		awsConfig = awsConfig.WithLogLevel(aws.LogDebug)
+	}
+
+	c := &Cluster{
+		cfg:      cfg,
+		aws:      awsConfig,
+		assetDir: assetDir,
+	}
+	return c, nil
+}
+
 type Cluster struct {
-	cfg *Config
-	aws *aws.Config
+	cfg      *Config
+	aws      *aws.Config
+	assetDir string
 }
 
 func (c *Cluster) stackName() string {
 	return c.cfg.ClusterName
 }
 
-func (c *Cluster) Create(tlsConfig *TLSConfig) error {
+func (c *Cluster) initAssets() *TLSConfig {
+
+	c.cfg.InstallWorkerScript = blobutil.MustReadAndCompressFile(filepath.Join(c.assetDir, "scripts", "install-worker.sh"))
+	c.cfg.InstallControllerScript = blobutil.MustReadAndCompressFile(filepath.Join(c.assetDir, "scripts", "install-controller.sh"))
+
+	manifestPath := filepath.Join(c.assetDir, "manifests")
+	c.cfg.ClusterManifestsTar = blobutil.MustTarAndCompressDirectory(c.assetDir, filepath.Join(manifestPath, "cluster"))
+	c.cfg.ControllerManifestsTar = blobutil.MustTarAndCompressDirectory(c.assetDir, filepath.Join(manifestPath, "controller"))
+	c.cfg.WorkerManifestsTar = blobutil.MustTarAndCompressDirectory(c.assetDir, filepath.Join(manifestPath, "worker"))
+
+	credentialsDir := filepath.Join(c.assetDir, "credentials")
+	tlsConfig := NewTLSConfig(credentialsDir)
+	tlsConfig.ReadFilesFromPaths()
+	return tlsConfig
+}
+
+func (c *Cluster) Create() error {
+
+	tlsConfig := c.initAssets()
+	fmt.Printf("Cluster assets initialized from '%s'\n", c.assetDir)
 	parameters := []*cloudformation.Parameter{
 		{
 			ParameterKey:     aws.String(parClusterName),
@@ -77,33 +143,53 @@ func (c *Cluster) Create(tlsConfig *TLSConfig) error {
 			UsePreviousValue: aws.Bool(true),
 		},
 		{
-			ParameterKey:     aws.String(parArtifactURL),
-			ParameterValue:   aws.String(c.cfg.ArtifactURL),
+			ParameterKey:     aws.String(parInstallWorkerScript),
+			ParameterValue:   aws.String(string(c.cfg.InstallWorkerScript)),
+			UsePreviousValue: aws.Bool(true),
+		},
+		{
+			ParameterKey:     aws.String(parInstallControllerScript),
+			ParameterValue:   aws.String(string(c.cfg.InstallControllerScript)),
+			UsePreviousValue: aws.Bool(true),
+		},
+		{
+			ParameterKey:     aws.String(parClusterManifestsTar),
+			ParameterValue:   aws.String(string(c.cfg.ClusterManifestsTar)),
+			UsePreviousValue: aws.Bool(true),
+		},
+		{
+			ParameterKey:     aws.String(parControllerManifestsTar),
+			ParameterValue:   aws.String(string(c.cfg.ControllerManifestsTar)),
+			UsePreviousValue: aws.Bool(true),
+		},
+		{
+			ParameterKey:     aws.String(parWorkerManifestsTar),
+			ParameterValue:   aws.String(string(c.cfg.WorkerManifestsTar)),
 			UsePreviousValue: aws.Bool(true),
 		},
 		{
 			ParameterKey:     aws.String(parCACert),
-			ParameterValue:   aws.String(base64.StdEncoding.EncodeToString(tlsConfig.CACert)),
+			ParameterValue:   aws.String(string(tlsConfig.CACert)),
 			UsePreviousValue: aws.Bool(true),
 		},
 		{
 			ParameterKey:     aws.String(parAPIServerCert),
-			ParameterValue:   aws.String(base64.StdEncoding.EncodeToString(tlsConfig.APIServerCert)),
+			ParameterValue:   aws.String(string(tlsConfig.APIServerCert)),
 			UsePreviousValue: aws.Bool(true),
 		},
 		{
 			ParameterKey:     aws.String(parAPIServerKey),
-			ParameterValue:   aws.String(base64.StdEncoding.EncodeToString(tlsConfig.APIServerKey)),
+			ParameterValue:   aws.String(string(tlsConfig.APIServerKey)),
 			UsePreviousValue: aws.Bool(true),
 		},
 		{
 			ParameterKey:     aws.String(parWorkerCert),
-			ParameterValue:   aws.String(base64.StdEncoding.EncodeToString(tlsConfig.WorkerCert)),
+			ParameterValue:   aws.String(string(tlsConfig.WorkerCert)),
 			UsePreviousValue: aws.Bool(true),
 		},
 		{
 			ParameterKey:     aws.String(parWorkerKey),
-			ParameterValue:   aws.String(base64.StdEncoding.EncodeToString(tlsConfig.WorkerKey)),
+			ParameterValue:   aws.String(string(tlsConfig.WorkerKey)),
 			UsePreviousValue: aws.Bool(true),
 		},
 	}
@@ -220,8 +306,12 @@ func (c *Cluster) Create(tlsConfig *TLSConfig) error {
 		})
 	}
 
-	tmplURL := fmt.Sprintf("%s/template.json", c.cfg.ArtifactURL)
-	return createStackAndWait(cloudformation.New(c.aws), c.stackName(), tmplURL, parameters)
+	tmplBody, err := ioutil.ReadFile(filepath.Join(c.assetDir, "template.json"))
+	if err != nil {
+		return err
+	}
+
+	return createStackAndWait(cloudformation.New(c.aws), c.stackName(), string(tmplBody), parameters)
 }
 
 func (c *Cluster) Info() (*ClusterInfo, error) {

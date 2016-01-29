@@ -33,13 +33,6 @@ externalDNSName:
 # Disk size (GiB) for worker nodes
 #workerRootVolumeSize: 30
 
-# Location of kube-aws artifacts used to deploy a new
-# Kubernetes cluster. The necessary artifacts are already
-# available in a public S3 bucket matching the version
-# of the kube-aws tool. This parameter is typically
-# overwritten only for development purposes.
-#artifactURL: https://coreos-kubernetes.s3.amazonaws.com/<VERSION>
-
 # CIDR for Kubernetes VPC
 # vpcCIDR: "10.0.0.0/16"
 

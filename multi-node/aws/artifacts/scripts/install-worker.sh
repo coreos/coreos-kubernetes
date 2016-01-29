@@ -16,9 +16,6 @@ export K8S_VER=v1.1.2
 # This must be the same DNS_SERVICE_IP used when configuring the controller nodes.
 export DNS_SERVICE_IP=
 
-# The HTTP(S) host serving the necessary Kubernetes artifacts
-export ARTIFACT_URL=
-
 # The above settings can optionally be overridden using an environment file:
 ENV_FILE=/run/coreos-kubernetes/options.env
 
@@ -26,16 +23,16 @@ ENV_FILE=/run/coreos-kubernetes/options.env
 
 function template {
 	# use a heredoc so the quoting & whitespace in the
-	# downloaded artifact is preserved, but env variables
-	# can still be evaluated
-	eval "cat <<EOF
-$(curl --silent -L "${ARTIFACT_URL}/$1")
+	# artifact is preserved, but env variables
+        # can still be evaluated
+    	eval "cat <<EOF
+$(cat $1)
 EOF
 " > $2
 }
 
 function init_config {
-	local REQUIRED=( 'ADVERTISE_IP' 'ETCD_ENDPOINTS' 'CONTROLLER_ENDPOINT' 'DNS_SERVICE_IP' 'K8S_VER' 'ARTIFACT_URL' )
+	local REQUIRED=( 'ADVERTISE_IP' 'ETCD_ENDPOINTS' 'CONTROLLER_ENDPOINT' 'DNS_SERVICE_IP' 'K8S_VER')
 
 	if [ -f $ENV_FILE ]; then
 		export $(cat $ENV_FILE | xargs)
@@ -97,8 +94,8 @@ EOF
 	}
 
 	mkdir -p /etc/kubernetes/manifests
-	template manifests/worker/kubeconfig /etc/kubernetes/worker-kubeconfig.yaml
-	template manifests/worker/kube-proxy.yaml /etc/kubernetes/manifests/kube-proxy.yaml
+	template /tmp/manifests/worker/kubeconfig /etc/kubernetes/worker-kubeconfig.yaml
+	template /tmp/manifests/worker/kube-proxy.yaml /etc/kubernetes/manifests/kube-proxy.yaml
 
 	local TEMPLATE=/run/flannel/options.env
 	[ -f $TEMPLATE ] || {

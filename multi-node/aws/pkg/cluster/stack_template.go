@@ -34,7 +34,11 @@ const (
 	parNameControllerRootVolumeSize = "ControllerRootVolumeSize"
 	parNameWorkerInstanceType       = "WorkerInstanceType"
 	parNameKeyName                  = "KeyName"
-	parArtifactURL                  = "ArtifactURL"
+	parInstallWorkerScript          = "InstallWorkerScript"
+	parInstallControllerScript      = "InstallControllerScript"
+	parClusterManifestsTar          = "ClusterManifestsTar"
+	parControllerManifestsTar       = "ControllerManifestsTar"
+	parWorkerManifestsTar           = "WorkerManifestsTar"
 	parCACert                       = "CACert"
 	parAPIServerCert                = "APIServerCert"
 	parAPIServerKey                 = "APIServerKey"
@@ -118,7 +122,7 @@ func getRegionMap() (map[string]interface{}, error) {
 	return output, nil
 }
 
-func StackTemplateBody(defaultArtifactURL string) (string, error) {
+func StackTemplateBody() (string, error) {
 	// NOTE: AWS only allows non-alphanumeric keys in the top level key
 	imageID := map[string]interface{}{
 		"Fn::FindInMap": []interface{}{
@@ -560,35 +564,54 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 		"Description": "Name of SSH keypair to authorize on each instance",
 	}
 
-	par[parArtifactURL] = map[string]interface{}{
+	par[parInstallWorkerScript] = map[string]interface{}{
 		"Type":        "String",
-		"Default":     defaultArtifactURL,
-		"Description": "Public location of coreos-kubernetes deployment artifacts",
+		"Description": "Shell script that provisions a kube-worker",
+	}
+
+	par[parInstallControllerScript] = map[string]interface{}{
+		"Type":        "String",
+		"Description": "Shell script that provisions a kube-controller",
+	}
+
+	par[parClusterManifestsTar] = map[string]interface{}{
+		"Type":        "String",
+		"Description": "Tarball containing kube manifest files common to cluster (gzip+base64) encoding",
+	}
+
+	par[parControllerManifestsTar] = map[string]interface{}{
+		"Type":        "String",
+		"Description": "Tarball containing kube manifest files for controller (gzip+base64) encoding",
+	}
+
+	par[parWorkerManifestsTar] = map[string]interface{}{
+		"Type":        "String",
+		"Description": "Tarball containing kube manifest files for worker (gzip+base64) encoding",
 	}
 
 	par[parCACert] = map[string]interface{}{
 		"Type":        "String",
-		"Description": "PEM-formattd CA certificate, base64-encoded",
+		"Description": "PEM-formattd CA certificate, (gzip+base64) encoding",
 	}
 
 	par[parAPIServerCert] = map[string]interface{}{
 		"Type":        "String",
-		"Description": "PEM-formatted kube-apiserver certificate, base64-encoded",
+		"Description": "PEM-formatted kube-apiserver certificate, (gzip+base64) encoding",
 	}
 
 	par[parAPIServerKey] = map[string]interface{}{
 		"Type":        "String",
-		"Description": "PEM-formatted kube-apiserver key, base64-encoded",
+		"Description": "PEM-formatted kube-apiserver key, (gzip+base64) encoding",
 	}
 
 	par[parWorkerCert] = map[string]interface{}{
 		"Type":        "String",
-		"Description": "PEM-formatted kubelet (worker) certificate, base64-encoded",
+		"Description": "PEM-formatted kubelet (worker) certificate, (gzip+base64) encoding",
 	}
 
 	par[parWorkerKey] = map[string]interface{}{
 		"Type":        "String",
-		"Description": "PEM-formatted kubelet (worker) key, base64-encoded",
+		"Description": "PEM-formatted kubelet (worker) key, (gzip+base64) encoding",
 	}
 
 	par[parWorkerCount] = map[string]interface{}{

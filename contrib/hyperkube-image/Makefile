@@ -1,4 +1,4 @@
-KUBERNETES_VERSION = 1.1.2
+KUBERNETES_VERSION = 1.1.4
 KUBERNETES_RELEASE = https://github.com/kubernetes/kubernetes/archive/v$(KUBERNETES_VERSION).tar.gz
 
 TAG = quay.io/coreos/hyperkube:v$(KUBERNETES_VERSION)
@@ -11,18 +11,13 @@ release: clean $(HYPERKUBE) container
 # Patches to apply when building hyperkube from kubernetes release
 #    Example: files/0001-foo-bar.patch
 #    Patches can be generated from `git-format-patch`
-PATCHES = \
-	files/0001-kubelet-report-NodeReady-last-in-status-list.patch \
-	files/0002-explicitly-check-Ready-condition-in-validate-cluster.patch \
-	files/0003-kubelet-check-node-condition-by-type-rather-than-by-.patch \
-	files/0004-pkg-kubelet-force-NodeReady-condition-to-be-last-on-.patch
+PATCHES =
 
 # Build binaries with PATCHES using the upstream release process
 # TODO(aaron): Patch upstream to more easily allow single-binary builds in the container based build process (make release).
 $(HYPERKUBE): $(WORKDIR)/$(KUBERNETES_VERSION)
 	@$(foreach p,$(PATCHES),patch --directory $(WORKDIR)/$(KUBERNETES_VERSION) --strip=1 < $(CURDIR)/$(p);)
-	#TODO(aaron): change 'quick-release' to 'release'. Known unit tests failures (v1.1.2) preventing this.
-	$(MAKE) -C $(WORKDIR)/$(KUBERNETES_VERSION) quick-release
+	$(MAKE) -C $(WORKDIR)/$(KUBERNETES_VERSION) release
 
 # Build Docker container using HYPERKUBE binary
 # If building with a custom binary:

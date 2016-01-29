@@ -62,6 +62,8 @@ subjectAltName = @alt_names
 [alt_names]
 DNS.1 = kubernetes
 DNS.2 = kubernetes.default
+DNS.3 = kubernetes.default.svc
+DNS.4 = kubernetes.default.svc.cluster.local
 IP.1 = ${K8S_SERVICE_IP}
 IP.2 = ${MASTER_HOST}
 ```
@@ -71,7 +73,7 @@ If deploying multiple master nodes in an HA configuration, you may need to add m
 Example:
 
 ```
-DNS.3 = ${MASTER_DNS_NAME}
+DNS.5 = ${MASTER_DNS_NAME}
 IP.3 = ${MASTER_IP}
 IP.4 = ${MASTER_LOADBALANCER_IP}
 ```

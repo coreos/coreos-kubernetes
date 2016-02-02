@@ -4,6 +4,12 @@
 
 ## Download the `kubectl` Executable
 
+Change the directory to the desired one (where you'd like to place `kubectl` binary); `/usr/local/bin/` is recommended.
+
+```sh
+$ cd /usr/local/bin
+```
+
 Download `kubectl` from the Kubernetes release artifact site with the `curl` tool.
 
 The linux `kubectl` binary can be fetched with a command like:
@@ -22,7 +28,6 @@ After downloading the binary, ensure it is executable and move it into your `PAT
 
 ```sh
 $ chmod +x kubectl
-$ mv kubectl /usr/local/bin/kubectl
 ```
 
 ## Configure `kubectl`

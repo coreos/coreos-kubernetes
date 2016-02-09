@@ -5,8 +5,8 @@ TAG = quay.io/coreos/hyperkube:v$(KUBERNETES_VERSION)
 WORKDIR = _workdir
 HYPERKUBE = $(WORKDIR)/$(KUBERNETES_VERSION)/_output/dockerized/bin/linux/amd64/hyperkube
 
-all: $(HYPERKUBE) container
-release: clean $(HYPERKUBE) container
+all: container
+release: clean container
 
 # Patches to apply when building hyperkube from kubernetes release
 #    Example: files/0001-foo-bar.patch
@@ -27,11 +27,10 @@ $(HYPERKUBE): $(WORKDIR)/$(KUBERNETES_VERSION)
 # Build Docker container using HYPERKUBE binary
 # If building with a custom binary:
 #	make container HYPERKUBE=path-to-bin
-container:
+container: $(HYPERKUBE)
 	$(eval TEMPDIR := $(shell mktemp -d -t $(KUBERNETES_VERSION)))
-	echo $(TEMPDIR)
-	cp ./Dockerfile $(TEMPDIR)
-	cp $(HYPERKUBE) $(TEMPDIR)
+	cp Dockerfile $(HYPERKUBE) files/master-multi.json files/master.json files/safe_format_and_mount $(TEMPDIR)
+	sed -i '' "s/VERSION/v$(KUBERNETES_VERSION)/g" $(TEMPDIR)/master-multi.json $(TEMPDIR)/master.json
 	docker build -t $(TAG) $(TEMPDIR)
 	rm -rf $(TEMPDIR)
 

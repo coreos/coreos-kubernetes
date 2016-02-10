@@ -55,7 +55,7 @@ Once in the `coreos-kubernetes/single-node/` directory, configure your local Kub
 
 You can choose from one of the two following options.
 
-1. **Use a custom KUBECONFIG path**
+2\. **Use a custom KUBECONFIG path**
 
 ```sh
 $ export KUBECONFIG="${KUBECONFIG}:$(pwd)/kubeconfig"

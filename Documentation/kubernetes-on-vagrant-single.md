@@ -55,14 +55,14 @@ Once in the `coreos-kubernetes/single-node/` directory, configure your local Kub
 
 You can choose from one of the two following options.
 
-2\. **Use a custom KUBECONFIG path**
+1. **Use a custom KUBECONFIG path**
 
 ```sh
 $ export KUBECONFIG="${KUBECONFIG}:$(pwd)/kubeconfig"
 $ kubectl config use-context vagrant-single
 ```
 
-1. **Update the local-user kubeconfig**
+2\. **Update the local-user kubeconfig**
 
 ```sh
 $ kubectl config set-cluster vagrant-single-cluster --server=https://172.17.4.99:443 --certificate-authority=${PWD}/ssl/ca.pem

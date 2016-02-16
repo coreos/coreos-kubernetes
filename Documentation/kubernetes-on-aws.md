@@ -9,15 +9,15 @@ Choose one of the following paths to get started:
 
 1. `kube-aws`
 
-        Use the `kube-aws` CLI tool to automate cluster deployment. See the [kube-aws Quickstart section](#kube-aws-quickstart) below.
+    Use the `kube-aws` CLI tool to automate cluster deployment. See the [kube-aws Quickstart section](#kube-aws-quickstart) below.
 
 1. Launch Stack & Configuration Guide
 
-        Click the following Launch Stack button, then use the [Configuration Guide](#cloudformation-template-parameters) later in this document to decide how to set the CloudFormation template parameters:
+    Click the following Launch Stack button, then use the [Configuration Guide](#cloudformation-template-parameters) later in this document to decide how to set the CloudFormation template parameters:
 
-        <a href="https://console.aws.amazon.com/cloudformation/home#/stacks/new?templateURL=https:%2F%2Fcoreos-kubernetes.s3.amazonaws.com%2Flatest%2Ftemplate.json" target="_blank">
-        <img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png" alt="Launch Stack">
-        </a>
+    <a href="https://console.aws.amazon.com/cloudformation/home#/stacks/new?templateURL=https:%2F%2Fcoreos-kubernetes.s3.amazonaws.com%2Flatest%2Ftemplate.json" target="_blank">
+    <img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png" alt="Launch Stack">
+    </a>
 
 ## kube-aws Quickstart
 
@@ -38,22 +38,22 @@ Configure your local workstation with AWS credentials using one of the following
 
 1. Environment Variables
 
-        Set `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` to the values of your AWS access and secret keys, respectively:
+    Set `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` to the values of your AWS access and secret keys, respectively:
 
-        ```
-        export AWS_ACCESS_KEY_ID=AKID1234567890
-        export AWS_SECRET_ACCESS_KEY=MY-SECRET-KEY
-        ```
+    ```
+export AWS_ACCESS_KEY_ID=AKID1234567890
+export AWS_SECRET_ACCESS_KEY=MY-SECRET-KEY
+    ```
 
 1. Config File
 
-        Write your credentials into the file `~/.aws/credentials` using the following template:
+    Write your credentials into the file `~/.aws/credentials` using the following template:
 
-        ```
-        [default]
-        aws_access_key_id = AKID1234567890
-        aws_secret_access_key = MY-SECRET-KEY
-        ```
+    ```
+[default]
+aws_access_key_id = AKID1234567890
+aws_secret_access_key = MY-SECRET-KEY
+    ```
 
 ### Configure Cluster
 

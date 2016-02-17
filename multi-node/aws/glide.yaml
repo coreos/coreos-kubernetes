@@ -1,13 +1,16 @@
 package: .
 import:
 - package: github.com/aws/aws-sdk-go
+  version: ^v1.1.3
   subpackages:
   - /aws
   - aws/session
   - service/cloudformation
   - service/ec2
 - package: github.com/coreos/coreos-cloudinit
+  version: ^v1.9.0
   subpackages:
   - /config/validate
 - package: github.com/spf13/cobra
+  version: 65a708cee0a4424f4e353d031ce440643e312f92
 - package: gopkg.in/yaml.v2

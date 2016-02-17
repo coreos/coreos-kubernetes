@@ -5,24 +5,91 @@ View the full instructions at https://coreos.com/kubernetes/docs/latest/kubernet
 
 ## Development
 
+### Download pre-built binary
+
+```sh
+wget https://<binary-url>
+# check checksum
+chmod +x ./kube-aws
+sudo mv kube-aws /usr/bin/
+```
+
 ### Build
 
 Run the `./build` script to compile `kube-aws` locally.
-This depends on having golang available on your workstation.
+
+This depends on having:
+* golang >= 1.5
+* glide package manager
+
 The compiled binary will be available at `./bin/kube-aws`.
 
-### Custom Kubernetes Manifests
-
-You may deploy a cluster using a custom CloudFormation template, Kubernetes manifests and install scripts using the `artifactURL` option in your cluster config.
-
-For example, you might upload a modified set of manifests to a custom S3 bucket (making the files publicly-readable) using the following commands:
-
-```
-$ kube-aws render --output=artifacts/template.json
-$ aws s3 cp --recursive --acl=public-read artifacts/ s3://<bucket>/
+## Initialize an asset directory
+```sh
+$ mkdir my-cluster
+$ cd ./my-cluster
+$ kube-aws init --cluster-name=my-cluster-name --external-dns-name=my-cluster-endpoint --region=us-west-1 --key-name=key-pair-name
 ```
 
-Then, simply create a cluster using `artifactURL: https://<bucket>.s3.amazonaws.com`.
+There will now be a ./cluster.yaml file in the asset directory.
+
+## Render contents of the asset directory
+
+```sh
+$ kube-aws render
+```
+You now have a default-configured cluster that is ready to launch.
+
+You can now customize your cluster by editing files:
+* ./cluster.yaml (common case)
+* `cloud-config/` directory (userdata files)
+* stack-template.json
+* `credentials/` directory
+
+You can also now check the `./my-cluster` asset directory into version control if you desire. The contents of this directory are your reproducible cluster assets. Please take care not to commit the `./my-cluster/credentials` directory, as it contains your TLS secrets. If you're using git, the `credentials` directory will already be ignored for you.
+
+## Validate your cluster assets
+
+The `validate` command check the validity of the cloud-config userdata files and the cloudformation stack description.
+
+```sh
+$ kube-aws validate
+```
+
+## Create a cluster from asset directory
+
+```sh
+$ kube-aws up
+```
+
+This command can take a while.
+
+## Access the cluster
+
+```sh
+$ kubectl --kubeconfig=./credentials/kubeconfig get nodes
+```
+
+It can take some time after `kube-aws up` completes before the cluster is available. Until then, you'll get a `connection refused` error.
+
+## Update the cluster
+
+After modifying your `cluster.yaml` file (or any of the other asset files), you can attempt to update the cloudformation stack.
+
+*Caveats*
+* updates that involve the controller will wipe-away etcd state, which in turn will wipe out kubernetes cluster state.
+* updates do not currently succeed if you change some of the "physical" networking options. (vpcCidr is an example).
+* the update procedure involves replacing ec2 instances without coordinating with the Kubernetes apiserver. This can (and probably will) produce cluster downtime
+
+```sh
+$ kube-aws up --update
+```
+
+### Updating SSL assets
+
+* Create a temporary directory and run `kube-aws render`.
+* Copy the `./credentials` directory to your "real" assets directory (overwriting the original `credentials` directory)
+* Run `kube-aws up --update` in the "real" assets directory. This will propagate the newly generated TLS assets to your cluster.
 
 ### Useful Resources
 

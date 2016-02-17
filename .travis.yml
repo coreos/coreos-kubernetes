@@ -1,12 +1,15 @@
 language: go
 go:
-  - 1.4
   - 1.5
 install:
+  - export GO15VENDOREXPERIMENT=1
+  - wget https://github.com/Masterminds/glide/releases/download/0.8.3/glide-0.8.3-linux-amd64.tar.gz
+  - tar zxvf glide-0.8.3-linux-amd64.tar.gz
+  - export PATH="${PATH}:$(pwd)/linux-amd64"
   - go get golang.org/x/tools/cmd/vet
 script:
   - cd $TRAVIS_BUILD_DIR/multi-node/aws
-  - GOPATH=${PWD}/Godeps/_workspace:${GOPATH} go test -v ./...
-  - test -z "$(find . -path ./Godeps -prune -o -name '*.go' -exec gofmt -d {} + | tee /dev/stderr)"
-  - go vet ./...
+  - test -z "$(find . -prune -o -name '*.go' -exec gofmt -d {} + | tee /dev/stderr)"
   - ./build
+  - go test -v ./{cmd,pkg}/*
+  - go vet ./{cmd,pkg}/*

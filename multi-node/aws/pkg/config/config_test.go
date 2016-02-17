@@ -1,11 +1,10 @@
-package cluster
+package config
 
 import (
 	"testing"
 )
 
-const testVer = "1"
-const minimalConfigYaml = `externalDNSName: test-external-dns-name
+const MinimalConfigYaml = `externalDNSName: test-external-dns-name
 keyName: test-key-name
 region: test-region
 clusterName: test-cluster-name
@@ -72,17 +71,15 @@ dnsServiceIP: 172.6.100.101 #dnsServiceIP not in service CIDR
 func TestNetworkValidation(t *testing.T) {
 
 	for _, networkConfig := range goodNetworkingConfigs {
-		config := NewDefaultConfig(testVer)
-		configBody := minimalConfigYaml + networkConfig
-		if err := decodeConfigBytes(config, []byte(configBody)); err != nil {
+		configBody := MinimalConfigYaml + networkConfig
+		if _, err := newConfigFromBytes([]byte(configBody)); err != nil {
 			t.Errorf("Correct config tested invalid: %s\n%s", err, networkConfig)
 		}
 	}
 
 	for _, networkConfig := range incorrectNetworkingConfigs {
-		config := NewDefaultConfig(testVer)
-		configBody := minimalConfigYaml + networkConfig
-		if err := decodeConfigBytes(config, []byte(configBody)); err == nil {
+		configBody := MinimalConfigYaml + networkConfig
+		if _, err := newConfigFromBytes([]byte(configBody)); err == nil {
 			t.Errorf("Incorrect config tested valid, expected error:\n%s", networkConfig)
 		}
 	}

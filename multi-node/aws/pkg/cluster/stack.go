@@ -10,13 +10,12 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
-func createStackAndWait(svc *cloudformation.CloudFormation, name, templateURL string, parameters []*cloudformation.Parameter) error {
+func createStackAndWait(svc *cloudformation.CloudFormation, name, stackBody string) error {
 	creq := &cloudformation.CreateStackInput{
 		StackName:    aws.String(name),
 		OnFailure:    aws.String("DO_NOTHING"),
 		Capabilities: []*string{aws.String(cloudformation.CapabilityCapabilityIam)},
-		Parameters:   parameters,
-		TemplateURL:  aws.String(templateURL),
+		TemplateBody: aws.String(stackBody),
 	}
 
 	resp, err := svc.CreateStack(creq)
@@ -29,6 +28,62 @@ func createStackAndWait(svc *cloudformation.CloudFormation, name, templateURL st
 	}
 
 	return nil
+}
+
+func validateStack(svc *cloudformation.CloudFormation, stackBody string) (string, error) {
+
+	input := &cloudformation.ValidateTemplateInput{
+		TemplateBody: aws.String(stackBody),
+	}
+
+	validationReport, err := svc.ValidateTemplate(input)
+
+	if err != nil {
+		return "", fmt.Errorf("Invalid cloudformation stack: %v", err)
+	}
+
+	return validationReport.String(), err
+}
+
+func updateStack(svc *cloudformation.CloudFormation, stackName, stackBody string) (string, error) {
+
+	input := &cloudformation.UpdateStackInput{
+		Capabilities: []*string{aws.String(cloudformation.CapabilityCapabilityIam)},
+		StackName:    aws.String(stackName),
+		TemplateBody: aws.String(stackBody),
+	}
+
+	updateOutput, err := svc.UpdateStack(input)
+
+	if err != nil {
+		return "", fmt.Errorf("Error updating cloudformation stack: %v", err)
+	}
+
+	return updateOutput.String(), waitForStackUpdateComplete(svc, *updateOutput.StackId)
+}
+
+func waitForStackUpdateComplete(svc *cloudformation.CloudFormation, stackID string) error {
+	req := cloudformation.DescribeStacksInput{
+		StackName: aws.String(stackID),
+	}
+	for {
+		resp, err := svc.DescribeStacks(&req)
+		if err != nil {
+			return err
+		}
+		if len(resp.Stacks) == 0 {
+			return fmt.Errorf("stack not found")
+		}
+		statusString := aws.StringValue(resp.Stacks[0].StackStatus)
+		switch statusString {
+		case cloudformation.ResourceStatusUpdateComplete:
+			return nil
+		case cloudformation.ResourceStatusUpdateFailed, cloudformation.StackStatusUpdateRollbackComplete, cloudformation.StackStatusUpdateRollbackFailed:
+			errMsg := fmt.Sprintf("Stack status: %s : %s", statusString, aws.StringValue(resp.Stacks[0].StackStatusReason))
+			return errors.New(errMsg)
+		}
+		time.Sleep(3 * time.Second)
+	}
 }
 
 func waitForStackCreateComplete(svc *cloudformation.CloudFormation, stackID string) error {
@@ -78,7 +133,7 @@ func mapStackResourcesToClusterInfo(svc *ec2.EC2, resources []cloudformation.Sta
 	var info ClusterInfo
 	for _, r := range resources {
 		switch aws.StringValue(r.LogicalResourceId) {
-		case resNameEIPController:
+		case "EIPController":
 			if r.PhysicalResourceId != nil {
 				info.ControllerIP = *r.PhysicalResourceId
 			} else {

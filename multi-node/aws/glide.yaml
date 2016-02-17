@@ -1,0 +1,13 @@
+package: .
+import:
+- package: github.com/aws/aws-sdk-go
+  subpackages:
+  - /aws
+  - aws/session
+  - service/cloudformation
+  - service/ec2
+- package: github.com/coreos/coreos-cloudinit
+  subpackages:
+  - /config/validate
+- package: github.com/spf13/cobra
+- package: gopkg.in/yaml.v2

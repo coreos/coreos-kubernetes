@@ -11,5 +11,5 @@ script:
   - cd $TRAVIS_BUILD_DIR/multi-node/aws
   - test -z "$(find . -prune -o -name '*.go' -exec gofmt -d {} + | tee /dev/stderr)"
   - ./build
-  - go test -v ./{cmd,pkg}/*
-  - go vet ./{cmd,pkg}/*
+  - go test -v $(find ./{cmd,pkg} -maxdepth 1 -mindepth 1 -type d)
+  - go vet $(find ./{cmd,pkg} -maxdepth 1 -mindepth 1 -type d)

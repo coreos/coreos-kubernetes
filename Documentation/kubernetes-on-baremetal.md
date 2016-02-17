@@ -24,11 +24,12 @@ Mixing multiple methods is possible. For example, doing an install to disk for t
 ### Kubernetes Pod Network
 
 The following guides assume the use of [flannel][coreos-flannel] as a software-defined overlay network to manage routing of the [pod network][pod-network].
-However, bare metal is a common platform where a self-managed network is used, due to the flexbility provided by physical networking gear.
+However, bare metal is a common platform where a self-managed network is used, due to the flexibility provided by physical networking gear. One common alternative is to use [Calico][calico-networking] networking, avoiding the use of an overlay and allowing interop with physical networking gear using BGP.
 
 See the [Kubernetes networking](kubernetes-networking.md) documentation for more information on self-managed networking options.
 
 [coreos-flannel]: https://coreos.com/flannel/docs/latest/flannel-config.html
+[calico-networking]: https://github.com/projectcalico/calico-containers
 [pod-network]: https://github.com/kubernetes/kubernetes/blob/release-1.2/docs/design/networking.md#pod-to-pod
 
 <div class="co-m-docs-next-step">

@@ -158,6 +158,17 @@ You can now customize your cluster by editing asset files:
 
 You can also now check the `my-cluster` asset directory into version control if you desire. The contents of this directory are your reproducible cluster assets. Please take care not to commit the `my-cluster/credentials` directory, as it contains your TLS secrets. If you're using git, the `credentials` directory will already be ignored for you.
 
+#### Calico network policy (optional)
+
+The cluster can be configured to use Calico to provide network policy.
+
+Edit the `cluster.yaml` file:
+```yaml
+useCalico: true
+kubernetesVersion: v1.2.3_coreos.cni.1
+```
+The hyperkube image version needs to contain the CNI binaries (these are tagged with `_cni`)
+
 #### Route53 Host Record (optional)
 
 `kube-aws` can optionally create an A record for the controller IP in an existing hosted zone.

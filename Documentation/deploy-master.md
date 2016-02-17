@@ -33,11 +33,12 @@ $ sudo chmod 600 /etc/kubernetes/ssl/*-key.pem
 $ sudo chown root:root /etc/kubernetes/ssl/*-key.pem
 ```
 
-### flannel Configuration
+### Network Configuration
+Networking is provided by Flannel and Calico.
+* [flannel][flannel-docs] provides a software-defined overlay network for routing traffic to/from the [pods][pod-overview]
+* [Calico][calico-docs] secures the overlay network by restricting traffic to/from the pods based on fine-grained network policy.
 
-[flannel][flannel-docs] provides a key Kubernetes networking capability &mdash; a software-defined overlay network to manage routing of the [Pod][pod-overview] network.
-
-*Note:* If the pod-network is being managed independently of flannel, this step can be skipped. See [kubernetes networking](kubernetes-networking.md) for more detail.
+*Note:* If the pod-network is being managed independently of flannel, then the flannel parts of this guide can be skipped. In this case, Calico may still be used for providing network policy. See [Kubernetes networking](kubernetes-networking.md) for more detail.
 
 We will configure flannel to source its local configuration in `/etc/flannel/options.env` and cluster-level configuration in etcd. Create this file and edit the contents:
 
@@ -50,7 +51,6 @@ We will configure flannel to source its local configuration in `/etc/flannel/opt
 FLANNELD_IFACE=${ADVERTISE_IP}
 FLANNELD_ETCD_ENDPOINTS=${ETCD_ENDPOINTS}
 ```
-
 Next create a [systemd drop-in][dropins], which is a method for appending or overriding parameters of a systemd unit. In this case we're appending two dependency rules. Create the following drop-in, which will use the above configuration when flannel starts:
 
 **/etc/systemd/system/flanneld.service.d/40-ExecStartPre-symlink.conf**
@@ -60,6 +60,7 @@ Next create a [systemd drop-in][dropins], which is a method for appending or ove
 ExecStartPre=/usr/bin/ln -sf /etc/flannel/options.env /run/flannel/options.env
 ```
 
+[calico-docs]: https://github.com/projectcalico/calico-containers/tree/v0.19.0/docs/cni/kubernetes
 [flannel-docs]: https://coreos.com/flannel/docs/latest/
 [pod-overview]: https://coreos.com/kubernetes/docs/latest/pods.html
 [service-overview]: https://coreos.com/kubernetes/docs/latest/services.html
@@ -68,7 +69,7 @@ ExecStartPre=/usr/bin/ln -sf /etc/flannel/options.env /run/flannel/options.env
 
 In order for flannel to manage the pod network in the cluster, Docker needs to be configured to use it. All we need to do is require that flanneld is running prior to Docker starting.
 
-*Note:* If the pod-network is being managed independently of flannel, this step can be skipped. See [kubernetes networking](kubernetes-networking.md) for more detail.
+*Note:* If the pod-network is being managed independently, this step can be skipped. See [kubernetes networking](kubernetes-networking.md) for more detail.
 
 We're going to do this, like we proceeded above with flannel, using a [systemd drop-in][dropins]:
 
@@ -88,11 +89,14 @@ The [kubelet](http://kubernetes.io/docs/admin/kubelet.html) is the agent on each
 
 On the master node, the kubelet is configured to communicate with the API server, but not register for cluster work, as shown in the `--register-schedulable=false` line in the YAML excerpt below. This prevents user pods being scheduled on the master nodes, and ensures cluster work is routed only to task-specific worker nodes.
 
+When using Calico, the kubelet is configured to use the Container Networking Interface (CNI) standard for networking. This makes Calico aware of each pod that is created and allows it to network the pods into the flannel overlay. Both flannel and Calico communicate via CNI interfaces to ensure the correct IP range (managed by flannel) is used for each node.
+
 Note that the kubelet running on a master node may log repeated attempts to post its status to the API server. These warnings are expected behavior and can be ignored. Future Kubernetes releases plan to [handle this common deployment consideration more gracefully](https://github.com/kubernetes/kubernetes/issues/14140#issuecomment-142126864).
 
 * Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
 * Replace `${DNS_SERVICE_IP}`
-* Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release
+* Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release. If using Calico a version that includes CNI binaries should be used. e.g. `v1.2.2_coreos_cni.0`
+* Replace `${NETWORK_PLUGIN}` with `cni` if using Calico. Otherwise just leave it blank.
 
 **/etc/systemd/system/kubelet.service**
 
@@ -103,6 +107,8 @@ ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
 Environment=KUBELET_VERSION=${K8S_VER}
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \
+  --network-plugin-dir=/etc/kubernetes/cni/net.d \
+  --network-plugin=${NETWORK_PLUGIN} \
   --register-schedulable=false \
   --allow-privileged=true \
   --config=/etc/kubernetes/manifests \
@@ -154,6 +160,7 @@ spec:
     - --tls-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
     - --client-ca-file=/etc/kubernetes/ssl/ca.pem
     - --service-account-key-file=/etc/kubernetes/ssl/apiserver-key.pem
+    - --runtime-config=extensions/v1beta1=true,extensions/v1beta1/thirdpartyresources=true
     ports:
     - containerPort: 443
       hostPort: 443
@@ -270,7 +277,7 @@ spec:
 
 ### Set Up the kube-scheduler Pod
 
-The scheduler is the last major piece of our master node. It monitors the API for unscheduled pods, finds them a machine to run on, and communicates the decision back to the API.
+The scheduler monitors the API for unscheduled pods, finds them a machine to run on, and communicates the decision back to the API.
 
 Create File `/etc/kubernetes/manifests/kube-scheduler.yaml`:
 
@@ -300,6 +307,115 @@ spec:
       initialDelaySeconds: 15
       timeoutSeconds: 1
 ```
+
+### Set Up Calico Node Container
+
+The Calico node container runs on all hosts, including the master node. It performs two functions:
+* Connects containers to the flannel overlay network, which enables the "one IP per pod" concept.
+* Enforces network policy created through the Kubernetes policy API, ensuring pods talk to authorized resources only.
+
+This step can be skipped if not using Calico.
+
+When creating `/etc/systemd/system/calico-node.service`:
+
+* Replace `${ETCD_ENDPOINTS}`
+* Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
+
+**/etc/systemd/system/calico-node.service**
+
+```yaml
+[Unit]
+Description=Calico per-host agent
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+Slice=machine.slice
+Environment=CALICO_DISABLE_FILE_LOGGING=true
+Environment=HOSTNAME=${ADVERTISE_IP}
+Environment=IP=${ADVERTISE_IP}
+Environment=FELIX_FELIXHOSTNAME=${ADVERTISE_IP}
+Environment=CALICO_NETWORKING=false
+Environment=NO_DEFAULT_POOLS=true
+Environment=ETCD_ENDPOINTS=${ETCD_ENDPOINTS}
+ExecStart=/usr/bin/rkt run --inherit-env --stage1-from-dir=stage1-fly.aci \
+--volume=modules,kind=host,source=/lib/modules,readOnly=false \
+--mount=volume=modules,target=/lib/modules \
+--trust-keys-from-https quay.io/calico/node:v0.19.0
+
+KillMode=mixed
+Restart=always
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target
+```
+
+### Set Up the policy-agent Pod
+
+The policy agent is the last major piece of the master node. It monitors the API for changes related to network policy and configures Calico to implement that policy. This step can be skipped if not using Calico.
+
+When creating `/etc/kubernetes/manifests/policy-agent.yaml`:
+
+* Replace `${ETCD_ENDPOINTS}` with the same endpoints used in calico-node.service, above.
+
+**/etc/kubernetes/manifests/policy-agent.yaml**
+
+```yaml
+apiVersion: v1
+kind: Pod 
+metadata:
+  name: calico-policy-agent
+  namespace: calico-system 
+spec:
+  hostNetwork: true
+  containers:
+    # The Calico policy agent.
+    - name: k8s-policy-agent
+      image: calico/k8s-policy-agent:v0.1.4
+      env:
+        - name: ETCD_ENDPOINTS
+          value: "${ETCD_ENDPOINTS}"
+        - name: K8S_API
+          value: "http://127.0.0.1:8080"
+        - name: LEADER_ELECTION 
+          value: "true"
+    # Leader election container used by the policy agent.
+    - name: leader-elector
+      image: quay.io/calico/leader-elector:v0.1.0
+      imagePullPolicy: IfNotPresent
+      args:
+        - "--election=calico-policy-election"
+        - "--election-namespace=calico-system"
+        - "--http=127.0.0.1:4040"
+```
+
+### Set Up the CNI config
+The kubelet reads the CNI configuration on startup and uses that to determine which CNI plugin to call. Create the following file which tells the kubelet to call the flannel plugin but to then delegate control to the Calico plugin. Using the flannel plugin ensures that the Calico plugin is called with the IP range for the host that was selected by flannel.
+
+* Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
+* Replace `${ETCD_ENDPOINTS}`
+
+**/etc/kubernetes/cni/net.d/10-calico.conf**
+
+```json
+{
+    "name": "calico",
+    "type": "flannel",
+    "delegate": {
+        "type": "calico",
+        "etcd_endpoints": "$ETCD_ENDPOINTS",
+        "log_level": "none",
+        "log_level_stderr": "info",
+        "hostname": "${ADVERTISE_IP}",
+        "policy": {
+            "type": "k8s",
+            "k8s_api_root": "http://127.0.0.1:8080/api/v1/"
+        }
+    }
+}
+```
+
 
 ## Start Services
 
@@ -339,7 +455,22 @@ $ sudo systemctl enable kubelet
 Created symlink from /etc/systemd/system/multi-user.target.wants/kubelet.service to /etc/systemd/system/kubelet.service.
 ```
 
-### Create kube-system Namespace
+### Start Calico
+
+Start Calico if you configured your kubelet to use CNI plugins earlier:
+
+```sh
+$ sudo systemctl start calico-node
+```
+
+Ensure that the Calico node container will start after a reboot:
+
+```sh
+$ sudo systemctl enable calico-node
+Created symlink from /etc/systemd/system/multi-user.target.wants/calico-node.service to /etc/systemd/system/calico-node.service.
+```
+
+### Create Namespaces
 
 The Kubernetes Pods that make up the control plane will exist in their own namespace. We need to create this namespace so these components are discoverable by other hosts in the cluster.
 
@@ -369,11 +500,37 @@ Now we can create the `kube-system` namespace:
 $ curl -H "Content-Type: application/json" -XPOST -d'{"apiVersion":"v1","kind":"Namespace","metadata":{"name":"kube-system"}}' "http://127.0.0.1:8080/api/v1/namespaces"
 ```
 
+The Calico policy-agent runs in its own `calico-system` namespace. Create this namespace:
+
+```sh
+$ curl -H "Content-Type: application/json" -XPOST -d'{"apiVersion":"v1","kind":"Namespace","metadata":{"name":"calico-system"}}' "http://127.0.0.1:8080/api/v1/namespaces"
+```
+
+### Enable network policy API
+
+Network policy in Kubernetes is currently implemented as a third party resource. To enable it, run the following:
+
+```sh
+$ curl -H "Content-Type: application/json" -XPOST http://127.0.0.1:8080/apis/extensions/v1beta1/namespaces/default/thirdpartyresources --data-binary @- <<BODY
+{
+  "kind": "ThirdPartyResource",
+  "apiVersion": "extensions/v1beta1",
+  "metadata": {
+    "name": "network-policy.net.alpha.kubernetes.io"
+  },
+  "description": "Specification for a network isolation policy",
+  "versions": [
+    {
+      "name": "v1alpha1"
+    }
+  ]
+}
+BODY
+```
+
 Our Pods should now be starting up and downloading their containers. To check the download progress, you can run `docker ps`.
 
 To check the health of the kubelet systemd unit that we created, run `systemctl status kubelet.service`.
-
-If you run into issues with Docker and flannel, check to see that the drop-in was applied correctly by running `systemctl cat docker.service` and ensuring that the drop-in appears at the bottom.
 
 <div class="co-m-docs-next-step">
   <p><strong>Did the containers start downloading?</strong> As long as they started to download, everything is working properly.</p>

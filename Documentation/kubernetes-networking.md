@@ -2,7 +2,7 @@
 
 ## Network Model
 
-The Kubernetes network model outlines four methods of component communication:
+The Kubernetes network model outlines three methods of component communication:
 
 * Pod-to-Pod Communication
     * Each Pod in a Kubernetes cluster is assigned an IP in a flat shared networking namespace. This allows for a clean network model where Pods, from a networking perspective, can be treated much like VMs or physical hosts.
@@ -13,13 +13,13 @@ The Kubernetes network model outlines four methods of component communication:
 * External-to-Internal Communication
     * Accessing services from outside the cluster is generally implemented by configuring external loadbalancers which target all nodes in the cluster. Once traffic arrives at a node, it is routed to the correct Service backends via the kube-proxy.
 
-See [Kubernetes Networking][kubernetes-network] for more detailed information on the Kubernetes network model and motiviation.
+See [Kubernetes Networking][kubernetes-network] for more detailed information on the Kubernetes network model and motivation.
 
 [kubernetes-network]: http://kubernetes.io/docs/admin/networking.html
 
 ## Port allocation
 
-The information below describes a minimum set of port allocations used by Kubernetes components. Some of these allocations will be optional depending on the deployment (e.g. if flannel is being used). Additionally, there are likely additional ports a deployer will need to open on their infrastructure (e.g. 22/ssh).
+The information below describes a minimum set of port allocations used by Kubernetes components. Some of these allocations will be optional depending on the deployment (e.g. if flannel or Calico is being used). Additionally, there are likely additional ports a deployer will need to open on their infrastructure (e.g. 22/ssh).
 
 Master Node Inbound
 
@@ -33,35 +33,38 @@ Worker Node Inbound
 -----------|-------------|--------------------------------|------------------------------------------------------------------------|
 | TCP      | 10250       | Master Nodes                   | Worker node Kubelet healthcheck port.                                  |
 | TCP      | 30000-32767 | External Application Consumers | Default port range for [external service][external-service] ports. Typically, these ports would need to be exposed to external load-balancers, or other external consumers of the application itself. |
-| TCP      | ALL         | Master & Worker Nodes          | Intra-cluster communication (unnecessary if flannel is used)           |
+| TCP      | ALL         | Master & Worker Nodes          | Intra-cluster communication (unnecessary if `vxlan` is used for networking)           |
 | UDP      | 8285        | Worker Nodes                   | flannel overlay network - *udp backend*. This is the default network configuration (only required if using flannel) |
 | UDP      | 8472        | Worker Nodes                   | flannel overlay network - *vxlan backend* (only required if using flannel) |
+| TCP      | 179         | Worker Nodes                   | Calico BGP network (only required if the BGP backend is used) |
 
 etcd Node Inbound
 
 | Protocol | Port Range | Source        | Purpose                                                  |
 -----------|------------|---------------|----------------------------------------------------------|
 | TCP      | 2379-2380  | Master Nodes  | etcd server client API                                   |
-| TCP      | 2379-2380  | Worker Nodes  | etcd server client API (only required if using flannel). |
+| TCP      | 2379-2380  | Worker Nodes  | etcd server client API (only required if using flannel or Calico). |
 
 [external-service]: http://kubernetes.io/docs/user-guide/services/#publishing-services---service-types
 
 ## Advanced Configuration
 
-The CoreOS Kubernetes documentation will describe either using cloud-provider networking integration (e.g. AWS, GCE), or a software-defined overlay network (e.g. [flannel][coreos-flannel]) to manage the Kubernetes Pod Network. However, in some cases a deployer may want to make use of existing network infrastructure to manage the Kubernetes network themselves.
+The CoreOS Kubernetes documentation describes a software-defined overlay network (i.e. [flannel][coreos-flannel]) to manage the Kubernetes Pod Network. However, in some cases a deployer may want to make use of existing network infrastructure to manage the Kubernetes network themselves e.g. using [Calico][calico]
 
 The following requirements must be met by your existing infrastructure to use Tectonic with a self-managed network.
 
 [coreos-flannel]: https://coreos.com/flannel/docs/latest/flannel-config.html
+[calico]: http://docs.projectcalico.org/en/latest/
 
 ### Pod-to-Pod Communication
 
 Each pod in the Kubernetes cluster will be assigned an IP that is expected to be routable from all other hosts and pods in the Kubernetes cluster.
 
-The general model for achieving this is to first assign an IP range to each host in your cluster.
+An easy way to achieve this is to use Calico. The Calico agent is already running on each node to enforce network policy. Starting it with the `CALICO_NETWORKING` environment variable set to `true` will cause it to run a BGP agent inside the Calico agent pod. These BGP agents will automatically form a full mesh network to exchange routing information. This allows a single large IP range to be used across your whole cluster and IP addresses to be efficiently assigned from it.  To peer with your existing BGP infrastructure follow this [guide][calico-bgp]. If your Kubernetes cluster is hosted on an [L2 network][calico-l2] (e.g. in your own datacenter or on AWS) there is no need to peer with your routers.
+
+An alternative way to achieve this is to first assign an IP range to each host in your cluster.
 Requests to IPs in an assigned range would need to be routed to that host via your network infrastructure.
 Next, the host is configured such that each pod launched on the host is assigned an IP from the host range.
-
 
 For example:
 
@@ -77,6 +80,8 @@ The actual allocation of Pod IPs on the host can be achieved by configuring Dock
 To achieve this network model, there are various methods that can be used. See the [Kubernetes Networking][how-to-achieve] documentation for more detail.
 
 [how-to-achieve]: http://kubernetes.io/docs/admin/networking.html#how-to-achieve-this
+[calico-bgp]: https://github.com/projectcalico/calico-containers/blob/v0.19.0/docs/bgp.md
+[calico-l2]: http://docs.projectcalico.org/en/latest/l2-interconnectFabric.html
 
 ### Pod-to-Service Communication
 
@@ -86,9 +91,10 @@ A requirement of a manually configured network is that the service-ip-range does
 
 ### External-to-Internal Communication
 
-IP addresses assigned on the pod network are typically not routable outside of the cluster. This isn't an issue since most communication between your applications stays within the cluster, as described above. Allowing external traffic into the cluster is generally accomplished by mapping external load-balancers to specifically exposed services in the cluster. This mapping allows the kube-proxy process to route the external requests to the proper pods using the cluster's pod-network.
+IP addresses assigned on the pod network are typically not routable outside of the cluster unless you're using Calico and have [peered with your routers][calico-external]. This isn't an issue since most communication between your applications stays within the cluster, as described above. Allowing external traffic into the cluster is generally accomplished by mapping external load-balancers to specifically exposed services in the cluster. This mapping allows the kube-proxy process to route the external requests to the proper pods using the cluster's pod-network.
 
 In a manually configured network, it may be necessary to open a range of ports to outside clients (default 30000-32767) for use with "external services". See the [Kubernetes Service][kube-service] documentation for more information on external services.
 
+[calico-external]: https://github.com/projectcalico/calico-containers/blob/v0.19.0/docs/ExternalConnectivity.md
 [kube-service]: http://kubernetes.io/docs/user-guide/services/#publishing-services---service-types
 

@@ -34,6 +34,9 @@ func NewDefaultConfig() *Config {
 		WorkerCount:              1,
 		WorkerInstanceType:       "m3.medium",
 		WorkerRootVolumeSize:     30,
+		ControllerPublic:         "true",
+		VPCID:                    "",
+		SubnetID:                 "",
 
 		TLSConfig:     newTLSConfig(),
 		UserData:      newUserDataConfig(),
@@ -63,6 +66,9 @@ type Config struct {
 	KubernetesServiceIP      string `yaml:"kubernetesServiceIP"`
 	DNSServiceIP             string `yaml:"dnsServiceIP"`
 	K8sVer                   string `yaml:"kubernetesVersion"`
+	ControllerPublic         string `yaml:"controllerPublic"`
+	SubnetID                 string `yaml:"subnetID"`
+	VPCID                    string `yaml:"vpcID"`
 
 	//Calculated fields
 	APIServers        string `yaml:"-"`
@@ -111,7 +117,7 @@ func (cfg *Config) valid() error {
 	if controllerIPAddr == nil {
 		return fmt.Errorf("invalid controllerIP: %s", cfg.ControllerIP)
 	}
-	if !instancesNet.Contains(controllerIPAddr) {
+	if cfg.VPCID == "" && cfg.SubnetID == "" && !instancesNet.Contains(controllerIPAddr) {
 		return fmt.Errorf("instanceCIDR (%s) does not contain controllerIP (%s)",
 			cfg.InstanceCIDR,
 			cfg.ControllerIP,

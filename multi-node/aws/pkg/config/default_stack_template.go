@@ -94,6 +94,28 @@ var defaultStackTemplate = `
         ""
       ]
     },
+    "ControllerPublic": {
+      "Fn::Equals": [
+        "{{.ControllerPublic}}",
+        "true"
+      ]
+    },
+		"CreateVPCResources": {
+			"Fn::Or": [
+				{
+					"Fn::Equals": [
+						"{{.VPCID}}",
+						""
+					]
+				},
+				{
+					"Fn::Equals": [
+						"{{.SubnetID}}",
+						""
+					]
+				}
+			]
+		},
     "UseWorkerSpotInstances": {
       "Fn::Not": [
         {
@@ -187,7 +209,13 @@ var defaultStackTemplate = `
         ],
         "VPCZoneIdentifier": [
           {
-            "Ref": "Subnet"
+            "Fn::If": [
+              "CreateVPCResources",
+              {
+                "Ref": "Subnet"
+              },
+              "{{.SubnetID}}"
+            ]
           }
         ]
       },
@@ -201,6 +229,7 @@ var defaultStackTemplate = `
       }
     },
     "EIPController": {
+      "Condition": "ControllerPublic",
       "Properties": {
         "Domain": "vpc",
         "InstanceId": {
@@ -372,7 +401,13 @@ var defaultStackTemplate = `
             ],
             "PrivateIpAddress": "{{.ControllerIP}}",
             "SubnetId": {
-              "Ref": "Subnet"
+              "Fn::If": [
+                "CreateVPCResources",
+                {
+                  "Ref": "Subnet"
+                },
+                "{{.SubnetID}}"
+              ]
             }
           }
         ],
@@ -391,6 +426,7 @@ var defaultStackTemplate = `
       "Type": "AWS::EC2::Instance"
     },
     "InternetGateway": {
+      "Condition": "CreateVPCResources",
       "Properties": {
         "Tags": [
           {
@@ -444,6 +480,7 @@ var defaultStackTemplate = `
       "Type": "AWS::AutoScaling::LaunchConfiguration"
     },
     "RouteTable": {
+      "Condition": "CreateVPCResources",
       "Properties": {
         "Tags": [
           {
@@ -458,6 +495,7 @@ var defaultStackTemplate = `
       "Type": "AWS::EC2::RouteTable"
     },
     "RouteToInternet": {
+      "Condition": "CreateVPCResources",
       "Properties": {
         "DestinationCidrBlock": "0.0.0.0/0",
         "GatewayId": {
@@ -515,7 +553,13 @@ var defaultStackTemplate = `
           }
         ],
         "VpcId": {
-          "Ref": "VPC"
+          "Fn::If": [
+            "CreateVPCResources",
+            {
+              "Ref": "VPC"
+            },
+            "{{.VPCID}}"
+          ]
         }
       },
       "Type": "AWS::EC2::SecurityGroup"
@@ -574,7 +618,13 @@ var defaultStackTemplate = `
           }
         ],
         "VpcId": {
-          "Ref": "VPC"
+          "Fn::If": [
+            "CreateVPCResources",
+            {
+              "Ref": "VPC"
+            },
+            "{{.VPCID}}"
+          ]
         }
       },
       "Type": "AWS::EC2::SecurityGroup"
@@ -650,6 +700,7 @@ var defaultStackTemplate = `
       "Type": "AWS::EC2::SecurityGroupIngress"
     },
     "Subnet": {
+      "Condition": "CreateVPCResources",
       "Properties": {
         "AvailabilityZone": {
           "Fn::If": [
@@ -682,6 +733,7 @@ var defaultStackTemplate = `
       "Type": "AWS::EC2::Subnet"
     },
     "SubnetRouteTableAssociation": {
+      "Condition": "CreateVPCResources",
       "Properties": {
         "RouteTableId": {
           "Ref": "RouteTable"
@@ -693,6 +745,7 @@ var defaultStackTemplate = `
       "Type": "AWS::EC2::SubnetRouteTableAssociation"
     },
     "VPC": {
+      "Condition": "CreateVPCResources",
       "Properties": {
         "CidrBlock": "{{.VPCCIDR}}",
         "EnableDnsHostnames": true,
@@ -712,6 +765,7 @@ var defaultStackTemplate = `
       "Type": "AWS::EC2::VPC"
     },
     "VPCGatewayAttachment": {
+      "Condition": "CreateVPCResources",
       "Properties": {
         "InternetGatewayId": {
           "Ref": "InternetGateway"

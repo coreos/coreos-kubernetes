@@ -62,4 +62,17 @@ region: {{.Region}}
 
 # IP address of Kubernetes dns service (must be contained by serviceCIDR)
 # dnsServiceIP: 10.3.0.10
+
+# Make a the controller available on a public IP address
+# controllerPublic: "true"
+
+# ID of the VPC to create the resources in. If provided together with subnetID,
+# no network new resources will be created.
+# vpcID: "vpc-xxxxxx"
+
+# ID of the subnet to create the resources in. If provided together with vpcID,
+# no network new resources will be created. 
+# Make sure availabilityZone is set to availability zone of the subnet you specified
+# Make sure controllerIP is set to an IP addres from the subnet range
+# subnetID: "subnet-xxxxxx"
 `

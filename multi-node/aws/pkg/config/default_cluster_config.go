@@ -62,4 +62,9 @@ region: {{.Region}}
 
 # IP address of Kubernetes dns service (must be contained by serviceCIDR)
 # dnsServiceIP: 10.3.0.10
+
+# Extra tags to be set on the created resources
+# tags:
+#   owner: foo
+#   purpose: development
 `

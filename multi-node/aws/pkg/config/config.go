@@ -2,6 +2,7 @@ package config
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -34,6 +35,7 @@ func NewDefaultConfig() *Config {
 		WorkerCount:              1,
 		WorkerInstanceType:       "m3.medium",
 		WorkerRootVolumeSize:     30,
+		Tags:                     make(map[string]string),
 
 		TLSConfig:     newTLSConfig(),
 		UserData:      newUserDataConfig(),
@@ -43,26 +45,27 @@ func NewDefaultConfig() *Config {
 }
 
 type Config struct {
-	ClusterName              string `yaml:"clusterName"`
-	ExternalDNSName          string `yaml:"externalDNSName"`
-	KeyName                  string `yaml:"keyName"`
-	Region                   string `yaml:"region"`
-	AvailabilityZone         string `yaml:"availabilityZone"`
-	ReleaseChannel           string `yaml:"releaseChannel"`
-	ControllerInstanceType   string `yaml:"controllerInstanceType"`
-	ControllerRootVolumeSize int    `yaml:"controllerRootVolumeSize"`
-	WorkerCount              int    `yaml:"workerCount"`
-	WorkerInstanceType       string `yaml:"workerInstanceType"`
-	WorkerRootVolumeSize     int    `yaml:"workerRootVolumeSize"`
-	WorkerSpotPrice          string `yaml:"workerSpotPrice"`
-	VPCCIDR                  string `yaml:"vpcCIDR"`
-	InstanceCIDR             string `yaml:"instanceCIDR"`
-	ControllerIP             string `yaml:"controllerIP"`
-	PodCIDR                  string `yaml:"podCIDR"`
-	ServiceCIDR              string `yaml:"serviceCIDR"`
-	KubernetesServiceIP      string `yaml:"kubernetesServiceIP"`
-	DNSServiceIP             string `yaml:"dnsServiceIP"`
-	K8sVer                   string `yaml:"kubernetesVersion"`
+	ClusterName              string            `yaml:"clusterName"`
+	ExternalDNSName          string            `yaml:"externalDNSName"`
+	KeyName                  string            `yaml:"keyName"`
+	Region                   string            `yaml:"region"`
+	AvailabilityZone         string            `yaml:"availabilityZone"`
+	ReleaseChannel           string            `yaml:"releaseChannel"`
+	ControllerInstanceType   string            `yaml:"controllerInstanceType"`
+	ControllerRootVolumeSize int               `yaml:"controllerRootVolumeSize"`
+	WorkerCount              int               `yaml:"workerCount"`
+	WorkerInstanceType       string            `yaml:"workerInstanceType"`
+	WorkerRootVolumeSize     int               `yaml:"workerRootVolumeSize"`
+	WorkerSpotPrice          string            `yaml:"workerSpotPrice"`
+	VPCCIDR                  string            `yaml:"vpcCIDR"`
+	InstanceCIDR             string            `yaml:"instanceCIDR"`
+	ControllerIP             string            `yaml:"controllerIP"`
+	PodCIDR                  string            `yaml:"podCIDR"`
+	ServiceCIDR              string            `yaml:"serviceCIDR"`
+	KubernetesServiceIP      string            `yaml:"kubernetesServiceIP"`
+	DNSServiceIP             string            `yaml:"dnsServiceIP"`
+	K8sVer                   string            `yaml:"kubernetesVersion"`
+	Tags                     map[string]string `yaml:"tags"`
 
 	//Calculated fields
 	APIServers        string `yaml:"-"`
@@ -266,6 +269,55 @@ func (cfg *Config) TemplateAndEncodeAssets() error {
 	if err := cfg.StackTemplate.Template(cfg); err != nil {
 		return err
 	}
+	stackMap := map[string]interface{}{}
+
+	if err := json.Unmarshal([]byte(cfg.StackTemplate.String()), &stackMap); err != nil {
+		return fmt.Errorf("Error unmarshaling stack template: %v", err)
+	}
+
+	stackResources, ok := stackMap["Resources"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("Error parsing stack template: 'Resources' key is not a dictionary")
+	}
+
+	for name, resource := range stackResources {
+		properties, ok := resource.(map[string]interface{})["Properties"]
+		if ok {
+			propertiesMap, ok := properties.(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("Error parsing stack template: 'Properties' of %s is not a dictionary", name)
+			}
+			tags, ok := propertiesMap["Tags"]
+			if ok {
+				propagateAtLaunchFound := false
+				propagateAtLaunchValue := ""
+				tagsArray := tags.([]interface{})
+				if firstTag, ok := tagsArray[0].(map[string]interface{}); ok {
+					if p, ok := firstTag["PropagateAtLaunch"].(string); ok {
+						propagateAtLaunchFound = true
+						propagateAtLaunchValue = p
+					}
+				}
+				for key, value := range cfg.Tags {
+					tag := make(map[string]string)
+					tag["Key"] = key
+					tag["Value"] = value
+					if propagateAtLaunchFound {
+						tag["PropagateAtLaunch"] = propagateAtLaunchValue
+					}
+					tagsArray = append(tagsArray, tag)
+				}
+				propertiesMap["Tags"] = tagsArray
+			}
+		}
+	}
+
+	output, err := json.MarshalIndent(&stackMap, "", "  ")
+	if err != nil {
+		return fmt.Errorf("Error marshalling stack template: %v", err)
+	}
+	cfg.StackTemplate.Reset()
+	cfg.StackTemplate.Write(output)
 
 	return nil
 }

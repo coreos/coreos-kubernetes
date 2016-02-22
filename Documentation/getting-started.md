@@ -100,9 +100,7 @@ Use the [official etcd clustering guide](https://coreos.com/etcd/docs/latest/clu
 
 The Kubernetes API has various methods for validating clients &mdash; this guide will configure the API server to use client cert authentication.
 
-This means it is necessary to have a Certificate Authority and generate the proper credentials. This can be done by generating the necessary assets from existing PKI infrastructure, or follow the OpenSSL instructions to create everything needed.
-
-[OpenSSL Manual Generation](openssl.md)
+This means it is necessary to have a Certificate Authority and generate the proper credentials. This can be done by generating the necessary assets from existing PKI infrastructure, or follow [our OpenSSL instructions](openssl.md) to create everything needed.
 
 In the following steps, it is assumed that you will have generated the following TLS assets:
 

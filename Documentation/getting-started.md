@@ -98,9 +98,9 @@ Use the [official etcd clustering guide](https://coreos.com/etcd/docs/latest/clu
 
 ## Generate Kubernetes TLS Assets
 
-The Kubernetes API has various methods for validating clients &mdash; this guide will configure the API server to use client cert authentication.
+The Kubernetes API has various methods for validating clients &mdash; this guide will configure the API server to use client certificate authentication.
 
-This means it is necessary to have a Certificate Authority and generate the proper credentials. This can be done by generating the necessary assets from existing PKI infrastructure, or follow [our OpenSSL instructions](openssl.md) to create everything needed.
+This means it is necessary to have a Certificate Authority and generate the proper credentials. Generate the necessary assets from existing PKI infrastructure, or by following [these OpenSSL-based instructions](openssl.md) to create the needed certificates and keys.
 
 In the following steps, it is assumed that you will have generated the following TLS assets:
 

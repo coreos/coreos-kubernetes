@@ -624,73 +624,45 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 	}
 
 	par[parVPCCIDR] = map[string]interface{}{
-		"Type":                  "String",
-		"Default":               DefaultVPCCIDR,
-		"Description":           "CIDR for Kubernetes vpc",
-		"MinLength":             "9",
-		"MaxLength":             "18",
-		"AllowedPattern":        "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
-		"ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x.",
+		"Type":        "String",
+		"Default":     DefaultVPCCIDR,
+		"Description": "CIDR for Kubernetes vpc",
 	}
 
 	par[parInstanceCIDR] = map[string]interface{}{
-		"Type":                  "String",
-		"Default":               DefaultInstanceCIDR,
-		"Description":           "CIDR for Kubernetes subnet",
-		"MinLength":             "9",
-		"MaxLength":             "18",
-		"AllowedPattern":        "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
-		"ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x.",
+		"Type":        "String",
+		"Default":     DefaultInstanceCIDR,
+		"Description": "CIDR for Kubernetes subnet",
 	}
 
 	par[parControllerIP] = map[string]interface{}{
-		"Type":                  "String",
-		"Default":               DefaultControllerIP,
-		"Description":           "IP address for controller in Kubernetes subnet",
-		"MinLength":             "7",
-		"MaxLength":             "15",
-		"AllowedPattern":        "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})",
-		"ConstraintDescription": "must be a valid IP address of the form x.x.x.x.",
+		"Type":        "String",
+		"Default":     DefaultControllerIP,
+		"Description": "IP address for controller in Kubernetes subnet",
 	}
 
 	par[parServiceCIDR] = map[string]interface{}{
-		"Type":                  "String",
-		"Default":               DefaultServiceCIDR,
-		"Description":           "CIDR for all service IP addresses",
-		"MinLength":             "9",
-		"MaxLength":             "18",
-		"AllowedPattern":        "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
-		"ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x.",
+		"Type":        "String",
+		"Default":     DefaultServiceCIDR,
+		"Description": "CIDR for all service IP addresses",
 	}
 
 	par[parPodCIDR] = map[string]interface{}{
-		"Type":                  "String",
-		"Default":               DefaultPodCIDR,
-		"Description":           "CIDR for all pod IP addresses",
-		"MinLength":             "9",
-		"MaxLength":             "18",
-		"AllowedPattern":        "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
-		"ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x.",
+		"Type":        "String",
+		"Default":     DefaultPodCIDR,
+		"Description": "CIDR for all pod IP addresses",
 	}
 
 	par[parKubernetesServiceIP] = map[string]interface{}{
-		"Type":                  "String",
-		"Default":               DefaultKubernetesServiceIP,
-		"Description":           "IP address for Kubernetes controller service (must be contained by serviceCIDR)",
-		"MinLength":             "7",
-		"MaxLength":             "15",
-		"AllowedPattern":        "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})",
-		"ConstraintDescription": "must be a valid IP address of the form x.x.x.x.",
+		"Type":        "String",
+		"Default":     DefaultKubernetesServiceIP,
+		"Description": "IP address for Kubernetes controller service (must be contained by serviceCIDR)",
 	}
 
 	par[parDNSServiceIP] = map[string]interface{}{
-		"Type":                  "String",
-		"Default":               DefaultDNSServiceIP,
-		"Description":           "IP address of the Kubernetes DNS service (must be contained by serviceCIDR)",
-		"MinLength":             "7",
-		"MaxLength":             "15",
-		"AllowedPattern":        "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})",
-		"ConstraintDescription": "must be a valid IP address of the form x.x.x.x.",
+		"Type":        "String",
+		"Default":     DefaultDNSServiceIP,
+		"Description": "IP address of the Kubernetes DNS service (must be contained by serviceCIDR)",
 	}
 
 	regionMap, err := getRegionMap()

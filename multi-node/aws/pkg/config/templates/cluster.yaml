@@ -25,6 +25,10 @@ kmsKeyArn: "{{.KMSKeyARN}}"
 # Instance type for controller node
 #controllerInstanceType: m3.medium
 
+# Release Channel
+# Configues the CoreOS Release channel to use for the Controller/Workers
+#releaseChannel: beta
+
 # Disk size (GiB) for controller node
 #controllerRootVolumeSize: 30
 

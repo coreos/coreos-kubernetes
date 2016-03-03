@@ -619,7 +619,7 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 
 	par[parAvailabilityZone] = map[string]interface{}{
 		"Type":        "AWS::EC2::AvailabilityZone::Name",
-		"Default":     "us-east-1",
+		"Default":     "us-east-1a",
 		"Description": "Specific availability zone (optional)",
 	}
 

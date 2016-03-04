@@ -36,24 +36,24 @@ $ tar -xf <file> kube-aws
 
 Configure your local workstation with AWS credentials using one of the following methods:
 
-1. Environment Variables
+#### Method 1: Environment Variables
 
-    Set `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` to the values of your AWS access and secret keys, respectively:
+Set `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` to the values of your AWS access and secret keys, respectively:
 
-    ```
-export AWS_ACCESS_KEY_ID=AKID1234567890
-export AWS_SECRET_ACCESS_KEY=MY-SECRET-KEY
-    ```
+```sh
+$ export AWS_ACCESS_KEY_ID=AKID1234567890
+$ export AWS_SECRET_ACCESS_KEY=MY-SECRET-KEY
+```
 
-1. Config File
+#### Method 2: Config File
 
-    Write your credentials into the file `~/.aws/credentials` using the following template:
+Write your credentials into the file `~/.aws/credentials` using the following template:
 
-    ```
+```
 [default]
 aws_access_key_id = AKID1234567890
 aws_secret_access_key = MY-SECRET-KEY
-    ```
+```
 
 ### Configure Cluster
 

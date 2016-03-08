@@ -15,7 +15,7 @@ For example, modifying the `KUBELET_VERSION` environment variable in the followi
 **/etc/systemd/system/kubelet.service**
 
 ```
-Environment=KUBELET_VERSION=v1.1.7_coreos.2
+Environment=KUBELET_VERSION=v1.1.8_coreos.0
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=https://master [...]
 ```

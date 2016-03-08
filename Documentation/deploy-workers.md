@@ -124,7 +124,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-proxy
-    image: quay.io/coreos/hyperkube:v1.1.7_coreos.2
+    image: quay.io/coreos/hyperkube:v1.1.8_coreos.0
     command:
     - /hyperkube
     - proxy

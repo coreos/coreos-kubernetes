@@ -1,6 +1,6 @@
 # Deploy Kubernetes Worker Node(s)
 
-Boot one or more CoreOS nodes which will be used as Kubernetes Workers. You must use a CoreOS version 773.1.0+ on the Alpha or Beta channel for the `kubelet` to be present in the image.
+Boot one or more CoreOS nodes which will be used as Kubernetes Workers. You must use a CoreOS version 962.0.0+ for the `/usr/lib/coreos/kubelet-wrapper` script to be present in the image. See [kubelet-wrapper](kubelet-wrapper.md) for more information.
 
 See the [CoreOS Documentation](https://coreos.com/os/docs/latest/) for guides on launching nodes on supported platforms.
 
@@ -80,12 +80,16 @@ Create `/etc/systemd/system/kubelet.service` and substitute the following variab
 * Replace `${MASTER_HOST}`
 * Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
 * Replace `${DNS_SERVICE_IP}`
+* Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release
 
 **/etc/systemd/system/kubelet.service**
 
 ```yaml
 [Service]
-ExecStart=/usr/bin/kubelet \
+ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
+
+Environment=KUBELET_VERSION=${K8S_VER}
+ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api_servers=https://${MASTER_HOST} \
   --register-node=true \
   --allow-privileged=true \
@@ -120,7 +124,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-proxy
-    image: gcr.io/google_containers/hyperkube:v1.1.2
+    image: quay.io/coreos/hyperkube:v1.1.7_coreos.2
     command:
     - /hyperkube
     - proxy

@@ -6,9 +6,19 @@ This document describes upgrading the Kubernetes components on a cluster's maste
 
 ## Upgrading the Kubelet
 
-The Kubelet runs on both master and worker nodes, and the binary ships as part of the CoreOS image. As the host OS is updated, the Kubelet will be upgraded as well. This step will not be covered in the guides below, however, more information can be found in the [CoreOS Updates Documentation](https://coreos.com/using-coreos/updates)
+The Kubelet runs on both master and worker nodes, and is distributed as a hyperkube container image. The image version is usually set as an environment variable in the `kubelet.service` file, which is then passed to the [kubelet-wrapper](kubelet-wrapper.md) script.
 
-To run a custom version of the kubelet, modify the kubelet service file on each node (`/etc/systemd/system/kubelet.service`) to contain the path to the custom kubelet binary.
+To update the image version, modify the kubelet service file on each node (`/etc/systemd/system/kubelet.service`) to reference the new hyperkube image.
+
+For example, modifying the `KUBELET_VERSION` environment variable in the following service file would change the container image version used when launching the kubelet via the [kubelet-wrapper](kubelet-wrapper.md) script.
+
+**/etc/systemd/system/kubelet.service**
+
+```
+Environment=KUBELET_VERSION=v1.1.7_coreos.2
+ExecStart=/usr/lib/coreos/kubelet-wrapper \
+  --api-servers=https://master [...]
+```
 
 ## Upgrading Master Nodes
 
@@ -28,8 +38,8 @@ Both the kube-apiserver and kube-proxy are run as "static pods". This means the 
 
 For example, to upgrade the kube-apiserver version you could update the pod image tag in `/etc/kubernetes/manifests/kube-apiserver.yaml`:
 
-From: `image: gcr.io/google_containers/hyperkube:v1.0.6`
-To: `image: gcr.io/google_containers/hyperkube:v1.0.7`
+From: `image: quay.io/coreos/hyperkube:v1.0.6_coreos.0`
+To: `image: quay.io/coreos//hyperkube:v1.0.7_coreos.0`
 
 The kubelet would then restart the pod, and the new image version would be used.
 

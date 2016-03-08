@@ -14,7 +14,7 @@ var (
 		Use:   "validate",
 		Short: "Validate cluster assets",
 		Long:  ``,
-		Run:   runCmdValidate,
+		RunE:  runCmdValidate,
 	}
 
 	validateOpts = struct {
@@ -27,34 +27,34 @@ func init() {
 	cmdValidate.Flags().BoolVar(&validateOpts.awsDebug, "aws-debug", false, "Log debug information from aws-sdk-go library")
 }
 
-func runCmdValidate(cmd *cobra.Command, args []string) {
-	cfg, err := config.NewConfigFromFile(configPath)
+func runCmdValidate(cmd *cobra.Command, args []string) error {
+	cfg, err := config.ClusterFromFile(configPath)
 	if err != nil {
-		stderr("Unable to load cluster config: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("Unable to load cluster config: %v", err)
 	}
 
-	if err := cfg.ReadAssetsFromFiles(); err != nil {
-		stderr("Error reading assets from files: %v", err)
-		os.Exit(1)
+	//Validate cloudconfig userdata
+	if err := cfg.ValidateUserData(stackTemplateOptions); err != nil {
+		return err
 	}
 
-	if err := cfg.TemplateAndEncodeAssets(); err != nil {
-		stderr("template/encode error: %v", err)
-		os.Exit(1)
+	fmt.Printf("UserData is valid\n")
+
+	//Validate stack template
+	data, err := cfg.RenderStackTemplate(stackTemplateOptions)
+	if err != nil {
+		return fmt.Errorf("Failed to render stack template: %v", err)
 	}
 
 	cluster := cluster.New(cfg, validateOpts.awsDebug)
-
-	report, err := cluster.ValidateStack()
-
+	report, err := cluster.ValidateStack(string(data))
 	if report != "" {
-		fmt.Printf("Validation Report: %s\n", report)
+		fmt.Fprintf(os.Stderr, "Validation Report: %s\n", report)
 	}
 
 	if err != nil {
-		stderr("Error creating cluster: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("Error creating cluster: %v", err)
 	}
 	fmt.Printf("Validation OK!\n")
+	return nil
 }

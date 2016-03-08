@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/coreos/coreos-kubernetes/multi-node/aws/pkg/config"
 	"github.com/spf13/cobra"
 )
 
@@ -17,10 +18,16 @@ var (
 
 const configPath = "cluster.yaml"
 
-func main() {
-	cmdRoot.Execute()
+var stackTemplateOptions = config.StackTemplateOptions{
+	TLSAssetsDir:          "credentials",
+	ControllerTmplFile:    "userdata/cloud-config-controller",
+	WorkerTmplFile:        "userdata/cloud-config-worker",
+	StackTemplateTmplFile: "stack-template.json",
 }
 
-func stderr(msg string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, msg+"\n", args...)
+func main() {
+	if err := cmdRoot.Execute(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(2)
+	}
 }

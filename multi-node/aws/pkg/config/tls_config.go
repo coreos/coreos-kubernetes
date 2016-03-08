@@ -1,89 +1,77 @@
 package config
 
 import (
+	"bytes"
+	"compress/gzip"
 	"crypto/rsa"
-	"crypto/x509"
+	"encoding/base64"
+	"io/ioutil"
+	"path/filepath"
 
-	"github.com/coreos/coreos-kubernetes/multi-node/aws/pkg/blobutil"
 	"github.com/coreos/coreos-kubernetes/multi-node/aws/pkg/tlsutil"
 )
 
-type TLSConfig struct {
-	CACert *blobutil.NamedBuffer
-	CAKey  *blobutil.NamedBuffer
-
-	APIServerCert *blobutil.NamedBuffer
-	APIServerKey  *blobutil.NamedBuffer
-
-	WorkerCert *blobutil.NamedBuffer
-	WorkerKey  *blobutil.NamedBuffer
-
-	AdminCert *blobutil.NamedBuffer
-	AdminKey  *blobutil.NamedBuffer
-
-	buffers blobutil.NamedBufferList
+// PEM encoded TLS assets.
+type RawTLSAssets struct {
+	CACert        []byte
+	CAKey         []byte
+	APIServerCert []byte
+	APIServerKey  []byte
+	WorkerCert    []byte
+	WorkerKey     []byte
+	AdminCert     []byte
+	AdminKey      []byte
 }
 
-func newTLSConfig() *TLSConfig {
-	tlsConfig := &TLSConfig{
-		CACert: &blobutil.NamedBuffer{Name: "ca.pem"},
-		CAKey:  &blobutil.NamedBuffer{Name: "ca-key.pem"},
-
-		APIServerCert: &blobutil.NamedBuffer{Name: "apiserver.pem"},
-		APIServerKey:  &blobutil.NamedBuffer{Name: "apiserver-key.pem"},
-
-		WorkerCert: &blobutil.NamedBuffer{Name: "worker.pem"},
-		WorkerKey:  &blobutil.NamedBuffer{Name: "worker-key.pem"},
-
-		AdminCert: &blobutil.NamedBuffer{Name: "admin.pem"},
-		AdminKey:  &blobutil.NamedBuffer{Name: "admin-key.pem"},
-	}
-
-	tlsConfig.buffers = blobutil.NamedBufferList{
-		tlsConfig.CACert,
-		tlsConfig.CAKey,
-
-		tlsConfig.APIServerCert,
-		tlsConfig.APIServerKey,
-
-		tlsConfig.WorkerCert,
-		tlsConfig.WorkerKey,
-
-		tlsConfig.AdminCert,
-		tlsConfig.AdminKey,
-	}
-
-	return tlsConfig
+// PEM -> gzip -> base64 encoded TLS assets.
+type CompactTLSAssets struct {
+	CACert        string
+	CAKey         string
+	APIServerCert string
+	APIServerKey  string
+	WorkerCert    string
+	WorkerKey     string
+	AdminCert     string
+	AdminKey      string
 }
 
-func (tc *TLSConfig) generateAllTLS(cfg *Config) error {
+func (c *Cluster) NewTLSAssets() (*RawTLSAssets, error) {
+	// Generate keys for the various components.
+	keys := make([]*rsa.PrivateKey, 4)
+	var err error
+	for i := range keys {
+		if keys[i], err = tlsutil.NewPrivateKey(); err != nil {
+			return nil, err
+		}
+	}
+	caKey, apiServerKey, workerKey, adminKey := keys[0], keys[1], keys[2], keys[3]
 
 	caConfig := tlsutil.CACertConfig{
 		CommonName:   "kube-ca",
 		Organization: "kube-aws",
 	}
-
-	caKey, caCert, err := tc.generateTLSCA(caConfig)
+	caCert, err := tlsutil.NewSelfSignedCACertificate(caConfig, caKey)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	apiserverConfig := tlsutil.ServerCertConfig{
+	apiServerConfig := tlsutil.ServerCertConfig{
 		CommonName: "kube-apiserver",
 		DNSNames: []string{
 			"kubernetes",
 			"kubernetes.default",
 			"kubernetes.default.svc",
 			"kubernetes.default.svc.cluster.local",
-			cfg.ExternalDNSName,
+			c.ExternalDNSName,
 		},
 		IPAddresses: []string{
-			cfg.ControllerIP,
-			cfg.KubernetesServiceIP,
+			c.ControllerIP,
+			c.KubernetesServiceIP,
 		},
 	}
-	if err := tc.generateTLSServer(apiserverConfig, caKey, caCert); err != nil {
-		return err
+	apiServerCert, err := tlsutil.NewSignedServerCertificate(apiServerConfig, apiServerKey, caCert, caKey)
+	if err != nil {
+		return nil, err
 	}
 
 	workerConfig := tlsutil.ClientCertConfig{
@@ -93,96 +81,120 @@ func (tc *TLSConfig) generateAllTLS(cfg *Config) error {
 			"*.ec2.internal",
 		},
 	}
-	if err := tc.generateTLSClientWorker(workerConfig, caKey, caCert); err != nil {
-		return err
+	workerCert, err := tlsutil.NewSignedClientCertificate(workerConfig, workerKey, caCert, caKey)
+	if err != nil {
+		return nil, err
 	}
 
 	adminConfig := tlsutil.ClientCertConfig{
 		CommonName: "kube-admin",
 	}
-	return tc.generateTLSClientAdmin(adminConfig, caKey, caCert)
+	adminCert, err := tlsutil.NewSignedClientCertificate(adminConfig, adminKey, caCert, caKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return &RawTLSAssets{
+		CACert:        tlsutil.EncodeCertificatePEM(caCert),
+		APIServerCert: tlsutil.EncodeCertificatePEM(apiServerCert),
+		WorkerCert:    tlsutil.EncodeCertificatePEM(workerCert),
+		AdminCert:     tlsutil.EncodeCertificatePEM(adminCert),
+		CAKey:         tlsutil.EncodePrivateKeyPEM(caKey),
+		APIServerKey:  tlsutil.EncodePrivateKeyPEM(apiServerKey),
+		WorkerKey:     tlsutil.EncodePrivateKeyPEM(workerKey),
+		AdminKey:      tlsutil.EncodePrivateKeyPEM(adminKey),
+	}, nil
 }
 
-func (tc *TLSConfig) generateTLSCA(cfg tlsutil.CACertConfig) (*x509.Certificate, *rsa.PrivateKey, error) {
-	key, err := tlsutil.NewPrivateKey()
-	if err != nil {
-		return nil, nil, err
+func ReadTLSAssets(dirname string) (*RawTLSAssets, error) {
+	r := new(RawTLSAssets)
+	files := []struct {
+		name      string
+		cert, key *[]byte
+	}{
+		{"ca", &r.CACert, &r.CAKey},
+		{"apiserver", &r.APIServerCert, &r.APIServerKey},
+		{"worker", &r.WorkerCert, &r.WorkerKey},
+		{"admin", &r.AdminCert, &r.AdminKey},
 	}
+	for _, file := range files {
+		certPath := filepath.Join(dirname, file.name+".pem")
+		keyPath := filepath.Join(dirname, file.name+"-key.pem")
 
-	cert, err := tlsutil.NewSelfSignedCACertificate(cfg, key)
-	if err != nil {
-		return nil, nil, err
+		certData, err := ioutil.ReadFile(certPath)
+		if err != nil {
+			return nil, err
+		}
+		*file.cert = certData
+		keyData, err := ioutil.ReadFile(keyPath)
+		if err != nil {
+			return nil, err
+		}
+		*file.key = keyData
 	}
-
-	if err := tlsutil.WritePrivateKeyPEMBlock(tc.CAKey, key); err != nil {
-		return nil, nil, err
-	}
-	if err := tlsutil.WriteCertificatePEMBlock(tc.CACert, cert); err != nil {
-		return nil, nil, err
-	}
-
-	return cert, key, nil
+	return r, nil
 }
 
-func (tc *TLSConfig) generateTLSServer(cfg tlsutil.ServerCertConfig, caCert *x509.Certificate, caKey *rsa.PrivateKey) error {
-	key, err := tlsutil.NewPrivateKey()
-	if err != nil {
-		return err
+func (r *RawTLSAssets) WriteToDir(dirname string) error {
+	assets := []struct {
+		name      string
+		cert, key []byte
+	}{
+		{"ca", r.CACert, r.CAKey},
+		{"apiserver", r.APIServerCert, r.APIServerKey},
+		{"worker", r.WorkerCert, r.WorkerKey},
+		{"admin", r.AdminCert, r.AdminKey},
 	}
-
-	cert, err := tlsutil.NewSignedServerCertificate(cfg, key, caCert, caKey)
-	if err != nil {
-		return err
+	for _, asset := range assets {
+		certPath := filepath.Join(dirname, asset.name+".pem")
+		keyPath := filepath.Join(dirname, asset.name+"-key.pem")
+		if err := ioutil.WriteFile(certPath, asset.cert, 0600); err != nil {
+			return err
+		}
+		if err := ioutil.WriteFile(keyPath, asset.key, 0600); err != nil {
+			return err
+		}
 	}
-
-	if err := tlsutil.WritePrivateKeyPEMBlock(tc.APIServerKey, key); err != nil {
-		return err
-	}
-	if err := tlsutil.WriteCertificatePEMBlock(tc.APIServerCert, cert); err != nil {
-		return err
-	}
-
 	return nil
 }
 
-func (tc *TLSConfig) generateTLSClientAdmin(cfg tlsutil.ClientCertConfig, caCert *x509.Certificate, caKey *rsa.PrivateKey) error {
-	key, err := tlsutil.NewPrivateKey()
-	if err != nil {
-		return err
+func compressData(d []byte) (string, error) {
+	var buff bytes.Buffer
+	gzw := gzip.NewWriter(&buff)
+	if _, err := gzw.Write(d); err != nil {
+		return "", err
 	}
-
-	cert, err := tlsutil.NewSignedClientCertificate(cfg, key, caCert, caKey)
-	if err != nil {
-		return err
+	if err := gzw.Close(); err != nil {
+		return "", err
 	}
-
-	if err := tlsutil.WritePrivateKeyPEMBlock(tc.AdminKey, key); err != nil {
-		return err
-	}
-	if err := tlsutil.WriteCertificatePEMBlock(tc.AdminCert, cert); err != nil {
-		return err
-	}
-
-	return nil
+	return base64.StdEncoding.EncodeToString(buff.Bytes()), nil
 }
 
-func (tc *TLSConfig) generateTLSClientWorker(cfg tlsutil.ClientCertConfig, caCert *x509.Certificate, caKey *rsa.PrivateKey) error {
-	key, err := tlsutil.NewPrivateKey()
+func (r *RawTLSAssets) Compact() (*CompactTLSAssets, error) {
+	var err error
+	compact := func(data []byte) string {
+		if err != nil {
+			return ""
+		}
+		var out string
+		out, err = compressData(data)
+		if err != nil {
+			return ""
+		}
+		return out
+	}
+	compactAssets := CompactTLSAssets{
+		CACert:        compact(r.CACert),
+		CAKey:         compact(r.CAKey),
+		APIServerCert: compact(r.APIServerCert),
+		APIServerKey:  compact(r.APIServerKey),
+		WorkerCert:    compact(r.WorkerCert),
+		WorkerKey:     compact(r.WorkerKey),
+		AdminCert:     compact(r.AdminCert),
+		AdminKey:      compact(r.AdminKey),
+	}
 	if err != nil {
-		return err
+		return nil, err
 	}
-
-	cert, err := tlsutil.NewSignedClientCertificate(cfg, key, caCert, caKey)
-	if err != nil {
-		return err
-	}
-
-	if err := tlsutil.WritePrivateKeyPEMBlock(tc.WorkerKey, key); err != nil {
-		return err
-	}
-	if err := tlsutil.WriteCertificatePEMBlock(tc.WorkerCert, cert); err != nil {
-		return err
-	}
-
-	return nil
+	return &compactAssets, nil
 }

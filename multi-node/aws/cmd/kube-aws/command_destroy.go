@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 
@@ -15,7 +14,7 @@ var (
 		Use:   "destroy",
 		Short: "Destroy an existing Kubernetes cluster",
 		Long:  ``,
-		Run:   runCmdDestroy,
+		RunE:  runCmdDestroy,
 	}
 	destroyOpts = struct {
 		awsDebug bool
@@ -27,19 +26,17 @@ func init() {
 	cmdDestroy.Flags().BoolVar(&destroyOpts.awsDebug, "aws-debug", false, "Log debug information from aws-sdk-go library")
 }
 
-func runCmdDestroy(cmd *cobra.Command, args []string) {
-	cfg, err := config.NewConfigFromFile(configPath)
+func runCmdDestroy(cmd *cobra.Command, args []string) error {
+	cfg, err := config.ClusterFromFile(configPath)
 	if err != nil {
-		stderr("Error parsing config: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("Error parsing config: %v", err)
 	}
 
-	cluster := cluster.New(cfg, destroyOpts.awsDebug)
-
-	if err := cluster.Destroy(); err != nil {
-		stderr("Failed destroying cluster: %v", err)
-		os.Exit(1)
+	c := cluster.New(cfg, destroyOpts.awsDebug)
+	if err := c.Destroy(); err != nil {
+		return fmt.Errorf("Failed destroying cluster: %v", err)
 	}
 
 	fmt.Println("Destroyed cluster")
+	return nil
 }

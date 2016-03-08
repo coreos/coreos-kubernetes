@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 	"text/template"
 
 	"github.com/coreos/coreos-kubernetes/multi-node/aws/pkg/config"
@@ -14,7 +16,7 @@ var (
 		Use:   "init",
 		Short: "Initialize default kube-aws cluster configuration",
 		Long:  ``,
-		Run:   runCmdInit,
+		RunE:  runCmdInit,
 	}
 
 	initOpts = config.Config{}
@@ -29,44 +31,42 @@ func init() {
 	cmdInit.Flags().StringVar(&initOpts.KeyName, "key-name", "", "AWS key-pair for ssh access to nodes")
 }
 
-func runCmdInit(cmd *cobra.Command, args []string) {
-	if initOpts.ClusterName == "" {
-		stderr("Must provide cluster-name parameter")
-		os.Exit(1)
+func runCmdInit(cmd *cobra.Command, args []string) error {
+	// Validate flags.
+	required := []struct {
+		name, val string
+	}{
+		{"--cluster-name", initOpts.ClusterName},
+		{"--external-dns-name", initOpts.ExternalDNSName},
+		{"--region", initOpts.Region},
+		{"--availability-zone", initOpts.AvailabilityZone},
+		{"--key-name", initOpts.KeyName},
 	}
-	if initOpts.ExternalDNSName == "" {
-		stderr("Must provide external-dns-name parameter")
-		os.Exit(1)
+	var missing []string
+	for _, req := range required {
+		if req.val == "" {
+			missing = append(missing, strconv.Quote(req.name))
+		}
 	}
-	if initOpts.Region == "" {
-		stderr("Must provide region parameter")
-		os.Exit(1)
-	}
-	if initOpts.AvailabilityZone == "" {
-		stderr("Must provide availability zone parameter")
-		os.Exit(1)
-	}
-	if initOpts.KeyName == "" {
-		stderr("Must provide key-name parameter")
-		os.Exit(1)
+	if len(missing) != 0 {
+		return fmt.Errorf("Missing required flag(s): %s", strings.Join(missing, ", "))
 	}
 
-	cfgTemplate, err := template.New("cluster.yaml").Parse(config.DefaultClusterConfig)
+	// Render the default cluster config.
+	cfgTemplate, err := template.New("cluster.yaml").Parse(string(config.DefaultClusterConfig))
 	if err != nil {
-		stderr("Error parsing default config template: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("Error parsing default config template: %v", err)
 	}
 
 	out, err := os.OpenFile(configPath, os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
-		stderr("Error opening %s : %v", configPath, err)
-		os.Exit(1)
+		return fmt.Errorf("Error opening %s : %v", configPath, err)
 	}
 	defer out.Close()
 	if err := cfgTemplate.Execute(out, initOpts); err != nil {
-		stderr("Error exec-ing default config template: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("Error exec-ing default config template: %v", err)
 	}
 
 	fmt.Printf("Edit %s to parameterize the cluster. Then use the \"kube-aws render\" command to render the stack template\n", configPath)
+	return nil
 }

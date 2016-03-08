@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/coreos/coreos-kubernetes/multi-node/aws/pkg/cluster"
 	"github.com/coreos/coreos-kubernetes/multi-node/aws/pkg/config"
@@ -14,7 +13,7 @@ var (
 		Use:   "status",
 		Short: "Describe an existing Kubernetes cluster",
 		Long:  ``,
-		Run:   runCmdStatus,
+		RunE:  runCmdStatus,
 	}
 )
 
@@ -22,20 +21,16 @@ func init() {
 	cmdRoot.AddCommand(cmdStatus)
 }
 
-func runCmdStatus(cmd *cobra.Command, args []string) {
-	cfg, err := config.NewConfigFromFile(configPath)
+func runCmdStatus(cmd *cobra.Command, args []string) error {
+	conf, err := config.ClusterFromFile(configPath)
 	if err != nil {
-		stderr("Error parsing config: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("Failed to read cluster config: %v", err)
 	}
-
-	cluster := cluster.New(cfg, false)
-
-	info, err := cluster.Info()
+	info, err := cluster.New(conf, false).Info()
 	if err != nil {
-		stderr("Failed fetching cluster info: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("Failed fetching cluster info: %v", err)
 	}
 
 	fmt.Print(info.String())
+	return nil
 }

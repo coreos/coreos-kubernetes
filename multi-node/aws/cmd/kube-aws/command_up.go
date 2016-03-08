@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 
 	"github.com/coreos/coreos-kubernetes/multi-node/aws/pkg/cluster"
 	"github.com/coreos/coreos-kubernetes/multi-node/aws/pkg/config"
@@ -15,7 +14,7 @@ var (
 		Use:   "up",
 		Short: "Create a new Kubernetes cluster",
 		Long:  ``,
-		Run:   runCmdUp,
+		RunE:  runCmdUp,
 	}
 
 	upOpts = struct {
@@ -30,52 +29,47 @@ func init() {
 	cmdUp.Flags().BoolVar(&upOpts.awsDebug, "aws-debug", false, "Log debug information from aws-sdk-go library")
 }
 
-func runCmdUp(cmd *cobra.Command, args []string) {
-	cfg, err := config.NewConfigFromFile(configPath)
+func runCmdUp(cmd *cobra.Command, args []string) error {
+	conf, err := config.ClusterFromFile(configPath)
 	if err != nil {
-		stderr("Unable to load cluster config: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("Failed to read cluster config: %v", err)
 	}
 
-	if err := cfg.ReadAssetsFromFiles(); err != nil {
-		stderr("Error reading assets from files: %v", err)
-		os.Exit(1)
+	data, err := conf.RenderStackTemplate(stackTemplateOptions)
+	if err != nil {
+		return fmt.Errorf("Failed to render stack template: %v", err)
 	}
 
-	if err := cfg.TemplateAndEncodeAssets(); err != nil {
-		stderr("Error templating assets: %v", err)
-		os.Exit(1)
-	}
 	if upOpts.export {
-		templatePath := fmt.Sprintf("%s.stack-template.json", cfg.ClusterName)
+		templatePath := fmt.Sprintf("%s.stack-template.json", conf.ClusterName)
 		fmt.Printf("Exporting %s\n", templatePath)
-		if err := ioutil.WriteFile(templatePath, cfg.StackTemplate.Bytes(), 0600); err != nil {
-			stderr("Error writing %s : %v", templatePath, err)
-			os.Exit(1)
+		if err := ioutil.WriteFile(templatePath, data, 0600); err != nil {
+			return fmt.Errorf("Error writing %s : %v", templatePath, err)
 		}
 		fmt.Printf("BEWARE: %s contains your TLS secrets!\n", templatePath)
-		return
+		return nil
 	}
-	cluster := cluster.New(cfg, upOpts.awsDebug)
-
+	cluster := cluster.New(conf, upOpts.awsDebug)
 	if upOpts.update {
-		if err := cluster.Update(); err != nil {
-			stderr("Error updating cluster: %v", err)
-			os.Exit(1)
+		report, err := cluster.Update(string(data))
+		if err != nil {
+			return fmt.Errorf("Error updating cluster: %v", err)
+		}
+		if report != "" {
+			fmt.Printf("Update stack: %s\n", report)
 		}
 	} else {
-		if err := cluster.Create(); err != nil {
-			stderr("Error creating cluster: %v", err)
-			os.Exit(1)
+		if err := cluster.Create(string(data)); err != nil {
+			return fmt.Errorf("Error creating cluster: %v", err)
 		}
 	}
 
 	info, err := cluster.Info()
 	if err != nil {
-		stderr("Failed fetching cluster info: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("Failed fetching cluster info: %v", err)
 	}
 
 	fmt.Print(info.String())
 
+	return nil
 }

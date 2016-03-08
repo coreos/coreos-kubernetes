@@ -73,14 +73,14 @@ func TestNetworkValidation(t *testing.T) {
 
 	for _, networkConfig := range goodNetworkingConfigs {
 		configBody := MinimalConfigYaml + networkConfig
-		if _, err := newConfigFromBytes([]byte(configBody)); err != nil {
+		if _, err := clusterFromBytes([]byte(configBody)); err != nil {
 			t.Errorf("Correct config tested invalid: %s\n%s", err, networkConfig)
 		}
 	}
 
 	for _, networkConfig := range incorrectNetworkingConfigs {
 		configBody := MinimalConfigYaml + networkConfig
-		if _, err := newConfigFromBytes([]byte(configBody)); err == nil {
+		if _, err := clusterFromBytes([]byte(configBody)); err == nil {
 			t.Errorf("Incorrect config tested valid, expected error:\n%s", networkConfig)
 		}
 	}

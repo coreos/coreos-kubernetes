@@ -1,6 +1,3 @@
-package config
-
-const DefaultClusterConfig = `
 # Unique name of Kubernetes cluster. In order to deploy
 # more than one cluster into the same AWS account, this
 # name must not conflict with an existing cluster.
@@ -62,4 +59,3 @@ availabilityZone: {{.AvailabilityZone}}
 
 # IP address of Kubernetes dns service (must be contained by serviceCIDR)
 # dnsServiceIP: 10.3.0.10
-`

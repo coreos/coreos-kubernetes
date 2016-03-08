@@ -7,7 +7,7 @@ After completing this guide, a deployer will be able to interact with the Kubern
 
 ### CoreOS Installation
 
-For all nodes running Kubernetes components (masters & workers), you must use CoreOS version 773.1.0+ on the Alpha or Beta channel for the kubelet to be present in the image.
+For all nodes running Kubernetes components (masters & workers), you must use a CoreOS version 962.0.0+ for the `kubelet-wrapper` script to be present in the image. If you wish to use an earlier version (e.g. from the 'stable' channel) see [kubelet-wrapper](kubelet-wrapper.md) for more information.
 
 Use the official CoreOS bare metal guides for installation instructions:
 

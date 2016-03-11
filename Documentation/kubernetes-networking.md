@@ -34,7 +34,7 @@ Worker Node Inbound
 | TCP      | 10250       | Master Nodes                   | Worker node Kubelet healthcheck port.                                  |
 | TCP      | 30000-32767 | External Application Consumers | Default port range for [external service][external-service] ports. Typically, these ports would need to be exposed to external load-balancers, or other external consumers of the application itself. |
 | TCP      | ALL         | Master & Worker Nodes          | Intra-cluster communication (unnecessary if flannel is used)           |
-| UDP      | 8285        | Worker Nodes                   | flannel overlay network - *udp backend*. This is the default netowrk configuration (only required if using flannel) |
+| UDP      | 8285        | Worker Nodes                   | flannel overlay network - *udp backend*. This is the default network configuration (only required if using flannel) |
 | UDP      | 8472        | Worker Nodes                   | flannel overlay network - *vxlan backend* (only required if using flannel) |
 
 etcd Node Inbound

@@ -2,14 +2,20 @@ package cluster
 
 import (
 	"bytes"
-	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"text/tabwriter"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/ec2"
+
+	"github.com/coreos/coreos-kubernetes/multi-node/aws/pkg/config"
 )
+
+// set by build script
+var VERSION = "UNKNOWN"
 
 type ClusterInfo struct {
 	Name         string
@@ -28,27 +34,15 @@ func (c *ClusterInfo) String() string {
 	return buf.String()
 }
 
-type TLSConfig struct {
-	CACertFile string
-	CACert     []byte
+func New(cfg *config.Config, awsDebug bool) *Cluster {
 
-	APIServerCertFile string
-	APIServerCert     []byte
-	APIServerKeyFile  string
-	APIServerKey      []byte
+	//Set up AWS config
+	awsConfig := aws.NewConfig()
+	awsConfig = awsConfig.WithRegion(cfg.Region)
+	if awsDebug {
+		awsConfig = awsConfig.WithLogLevel(aws.LogDebug)
+	}
 
-	WorkerCertFile string
-	WorkerCert     []byte
-	WorkerKeyFile  string
-	WorkerKey      []byte
-
-	AdminCertFile string
-	AdminCert     []byte
-	AdminKeyFile  string
-	AdminKey      []byte
-}
-
-func New(cfg *Config, awsConfig *aws.Config) *Cluster {
 	return &Cluster{
 		cfg: cfg,
 		aws: awsConfig,
@@ -56,7 +50,7 @@ func New(cfg *Config, awsConfig *aws.Config) *Cluster {
 }
 
 type Cluster struct {
-	cfg *Config
+	cfg *config.Config
 	aws *aws.Config
 }
 
@@ -64,181 +58,61 @@ func (c *Cluster) stackName() string {
 	return c.cfg.ClusterName
 }
 
-func (c *Cluster) Create(tlsConfig *TLSConfig) error {
-	parameters := []*cloudformation.Parameter{
-		{
-			ParameterKey:     aws.String(parClusterName),
-			ParameterValue:   aws.String(c.stackName()),
-			UsePreviousValue: aws.Bool(true),
-		},
-		{
-			ParameterKey:     aws.String(parNameKeyName),
-			ParameterValue:   aws.String(c.cfg.KeyName),
-			UsePreviousValue: aws.Bool(true),
-		},
-		{
-			ParameterKey:     aws.String(parArtifactURL),
-			ParameterValue:   aws.String(c.cfg.ArtifactURL),
-			UsePreviousValue: aws.Bool(true),
-		},
-		{
-			ParameterKey:     aws.String(parCACert),
-			ParameterValue:   aws.String(base64.StdEncoding.EncodeToString(tlsConfig.CACert)),
-			UsePreviousValue: aws.Bool(true),
-		},
-		{
-			ParameterKey:     aws.String(parAPIServerCert),
-			ParameterValue:   aws.String(base64.StdEncoding.EncodeToString(tlsConfig.APIServerCert)),
-			UsePreviousValue: aws.Bool(true),
-		},
-		{
-			ParameterKey:     aws.String(parAPIServerKey),
-			ParameterValue:   aws.String(base64.StdEncoding.EncodeToString(tlsConfig.APIServerKey)),
-			UsePreviousValue: aws.Bool(true),
-		},
-		{
-			ParameterKey:     aws.String(parWorkerCert),
-			ParameterValue:   aws.String(base64.StdEncoding.EncodeToString(tlsConfig.WorkerCert)),
-			UsePreviousValue: aws.Bool(true),
-		},
-		{
-			ParameterKey:     aws.String(parWorkerKey),
-			ParameterValue:   aws.String(base64.StdEncoding.EncodeToString(tlsConfig.WorkerKey)),
-			UsePreviousValue: aws.Bool(true),
-		},
+func (c *Cluster) getStackBody() (string, error) {
+	//Minify the JSON
+	stackHolder := &map[string]interface{}{}
+	if err := json.Unmarshal(c.cfg.StackTemplate.Bytes(), stackHolder); err != nil {
+		return "", fmt.Errorf("error unmarshalling stack json : %v", err)
 	}
 
-	if c.cfg.ReleaseChannel != "" {
-		parameters = append(parameters, &cloudformation.Parameter{
-			ParameterKey:     aws.String(parNameReleaseChannel),
-			ParameterValue:   aws.String(c.cfg.ReleaseChannel),
-			UsePreviousValue: aws.Bool(true),
-		})
+	miniStackBody, err := json.Marshal(stackHolder)
+	if err != nil {
+		return "", fmt.Errorf("error marshalling stack json : %v", err)
 	}
 
-	if c.cfg.ControllerInstanceType != "" {
-		parameters = append(parameters, &cloudformation.Parameter{
-			ParameterKey:     aws.String(parNameControllerInstanceType),
-			ParameterValue:   aws.String(c.cfg.ControllerInstanceType),
-			UsePreviousValue: aws.Bool(true),
-		})
-	}
-
-	if c.cfg.ControllerRootVolumeSize > 0 {
-		parameters = append(parameters, &cloudformation.Parameter{
-			ParameterKey:     aws.String(parNameControllerRootVolumeSize),
-			ParameterValue:   aws.String(fmt.Sprintf("%d", c.cfg.ControllerRootVolumeSize)),
-			UsePreviousValue: aws.Bool(true),
-		})
-	}
-
-	if c.cfg.WorkerCount > 0 {
-		parameters = append(parameters, &cloudformation.Parameter{
-			ParameterKey:     aws.String(parWorkerCount),
-			ParameterValue:   aws.String(fmt.Sprintf("%d", c.cfg.WorkerCount)),
-			UsePreviousValue: aws.Bool(true),
-		})
-	}
-
-	if c.cfg.WorkerInstanceType != "" {
-		parameters = append(parameters, &cloudformation.Parameter{
-			ParameterKey:     aws.String(parNameWorkerInstanceType),
-			ParameterValue:   aws.String(c.cfg.WorkerInstanceType),
-			UsePreviousValue: aws.Bool(true),
-		})
-	}
-
-	if c.cfg.WorkerRootVolumeSize > 0 {
-		parameters = append(parameters, &cloudformation.Parameter{
-			ParameterKey:     aws.String(parNameWorkerRootVolumeSize),
-			ParameterValue:   aws.String(fmt.Sprintf("%d", c.cfg.WorkerRootVolumeSize)),
-			UsePreviousValue: aws.Bool(true),
-		})
-	}
-
-	if c.cfg.WorkerSpotPrice != "" {
-		parameters = append(parameters, &cloudformation.Parameter{
-			ParameterKey:     aws.String(parWorkerSpotPrice),
-			ParameterValue:   aws.String(c.cfg.WorkerSpotPrice),
-			UsePreviousValue: aws.Bool(true),
-		})
-	}
-
-	if c.cfg.AvailabilityZone != "" {
-		parameters = append(parameters, &cloudformation.Parameter{
-			ParameterKey:     aws.String(parAvailabilityZone),
-			ParameterValue:   aws.String(c.cfg.AvailabilityZone),
-			UsePreviousValue: aws.Bool(true),
-		})
-	}
-
-	if c.cfg.VPCCIDR != "" {
-		parameters = append(parameters, &cloudformation.Parameter{
-			ParameterKey:     aws.String(parVPCCIDR),
-			ParameterValue:   aws.String(c.cfg.VPCCIDR),
-			UsePreviousValue: aws.Bool(true),
-		})
-	}
-
-	if c.cfg.InstanceCIDR != "" {
-		parameters = append(parameters, &cloudformation.Parameter{
-			ParameterKey:     aws.String(parInstanceCIDR),
-			ParameterValue:   aws.String(c.cfg.InstanceCIDR),
-			UsePreviousValue: aws.Bool(true),
-		})
-	}
-
-	if c.cfg.ControllerIP != "" {
-		parameters = append(parameters, &cloudformation.Parameter{
-			ParameterKey:     aws.String(parControllerIP),
-			ParameterValue:   aws.String(c.cfg.ControllerIP),
-			UsePreviousValue: aws.Bool(true),
-		})
-	}
-
-	if c.cfg.PodCIDR != "" {
-		parameters = append(parameters, &cloudformation.Parameter{
-			ParameterKey:     aws.String(parPodCIDR),
-			ParameterValue:   aws.String(c.cfg.PodCIDR),
-			UsePreviousValue: aws.Bool(true),
-		})
-	}
-
-	if c.cfg.ServiceCIDR != "" {
-		parameters = append(parameters, &cloudformation.Parameter{
-			ParameterKey:     aws.String(parServiceCIDR),
-			ParameterValue:   aws.String(c.cfg.ServiceCIDR),
-			UsePreviousValue: aws.Bool(true),
-		})
-	}
-
-	if c.cfg.KubernetesServiceIP != "" {
-		parameters = append(parameters, &cloudformation.Parameter{
-			ParameterKey:     aws.String(parKubernetesServiceIP),
-			ParameterValue:   aws.String(c.cfg.KubernetesServiceIP),
-			UsePreviousValue: aws.Bool(true),
-		})
-	}
-
-	if c.cfg.DNSServiceIP != "" {
-		parameters = append(parameters, &cloudformation.Parameter{
-			ParameterKey:     aws.String(parDNSServiceIP),
-			ParameterValue:   aws.String(c.cfg.DNSServiceIP),
-			UsePreviousValue: aws.Bool(true),
-		})
-	}
-
-	tmplURL := fmt.Sprintf("%s/template.json", c.cfg.ArtifactURL)
-	return createStackAndWait(cloudformation.New(c.aws), c.stackName(), tmplURL, parameters)
+	return string(miniStackBody), nil
 }
 
+func (c *Cluster) ValidateStack() (string, error) {
+
+	stackBody, err := c.getStackBody()
+	if err != nil {
+		return "", err
+	}
+
+	return validateStack(cloudformation.New(session.New(c.aws)), stackBody)
+}
+
+func (c *Cluster) Create() error {
+	stackBody, err := c.getStackBody()
+	if err != nil {
+		return err
+	}
+	return createStackAndWait(cloudformation.New(session.New(c.aws)), c.stackName(), stackBody)
+}
+
+func (c *Cluster) Update() error {
+	stackBody, err := c.getStackBody()
+	if err != nil {
+		return err
+	}
+
+	report, err := updateStack(cloudformation.New(session.New(c.aws)), c.stackName(), stackBody)
+
+	if report != "" {
+		fmt.Printf("Update stack: %s\n", report)
+	}
+	return err
+}
+
+//TODO: validate cluster
 func (c *Cluster) Info() (*ClusterInfo, error) {
-	resources, err := getStackResources(cloudformation.New(c.aws), c.stackName())
+	resources, err := getStackResources(cloudformation.New(session.New(c.aws)), c.stackName())
 	if err != nil {
 		return nil, err
 	}
 
-	info, err := mapStackResourcesToClusterInfo(ec2.New(c.aws), resources)
+	info, err := mapStackResourcesToClusterInfo(ec2.New(session.New(c.aws)), resources)
 	if err != nil {
 		return nil, err
 	}
@@ -248,5 +122,5 @@ func (c *Cluster) Info() (*ClusterInfo, error) {
 }
 
 func (c *Cluster) Destroy() error {
-	return destroyStack(cloudformation.New(c.aws), c.stackName())
+	return destroyStack(cloudformation.New(session.New(c.aws)), c.stackName())
 }

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
-
 	"github.com/coreos/coreos-kubernetes/multi-node/aws/pkg/cluster"
+	"github.com/coreos/coreos-kubernetes/multi-node/aws/pkg/config"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -23,16 +23,15 @@ func init() {
 }
 
 func runCmdStatus(cmd *cobra.Command, args []string) {
-	cfg := cluster.NewDefaultConfig(VERSION)
-	err := cluster.DecodeConfigFromFile(cfg, rootOpts.ConfigPath)
+	cfg, err := config.NewConfigFromFile(configPath)
 	if err != nil {
-		stderr("Unable to load cluster config: %v", err)
+		stderr("Error parsing config: %v", err)
 		os.Exit(1)
 	}
 
-	c := cluster.New(cfg, newAWSConfig(cfg))
+	cluster := cluster.New(cfg, false)
 
-	info, err := c.Info()
+	info, err := cluster.Info()
 	if err != nil {
 		stderr("Failed fetching cluster info: %v", err)
 		os.Exit(1)

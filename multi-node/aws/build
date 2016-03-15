@@ -14,6 +14,9 @@ if [ -n "$(git diff --shortstat 2> /dev/null | tail -n1)" ]; then
     VERSION="${VERSION}+dirty"
 fi
 
+export GO15VENDOREXPERIMENT=1
+
+
 echo "Building kube-aws ${VERSION}..."
 rm -rf ./gopath
 link_path="${PWD}/gopath/src/github.com/coreos"

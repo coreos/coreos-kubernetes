@@ -38,10 +38,10 @@ For example:
 - Make the script executable: `chmod +x /opt/bin/kubelet-wrapper`
 - Reference from your kubelet service file:
 
-    ```yaml
-    [Service]
-    Environment=KUBELET_VERSION=v1.1.8_coreos.0
-    ExecStart=/opt/bin/kubelet-wrapper \
-      --api_servers=http://127.0.0.1:8080 \
-      --config=/etc/kubernetes/manifests
-    ```
+```yaml
+[Service]
+Environment=KUBELET_VERSION=v1.1.8_coreos.0
+ExecStart=/opt/bin/kubelet-wrapper \
+  --api_servers=http://127.0.0.1:8080 \
+  --config=/etc/kubernetes/manifests
+```

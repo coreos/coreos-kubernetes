@@ -564,7 +564,7 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 	}
 
 	par[parNameKeyName] = map[string]interface{}{
-		"Type":        "String",
+		"Type":        "AWS::EC2::KeyPair::KeyName",
 		"Description": "Name of SSH keypair to authorize on each instance",
 	}
 
@@ -618,8 +618,7 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 	}
 
 	par[parAvailabilityZone] = map[string]interface{}{
-		"Type":        "String",
-		"Default":     "",
+		"Type":        "AWS::EC2::AvailabilityZone::Name",
 		"Description": "Specific availability zone (optional)",
 	}
 

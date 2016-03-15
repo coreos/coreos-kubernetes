@@ -42,6 +42,6 @@ For example:
 [Service]
 Environment=KUBELET_VERSION=v1.1.8_coreos.0
 ExecStart=/opt/bin/kubelet-wrapper \
-  --api_servers=http://127.0.0.1:8080 \
-  --config=/etc/kubernetes/manifests
+--api_servers=http://127.0.0.1:8080 \
+--config=/etc/kubernetes/manifests
 ```

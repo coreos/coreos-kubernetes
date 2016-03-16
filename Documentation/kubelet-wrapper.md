@@ -21,7 +21,7 @@ An example systemd kubelet.service file which takes advantage of the kubelet-wra
 [Service]
 Environment=KUBELET_VERSION=v1.1.8_coreos.0
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
-  --api_servers=http://127.0.0.1:8080 \
+  --api-servers=http://127.0.0.1:8080 \
   --config=/etc/kubernetes/manifests
 ```
 

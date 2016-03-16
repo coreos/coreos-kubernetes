@@ -232,7 +232,7 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 				map[string]interface{}{"IpProtocol": sgProtoUDP, "FromPort": 0, "ToPort": sgPortMax, "CidrIp": sgAllIPs},
 			},
 			"SecurityGroupIngress": []map[string]interface{}{
-				map[string]interface{}{"IpProtocol": sgProtoICMP, "FromPort": 3, "ToPort": -1, "CidrIp": sgAllIPs},
+				map[string]interface{}{"IpProtocol": sgProtoICMP, "FromPort": 0, "ToPort": -1, "CidrIp": sgAllIPs},
 				map[string]interface{}{"IpProtocol": sgProtoTCP, "FromPort": 22, "ToPort": 22, "CidrIp": sgAllIPs},
 				map[string]interface{}{"IpProtocol": sgProtoTCP, "FromPort": 443, "ToPort": 443, "CidrIp": sgAllIPs},
 			},
@@ -258,11 +258,12 @@ func StackTemplateBody(defaultArtifactURL string) (string, error) {
 			"GroupDescription": newRef("AWS::StackName"),
 			"VpcId":            newRef(resNameVPC),
 			"SecurityGroupEgress": []map[string]interface{}{
+				map[string]interface{}{"IpProtocol": sgProtoICMP, "FromPort": 0, "ToPort": -1, "CidrIp": sgAllIPs},
 				map[string]interface{}{"IpProtocol": sgProtoTCP, "FromPort": 0, "ToPort": sgPortMax, "CidrIp": sgAllIPs},
 				map[string]interface{}{"IpProtocol": sgProtoUDP, "FromPort": 0, "ToPort": sgPortMax, "CidrIp": sgAllIPs},
 			},
 			"SecurityGroupIngress": []map[string]interface{}{
-				map[string]interface{}{"IpProtocol": sgProtoICMP, "FromPort": 3, "ToPort": -1, "CidrIp": sgAllIPs},
+				map[string]interface{}{"IpProtocol": sgProtoICMP, "FromPort": 0, "ToPort": -1, "CidrIp": sgAllIPs},
 				map[string]interface{}{"IpProtocol": sgProtoTCP, "FromPort": 22, "ToPort": 22, "CidrIp": sgAllIPs},
 			},
 			"Tags": []map[string]interface{}{

@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/spf13/cobra"
 
 	"github.com/coreos/coreos-kubernetes/multi-node/aws/pkg/cluster"
@@ -42,6 +43,7 @@ func stderr(msg string, args ...interface{}) {
 
 func newAWSConfig(cfg *cluster.Config) *aws.Config {
 	c := aws.NewConfig()
+	c = c.WithCredentials(credentials.NewSharedCredentials("", ""))
 	c = c.WithRegion(cfg.Region)
 	if rootOpts.AWSDebug {
 		c = c.WithLogLevel(aws.LogDebug)

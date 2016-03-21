@@ -70,6 +70,6 @@ func runCmdInit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("Error exec-ing default config template: %v", err)
 	}
 
-	fmt.Printf("Edit %s to parameterize the cluster. Then use the \"kube-aws render\" command to render the stack template\n", configPath)
+	fmt.Printf("Edit %s to parameterize the cluster. Then use the \"kube-aws render\" command to render the stack template.\n", configPath)
 	return nil
 }

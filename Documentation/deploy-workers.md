@@ -90,7 +90,7 @@ ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
 
 Environment=KUBELET_VERSION=${K8S_VER}
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
-  --api_servers=https://${MASTER_HOST} \
+  --api-servers=https://${MASTER_HOST} \
   --register-node=true \
   --allow-privileged=true \
   --config=/etc/kubernetes/manifests \

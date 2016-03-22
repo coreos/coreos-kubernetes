@@ -70,7 +70,7 @@
       },
       "Type": "AWS::AutoScaling::AutoScalingGroup",
       "UpdatePolicy" : {
-	    "AutoScalingRollingUpdate" : {
+      "AutoScalingRollingUpdate" : {
           "MinInstancesInService" :
           {{if .WorkerSpotPrice}}
             "0"
@@ -79,7 +79,7 @@
           {{end}},
           "MaxBatchSize" : "1",
           "PauseTime" : "PT2M"
-	    }
+      }
       }
     },
     "EIPController": {
@@ -137,6 +137,24 @@
             "PolicyDocument": {
               "Statement": [
                 {
+                  "Action": [
+                    "ecr:GetAuthorizationToken",
+                    "ecr:BatchCheckLayerAvailability",
+                    "ecr:GetDownloadUrlForLayer",
+                    "ecr:GetRepositoryPolicy",
+                    "ecr:DescribeRepositories",
+                    "ecr:ListImages",
+                    "ecr:BatchGetImage"
+                ],
+                  "Effect": "Allow",
+                  "Resource": "*"
+                },
+                {
+                  "Action": "ec2:*",
+                  "Effect": "Allow",
+                  "Resource": "*"
+                },
+                {
                   "Action": "ec2:*",
                   "Effect": "Allow",
                   "Resource": "*"
@@ -146,11 +164,11 @@
                   "Effect": "Allow",
                   "Resource": "*"
                 },
-		{
-		  "Action" : "kms:Decrypt",
-		  "Effect" : "Allow",
-		  "Resource" : "{{.KMSKeyARN}}"
-		}
+                {
+                  "Action" : "kms:Decrypt",
+                  "Effect" : "Allow",
+                  "Resource" : "{{.KMSKeyARN}}"
+                }
               ],
               "Version": "2012-10-17"
             },
@@ -189,6 +207,16 @@
                   "Resource": "*"
                 },
                 {
+                  "Action": [
+                    "ec2:CreateRoute",
+                    "ec2:DeleteRoute",
+                    "ec2:ReplaceRoute",
+                    "ec2:ModifyInstanceAttribute"
+                  ],
+                  "Effect": "Allow",
+                  "Resource": "*"
+                },
+                {
                   "Action": "ec2:AttachVolume",
                   "Effect": "Allow",
                   "Resource": "*"
@@ -198,11 +226,11 @@
                   "Effect": "Allow",
                   "Resource": "*"
                 },
-		{
-		  "Action" : "kms:Decrypt",
-		  "Effect" : "Allow",
-		  "Resource" : "{{.KMSKeyARN}}"
-		}
+                {
+                  "Action" : "kms:Decrypt",
+                  "Effect" : "Allow",
+                  "Resource" : "{{.KMSKeyARN}}"
+                }
               ],
               "Version": "2012-10-17"
             },

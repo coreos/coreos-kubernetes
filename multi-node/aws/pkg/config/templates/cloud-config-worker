@@ -58,6 +58,16 @@ coreos:
         [Install]
         RequiredBy=kubelet.service
 
+    - name: sourcedestcheck.service
+      command: start
+      content: |
+        [Unit]
+        Description=Set AWS source/dest check to false
+        [Service]\n",
+        Type=oneshot\n",
+        ExecStartPre=/usr/bin/docker pull quay.io/coreos/awscli
+        ExecStart=/bin/sh -c 'docker run quay.io/coreos/awscli aws ec2 --region {{.Region}} modify-instance-attribute --attribute sourceDestCheck --value false --instance-id $(curl --silent http://169.254.169.254/latest/meta-data/instance-id)'
+
 write_files:
   - path: /etc/kubernetes/ssl/worker.pem
     encoding: gzip+base64

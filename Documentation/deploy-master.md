@@ -429,7 +429,7 @@ A successful response should look something like:
 Now we can create the `kube-system` namespace:
 
 ```sh
-$ curl -XPOST -d'{"apiVersion":"v1","kind":"Namespace","metadata":{"name":"kube-system"}}' "http://127.0.0.1:8080/api/v1/namespaces"
+$ curl -H "Content-Type: application/json" -XPOST -d'{"apiVersion":"v1","kind":"Namespace","metadata":{"name":"kube-system"}}' "http://127.0.0.1:8080/api/v1/namespaces"
 ```
 
 Our Pods should now be starting up and downloading their containers. To check the download progress, you can run `docker ps`.

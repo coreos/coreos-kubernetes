@@ -51,15 +51,17 @@ aws_secret_access_key = MY-SECRET-KEY
 
 ### Configure Cluster
 
+First, let's define a few parameters that we'll use when we create the cluster.
+
 #### EC2 Key Pair
 
-The keypair that will authenticate SSH access to your ec2 instances. [Docs](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html)
+The keypair that will authenticate SSH access to your EC2 instances. More info in the [EC2 Keypair docs](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html).
 
 #### External DNS Name
 
-Before configuring the cluster, we to define a DNS hostname at which the cluster's API will be accessible. This information will first be used to provision the TLS certificate for the API server.
+Select a DNS hostname where the cluster's API will be accessible. This information will first be used to provision the TLS certificate for the API server.
 
-When Cloudformation finishes creating your cluster, your controller will expose the TLS-secured API via a public IP address. You will need to create an A record for the DNS hostname which lists the IP address of the API. You can find this IP address later via `kube-aws status`.
+When CloudFormation finishes creating your cluster, your controller will expose the TLS-secured API via a public IP address. You will need to create an A record for the DNS hostname which lists the IP address of the API. You can find this IP address later via `kube-aws status`.
 
 #### KMS Key
 
@@ -67,7 +69,7 @@ When Cloudformation finishes creating your cluster, your controller will expose 
 
 Creating a KMS key can be done via the [AWS web console](http://docs.aws.amazon.com/kms/latest/developerguide/create-keys.html) or via the AWS cli tool.
 
-```shell
+```sh
 $ aws kms --region=<your-region> create-key --description="kube-aws assets"
 {
     "KeyMetadata": {
@@ -82,9 +84,13 @@ $ aws kms --region=<your-region> create-key --description="kube-aws assets"
     }
 }
 ```
-You'll need the `KeyMetadata.Arn` string for the next step.
+
+Reference the `KeyMetadata.Arn` string on the next step.
 
 #### Initialize an asset directory
+
+Create a directory on your local machine that will hold the generated assets, then initialize your cluster:
+
 ```sh
 $ mkdir my-cluster
 $ cd my-cluster
@@ -96,31 +102,34 @@ $ kube-aws init --cluster-name=my-cluster-name \
 --kms-key-arn="arn:aws:kms:us-west-1:xxxxxxxxxx:key/xxxxxxxxxxxxxxxxxxx"
 ```
 
-There will now be a cluster.yaml file in the asset directory.
+There will now be a `cluster.yaml` file in the asset directory.
 
 #### Render contents of the asset directory
+
+Next, generate a default set of cluster assets in your asset directory:
 
 ```sh
 $ kube-aws render
 ```
-This generates the default set of cluster assets in your asset directory. These assets are templates and credentials that are used to create, update and interact with your Kubernetes cluster.
+
+These assets (templates and credentials) are used to create, update and interact with your Kubernetes cluster.
 
 You can now customize your cluster by editing asset files:
 
 * **cluster.yaml**
 
-  This is the configuration file for your cluster. It contains the configuration parameters that are templated into your userdata and cloudformation stack.
+  This is the configuration file for your cluster. It contains the configuration parameters that are templated into your userdata and CloudFormation stack.
 
 * **cloud-config/**
 
   * `cloud-config-worker`
   * `cloud-config-controller`
 
-  This directory contains the [cloud-init](https://github.com/coreos/coreos-cloudinit) cloud-config userdata files. The CoreOS operating system supports automated provisioning via cloud-config files, which describe the various files, scripts and systemd actions necessary to produce a working cluster machine. These files are templated with your cluster configuration parameters and embedded into the cloudformation stack template.
+  This directory contains the [cloud-init](https://github.com/coreos/coreos-cloudinit) cloud-config userdata files. The CoreOS operating system supports automated provisioning via cloud-config files, which describe the various files, scripts and systemd actions necessary to produce a working cluster machine. These files are templated with your cluster configuration parameters and embedded into the CloudFormation stack template.
 
 * **stack-template.json**
 
-  This file describes the [AWS cloudformation](https://aws.amazon.com/cloudformation/) stack which encompasses all the AWS resources associated with your cluster. This JSON document is temlated with configuration parameters, we well as the encoded userdata files.
+  This file describes the [AWS CloudFormation](https://aws.amazon.com/cloudformation/) stack which encompasses all the AWS resources associated with your cluster. This JSON document is temlated with configuration parameters, we well as the encoded userdata files.
 
 * **credentials/**
 
@@ -130,13 +139,15 @@ You can also now check the `my-cluster` asset directory into version control if 
 
 #### Validate your cluster assets
 
-The `validate` command check the validity of the cloud-config userdata files and the cloudformation stack description.
+The `validate` command check the validity of the cloud-config userdata files and the CloudFormation stack description.
 
 ```sh
 $ kube-aws validate
 ```
 
 #### Create a cluster from asset directory
+
+Now for the exciting part, create your cluster:
 
 ```sh
 $ kube-aws up
@@ -146,10 +157,11 @@ $ kube-aws up
 Each component certificate is only valid for 90 days, while the CA is valid for 365 days.
 If deploying a production Kubernetes cluster, consider establishing PKI independently of this tool first.
 
-Navigate to the DNS registrar hosting the zone for the provided external DNS name and ensure a single A record exists, routing the value of `externalDNSName` defined in `cluster.yaml` to the externally-accessible IP of the master node instance.
-You may use `kube-aws status` to get this value after cluster creation, if necessary.
+#### Configure your DNS
 
-This command can take a while.
+Navigate to the DNS registrar hosting the zone for the provided external DNS name. Ensure a single A record exists, routing the value of `externalDNSName` defined in `cluster.yaml` to the externally-accessible IP of the master node instance.
+
+You may use `kube-aws status` to get this value after cluster creation, if necessary. This command can take a while.
 
 #### Access the cluster
 
@@ -162,6 +174,7 @@ $ kubectl --kubeconfig=kubeconfig get nodes
 It can take some time after `kube-aws up` completes before the cluster is available. Until then, you will have a `connection refused` error.
 
 #### Export your cloudformation stack
+
 ```sh
 $ kube-aws up --export
 ```

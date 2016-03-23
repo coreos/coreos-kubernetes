@@ -29,8 +29,8 @@ func init() {
 	cmdInit.Flags().StringVar(&initOpts.ExternalDNSName, "external-dns-name", "", "The hostname that will route to the api server")
 	cmdInit.Flags().StringVar(&initOpts.Region, "region", "", "The aws region to deploy to")
 	cmdInit.Flags().StringVar(&initOpts.AvailabilityZone, "availability-zone", "", "The aws availability-zone to deploy to")
-	cmdInit.Flags().StringVar(&initOpts.KeyName, "key-name", "", "AWS key-pair for ssh access to nodes")
-	cmdInit.Flags().StringVar(&initOpts.KMSKeyARN, "kms-key-arn", "", "ARN of the AWS KMS key for encrypting TLS assets")
+	cmdInit.Flags().StringVar(&initOpts.KeyName, "key-name", "", "The AWS key-pair for ssh access to nodes")
+	cmdInit.Flags().StringVar(&initOpts.KMSKeyARN, "kms-key-arn", "", "The ARN of the AWS KMS key for encrypting TLS assets")
 }
 
 func runCmdInit(cmd *cobra.Command, args []string) error {

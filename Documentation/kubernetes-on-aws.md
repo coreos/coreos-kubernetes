@@ -7,13 +7,6 @@ After completing this guide, a deployer will be able to interact with the Kubern
 
 At CoreOS, we use the [kube-aws](https://github.com/coreos/coreos-kubernetes/tree/master/multi-node/aws) CLI tool to automate cluster deployment to AWS.
 
-### AWS Credentials
-The supported way to provide AWS credentials to kube-aws is by exporting the following environment variables:
-```sh
-export AWS_ACCESS_KEY_ID=AKID1234567890
-export AWS_SECRET_ACCESS_KEY=MY-SECRET-KEY
-```
-
 ### Download kube-aws
 
 ```sh

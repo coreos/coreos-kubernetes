@@ -5,7 +5,7 @@ Your cluster will be configured to use AWS features to enhance Kubernetes.
 For example, Kubernetes may automatically provision an Elastic Load Balancer for each Kubernetes Service.
 After completing this guide, a deployer will be able to interact with the Kubernetes API from their workstation using the kubectl CLI tool.
 
-At CoreOS, we use the [kube-aws](https://github.com/coreos/coreos-kubernetes/tree/master/multi-node/aws) CLI tool to automate cluster deployment to AWS.
+At CoreOS, we use the [kube-aws](https://github.com/coreos/coreos-kubernetes/releases) CLI tool to automate cluster deployment to AWS.
 
 ### Download kube-aws
 

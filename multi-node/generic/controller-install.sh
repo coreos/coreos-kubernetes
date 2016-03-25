@@ -86,7 +86,7 @@ ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
 Environment=KUBELET_VERSION=${K8S_VER}
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \
-  --register-node=false \
+  --register-schedulable=false \
   --allow-privileged=true \
   --config=/etc/kubernetes/manifests \
   --hostname-override=${ADVERTISE_IP} \

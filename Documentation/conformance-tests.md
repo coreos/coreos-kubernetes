@@ -44,7 +44,7 @@ $ make quick-release
 Modify the `WORKERS` count to match the deployment you are testing:
 
 ```sh
-$ WORKERS=1; sed -i '' "s/NUM_MINIONS=[0-9]/NUM_MINIONS=${WORKERS}/" hack/conformance-test.sh
+$ WORKERS=1; sed -i "s/NUM_MINIONS=[0-9]/NUM_MINIONS=${WORKERS}/" hack/conformance-test.sh
 ```
 
 ### Run Conformance Tests

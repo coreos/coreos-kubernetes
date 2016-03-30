@@ -140,7 +140,7 @@ spec:
             cpu: 10m
             memory: 20Mi
         args:
-        - -cmd=nslookup kubernetes.default.svc.cluster.local localhost >/dev/null
+        - -cmd=nslookup kubernetes.default.svc.cluster.local 127.0.0.1 >/dev/null
         - -port=8080
         ports:
         - containerPort: 8080

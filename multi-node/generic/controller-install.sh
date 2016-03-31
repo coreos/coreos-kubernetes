@@ -5,7 +5,7 @@ set -e
 export ETCD_ENDPOINTS=
 
 # Specify the version (vX.Y.Z) of Kubernetes assets to deploy
-export K8S_VER=v1.1.8_coreos.0
+export K8S_VER=v1.2.0_coreos.1
 
 # The CIDR network to use for pod IPs.
 # Each pod launched in the cluster will be assigned an IP out of this range.
@@ -86,7 +86,7 @@ ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
 Environment=KUBELET_VERSION=${K8S_VER}
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \
-  --register-node=false \
+  --register-schedulable=false \
   --allow-privileged=true \
   --config=/etc/kubernetes/manifests \
   --hostname-override=${ADVERTISE_IP} \
@@ -187,61 +187,7 @@ spec:
 EOF
     }
 
-    local TEMPLATE=/etc/kubernetes/manifests/kube-podmaster.yaml
-    [ -f $TEMPLATE ] || {
-        echo "TEMPLATE: $TEMPLATE"
-        mkdir -p $(dirname $TEMPLATE)
-        cat << EOF > $TEMPLATE
-apiVersion: v1
-kind: Pod
-metadata:
-  name: kube-podmaster
-  namespace: kube-system
-spec:
-  hostNetwork: true
-  containers:
-  - name: scheduler-elector
-    image: gcr.io/google_containers/podmaster:1.1
-    command:
-    - /podmaster
-    - --etcd-servers=${ETCD_ENDPOINTS}
-    - --key=scheduler
-    - --whoami=${ADVERTISE_IP}
-    - --source-file=/src/manifests/kube-scheduler.yaml
-    - --dest-file=/dst/manifests/kube-scheduler.yaml
-    volumeMounts:
-    - mountPath: /src/manifests
-      name: manifest-src
-      readOnly: true
-    - mountPath: /dst/manifests
-      name: manifest-dst
-  - name: controller-manager-elector
-    image: gcr.io/google_containers/podmaster:1.1
-    command:
-    - /podmaster
-    - --etcd-servers=${ETCD_ENDPOINTS}
-    - --key=controller
-    - --whoami=${ADVERTISE_IP}
-    - --source-file=/src/manifests/kube-controller-manager.yaml
-    - --dest-file=/dst/manifests/kube-controller-manager.yaml
-    terminationMessagePath: /dev/termination-log
-    volumeMounts:
-    - mountPath: /src/manifests
-      name: manifest-src
-      readOnly: true
-    - mountPath: /dst/manifests
-      name: manifest-dst
-  volumes:
-  - hostPath:
-      path: /srv/kubernetes/manifests
-    name: manifest-src
-  - hostPath:
-      path: /etc/kubernetes/manifests
-    name: manifest-dst
-EOF
-    }
-
-    local TEMPLATE=/srv/kubernetes/manifests/kube-controller-manager.yaml
+    local TEMPLATE=/etc/kubernetes/manifests/kube-controller-manager.yaml
     [ -f $TEMPLATE ] || {
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
@@ -259,6 +205,7 @@ spec:
     - /hyperkube
     - controller-manager
     - --master=http://127.0.0.1:8080
+    - --leader-elect=true 
     - --service-account-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
     - --root-ca-file=/etc/kubernetes/ssl/ca.pem
     livenessProbe:
@@ -286,7 +233,7 @@ spec:
 EOF
     }
 
-    local TEMPLATE=/srv/kubernetes/manifests/kube-scheduler.yaml
+    local TEMPLATE=/etc/kubernetes/manifests/kube-scheduler.yaml
     [ -f $TEMPLATE ] || {
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
@@ -305,6 +252,7 @@ spec:
     - /hyperkube
     - scheduler
     - --master=http://127.0.0.1:8080
+    - --leader-elect=true
     livenessProbe:
       httpGet:
         host: 127.0.0.1
@@ -342,23 +290,23 @@ EOF
         "labels": {
             "k8s-app": "kube-dns",
             "kubernetes.io/cluster-service": "true",
-            "version": "v9"
+            "version": "v11"
         },
-        "name": "kube-dns-v9",
+        "name": "kube-dns-v11",
         "namespace": "kube-system"
     },
     "spec": {
         "replicas": 1,
         "selector": {
             "k8s-app": "kube-dns",
-            "version": "v9"
+            "version": "v11"
         },
         "template": {
             "metadata": {
                 "labels": {
                     "k8s-app": "kube-dns",
                     "kubernetes.io/cluster-service": "true",
-                    "version": "v9"
+                    "version": "v11"
                 }
             },
             "spec": {
@@ -375,10 +323,14 @@ EOF
                             "-initial-cluster-token",
                             "skydns-etcd"
                         ],
-                        "image": "gcr.io/google_containers/etcd:2.0.9",
+                        "image": "gcr.io/google_containers/etcd:2.2.1",
                         "name": "etcd",
                         "resources": {
                             "limits": {
+                                "cpu": "100m",
+                                "memory": "500Mi"
+                            },
+                            "requests": {
                                 "cpu": "100m",
                                 "memory": "50Mi"
                             }
@@ -388,20 +340,52 @@ EOF
                                 "mountPath": "/var/etcd/data",
                                 "name": "etcd-storage"
                             }
-                        ]
+                        ],
+                        "terminationMessagePath": "/dev/termination-log",
+                        "imagePullPolicy": "IfNotPresent"
                     },
                     {
                         "args": [
-                            "-domain=cluster.local"
+                            "--domain=cluster.local"
                         ],
-                        "image": "gcr.io/google_containers/kube2sky:1.11",
+                        "image": "gcr.io/google_containers/kube2sky:1.14",
                         "name": "kube2sky",
                         "resources": {
                             "limits": {
                                 "cpu": "100m",
+                                "memory": "200Mi"
+                            },
+                            "requests": {
+                                "cpu": "100m",
                                 "memory": "50Mi"
                             }
-                        }
+                        },
+                        "livenessProbe": {
+                            "httpGet": {
+                                "path": "/healthz",
+                                "port": 8080,
+                                "scheme": "HTTP"
+                            },
+                            "initialDelaySeconds": 60,
+                            "timeoutSeconds": 5,
+                            "periodSeconds": 10,
+                            "successThreshold": 1,
+                            "failureThreshold": 3
+                        },
+                        "readinessProbe": {
+                            "httpGet": {
+                                "path": "/readiness",
+                                "port": 8081,
+                                "scheme": "HTTP"
+                            },
+                            "initialDelaySeconds": 30,
+                            "timeoutSeconds": 5,
+                            "periodSeconds": 10,
+                            "successThreshold": 1,
+                            "failureThreshold": 3
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "imagePullPolicy": "IfNotPresent"
                     },
                     {
                         "args": [
@@ -411,15 +395,6 @@ EOF
                             "-domain=cluster.local."
                         ],
                         "image": "gcr.io/google_containers/skydns:2015-10-13-8c72f8c",
-                        "livenessProbe": {
-                            "httpGet": {
-                                "path": "/healthz",
-                                "port": 8080,
-                                "scheme": "HTTP"
-                            },
-                            "initialDelaySeconds": 30,
-                            "timeoutSeconds": 5
-                        },
                         "name": "skydns",
                         "ports": [
                             {
@@ -433,21 +408,18 @@ EOF
                                 "protocol": "TCP"
                             }
                         ],
-                        "readinessProbe": {
-                            "httpGet": {
-                                "path": "/healthz",
-                                "port": 8080,
-                                "scheme": "HTTP"
-                            },
-                            "initialDelaySeconds": 1,
-                            "timeoutSeconds": 5
-                        },
                         "resources": {
                             "limits": {
                                 "cpu": "100m",
+                                "memory": "200Mi"
+                            },
+                            "requests": {
+                                "cpu": "100m",
                                 "memory": "50Mi"
                             }
-                        }
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "imagePullPolicy": "IfNotPresent"
                     },
                     {
                         "args": [
@@ -466,17 +438,26 @@ EOF
                             "limits": {
                                 "cpu": "10m",
                                 "memory": "20Mi"
+                            },
+                            "requests": {
+                                "cpu": "10m",
+                                "memory": "20Mi"
                             }
-                        }
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "imagePullPolicy": "IfNotPresent"
                     }
                 ],
+                "restartPolicy": "Always",
+                "terminationGracePeriodSeconds": 30,
                 "dnsPolicy": "Default",
                 "volumes": [
                     {
                         "emptyDir": {},
                         "name": "etcd-storage"
                     }
-                ]
+                ],
+                "securityContext": {}
             }
         }
     }
@@ -524,8 +505,8 @@ EOF
     }
 
     # For one controller and one worker node, fix memory at
-    # 224Mi. Multiple node clusters should scale up their memory by
-    # about 12Mi per node
+    # 208Mi. Multiple node clusters should scale up their memory by
+    # about 4Mi per node
     local TEMPLATE=/srv/kubernetes/manifests/heapster-rc.json
     [ -f $TEMPLATE ] || {
         echo "TEMPLATE: $TEMPLATE"
@@ -535,129 +516,53 @@ EOF
   "apiVersion": "v1",
   "kind": "ReplicationController",
   "metadata": {
-    "name": "heapster-v10",
+    "name": "heapster-v1.0.0",
     "namespace": "kube-system",
     "labels": {
       "k8s-app": "heapster",
-      "version": "v10",
       "kubernetes.io/cluster-service": "true"
     }
   },
   "spec": {
     "replicas": 1,
     "selector": {
-      "k8s-app": "heapster",
-      "version": "v10"
+      "k8s-app": "heapster"
     },
     "template": {
       "metadata": {
         "labels": {
           "k8s-app": "heapster",
-          "version": "v10",
           "kubernetes.io/cluster-service": "true"
         }
       },
       "spec": {
         "containers": [
           {
-            "image": "gcr.io/google_containers/heapster:v0.18.2",
+            "image": "gcr.io/google_containers/heapster:v1.0.0",
             "name": "heapster",
-            "resources": {
-              "limits": {
-                "cpu": "100m",
-                "memory": "224Mi"
-              },
-              "requests": {
-                "cpu": "100m",
-                "memory": "224Mi"
-              }
-            },
             "command": [
               "/heapster",
-              "--source=kubernetes:''",
-              "--sink=influxdb:http://monitoring-influxdb:8086",
-              "--stats_resolution=30s",
-              "--sink_frequency=1m"
-            ]
-          }
-        ]
-      }
-    }
-  }
-}
-EOF
-    }
-
-    local TEMPLATE=/srv/kubernetes/manifests/influxdb-rc.json
-    [ -f $TEMPLATE ] || {
-        echo "TEMPLATE: $TEMPLATE"
-        mkdir -p $(dirname $TEMPLATE)
-        cat << EOF > $TEMPLATE
-{
-  "apiVersion": "v1",
-  "kind": "ReplicationController",
-  "metadata": {
-    "name": "monitoring-influxdb-v2",
-    "namespace": "kube-system",
-    "labels": {
-      "k8s-app": "influxdb",
-      "version": "v2",
-      "kubernetes.io/cluster-service": "true"
-    }
-  },
-  "spec": {
-    "replicas": 1,
-    "selector": {
-      "k8s-app": "influxdb",
-      "version": "v2"
-    },
-    "template": {
-      "metadata": {
-        "labels": {
-          "k8s-app": "influxdb",
-          "version": "v2",
-          "kubernetes.io/cluster-service": "true"
-        }
-      },
-      "spec": {
-        "containers": [
-          {
-            "image": "gcr.io/google_containers/heapster_influxdb:v0.4",
-            "name": "influxdb",
+              "--source=kubernetes.summary_api:''",
+              "--metric_resolution=60s"
+            ],
             "resources": {
               "limits": {
                 "cpu": "100m",
-                "memory": "200Mi"
+                "memory": "208Mi"
               },
               "requests": {
                 "cpu": "100m",
-                "memory": "200Mi"
+                "memory": "208Mi"
               }
             },
-            "ports": [
-              {
-                "containerPort": 8083,
-                "hostPort": 8083
-              },
-              {
-                "containerPort": 8086,
-                "hostPort": 8086
-              }
-            ],
-            "volumeMounts": [
-              {
-                "name": "influxdb-persistent-storage",
-                "mountPath": "/data"
-              }
-            ]
+            "terminationMessagePath": "/dev/termination-log",
+            "imagePullPolicy": "IfNotPresent"
           }
         ],
-        "volumes": [
-          {
-            "name": "influxdb-persistent-storage",
-            "emptyDir": {}
-          }
-        ]
+        "restartPolicy": "Always",
+        "terminationGracePeriodSeconds": 30,
+        "dnsPolicy": "ClusterFirst",
+        "securityContext": {}
       }
     }
   }
@@ -690,43 +595,6 @@ EOF
     ],
     "selector": {
       "k8s-app": "heapster"
-    }
-  }
-}
-EOF
-    }
-
-    local TEMPLATE=/srv/kubernetes/manifests/influxdb-svc.json
-    [ -f $TEMPLATE ] || {
-        echo "TEMPLATE: $TEMPLATE"
-        mkdir -p $(dirname $TEMPLATE)
-        cat << EOF > $TEMPLATE
-{
-  "apiVersion": "v1",
-  "kind": "Service",
-  "metadata": {
-    "name": "monitoring-influxdb",
-    "namespace": "kube-system",
-    "labels": {
-      "kubernetes.io/cluster-service": "true",
-      "kubernetes.io/name": "InfluxDB"
-    }
-  },
-  "spec": {
-    "ports": [
-      {
-        "name": "http",
-        "port": 8083,
-        "targetPort": 8083
-      },
-      {
-        "name": "api",
-        "port": 8086,
-        "targetPort": 8086
-      }
-    ],
-    "selector": {
-      "k8s-app": "influxdb"
     }
   }
 }
@@ -778,10 +646,9 @@ function start_addons {
     echo "K8S: DNS addon"
     curl --silent -H "Content-Type: application/json" -XPOST -d"$(cat /srv/kubernetes/manifests/kube-dns-rc.json)" "http://127.0.0.1:8080/api/v1/namespaces/kube-system/replicationcontrollers" > /dev/null
     curl --silent -H "Content-Type: application/json" -XPOST -d"$(cat /srv/kubernetes/manifests/kube-dns-svc.json)" "http://127.0.0.1:8080/api/v1/namespaces/kube-system/services" > /dev/null
+    echo "K8S: Heapster addon"
     curl --silent -H "Content-Type: application/json" -XPOST -d"$(cat /srv/kubernetes/manifests/heapster-rc.json)" "http://127.0.0.1:8080/api/v1/namespaces/kube-system/replicationcontrollers" > /dev/null
-    curl --silent -H "Content-Type: application/json" -XPOST -d"$(cat /srv/kubernetes/manifests/influxdb-rc.json)" "http://127.0.0.1:8080/api/v1/namespaces/kube-system/replicationcontrollers" > /dev/null
     curl --silent -H "Content-Type: application/json" -XPOST -d"$(cat /srv/kubernetes/manifests/heapster-svc.json)" "http://127.0.0.1:8080/api/v1/namespaces/kube-system/services" > /dev/null
-    curl --silent -H "Content-Type: application/json" -XPOST -d"$(cat /srv/kubernetes/manifests/influxdb-svc.json)" "http://127.0.0.1:8080/api/v1/namespaces/kube-system/services" > /dev/null
 }
 
 init_config

@@ -7,16 +7,42 @@ After completing this guide, a deployer will be able to interact with the Kubern
 
 At CoreOS, we use the [kube-aws](https://github.com/coreos/coreos-kubernetes/releases) CLI tool to automate cluster deployment to AWS.
 
-### Download kube-aws
+### Download pre-built binary
+
+Import the [CoreOS Application Signing Public Key](https://coreos.com/security/app-signing-key/):
+
+```sh
+gpg2 --keyserver pgp.mit.edu --recv-key FC8A365E
+```
+
+Validate the key fingerprint:
+
+```sh
+gpg2 --fingerprint FC8A365E
+```
+The correct key fingerprint is `18AD 5014 C99E F7E3 BA5F  6CE9 50BD D3E0 FC8A 365E`
+
+Go to the [releases](https://github.com/coreos/coreos-kubernetes/releases) and download the latest release tarball and detached signature (.sig) for your architecture.
+
+Validate the tarball's GPG signature:
 
 ```sh
 PLATFORM=linux-amd64
 # Or
 PLATFORM=darwin-amd64
 
-wget https://coreos-kubernetes.s3.amazonaws.com/kube-aws/latest/${PLATFORM}/kube-aws
-chmod +x kube-aws
-# Add kube-aws binary to your PATH
+gpg2 --verify kube-aws-${PLATFORM}.tar.gz.sig kube-aws-${PLATFORM}.tar.gz
+```
+Extract the binary:
+
+```sh
+tar zxvf kube-aws-${PLATFORM}.tar.gz
+```
+
+Add kube-aws to your path:
+
+```sh
+mv ${PLATFORM}/kube-aws /usr/local/bin
 ```
 
 ### Configure AWS Credentials
@@ -60,7 +86,7 @@ When CloudFormation finishes creating your cluster, your controller will expose 
 
 [Amazon KMS](http://docs.aws.amazon.com/kms/latest/developerguide/overview.html) keys are used to encrypt and decrypt cluster TLS assets. If you already have a KMS Key that you would like to use, you can skip this step.
 
-Creating a KMS key can be done via the [AWS web console](http://docs.aws.amazon.com/kms/latest/developerguide/create-keys.html) or via the AWS cli tool.
+Creating a KMS key can be done via the [AWS web console](http://docs.aws.amazon.com/kms/latest/developerguide/create-keys.html) or via the AWS cli tool:
 
 ```sh
 $ aws kms --region=<your-region> create-key --description="kube-aws assets"
@@ -132,7 +158,7 @@ You can also now check the `my-cluster` asset directory into version control if 
 
 #### Validate your cluster assets
 
-The `validate` command check the validity of the cloud-config userdata files and the CloudFormation stack description.
+The `validate` command check the validity of the cloud-config userdata files and the CloudFormation stack description:
 
 ```sh
 $ kube-aws validate

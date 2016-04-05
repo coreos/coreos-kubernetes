@@ -87,9 +87,9 @@ After=flanneld.service
 
 ### Create the kubelet Unit
 
-The [kubelet](http://kubernetes.io/v1.1/docs/admin/kubelet.html) is the agent on each machine that starts and stops Pods and other machine-level tasks. The kubelet communicates with the API server (also running on the master nodes) with the TLS certificates we placed on disk earlier.
+The [kubelet](http://kubernetes.io/docs/admin/kubelet.html) is the agent on each machine that starts and stops Pods and other machine-level tasks. The kubelet communicates with the API server (also running on the master nodes) with the TLS certificates we placed on disk earlier.
 
-On the master node, the kubelet is configured to communicate with the API server, but not register for cluster work, as shown in the `--register-node=false` line in the YAML excerpt below. This prevents user pods being scheduled on the master nodes, and ensures cluster work is routed only to task-specific worker nodes.
+On the master node, the kubelet is configured to communicate with the API server, but not register for cluster work, as shown in the `--register-schedulable=false` line in the YAML excerpt below. This prevents user pods being scheduled on the master nodes, and ensures cluster work is routed only to task-specific worker nodes.
 
 Note that the kubelet running on a master node may log repeated attempts to post its status to the API server. These warnings are expected behavior and can be ignored. Future Kubernetes releases plan to [handle this common deployment consideration more gracefully](https://github.com/kubernetes/kubernetes/issues/14140#issuecomment-142126864).
 
@@ -106,7 +106,7 @@ ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
 Environment=KUBELET_VERSION=${K8S_VER}
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \
-  --register-node=false \
+  --register-schedulable=false \
   --allow-privileged=true \
   --config=/etc/kubernetes/manifests \
   --hostname-override=${ADVERTISE_IP} \
@@ -142,7 +142,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-apiserver
-    image: quay.io/coreos/hyperkube:v1.1.8_coreos.0
+    image: quay.io/coreos/hyperkube:v1.2.0_coreos.1
     command:
     - /hyperkube
     - apiserver
@@ -200,7 +200,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-proxy
-    image: quay.io/coreos/hyperkube:v1.1.8_coreos.0
+    image: quay.io/coreos/hyperkube:v1.2.0_coreos.1
     command:
     - /hyperkube
     - proxy
@@ -302,7 +302,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-controller-manager
-    image: quay.io/coreos/hyperkube:v1.1.8_coreos.0
+    image: quay.io/coreos/hyperkube:v1.2.0_coreos.1
     command:
     - /hyperkube
     - controller-manager
@@ -350,7 +350,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-scheduler
-    image: quay.io/coreos/hyperkube:v1.1.8_coreos.0
+    image: quay.io/coreos/hyperkube:v1.2.0_coreos.1
     command:
     - /hyperkube
     - scheduler

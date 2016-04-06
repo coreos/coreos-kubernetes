@@ -22,10 +22,15 @@ The linux `kubectl` binary can be fetched with a command like:
 $ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.2.0/bin/linux/amd64/kubectl
 ```
 
-On an OS X workstation, replace `linux` in the URL above with `darwin`:
+On an OS X workstation, you can either replace `linux` in the URL above with `darwin`:
 
 ```sh
 $ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.2.0/bin/darwin/amd64/kubectl
+```
+
+Or install `kubectl` using [Homebrew](http://brew.sh/):
+```sh
+$ brew install kubectl
 ```
 
 After downloading the binary, ensure it is executable and move it into your PATH:

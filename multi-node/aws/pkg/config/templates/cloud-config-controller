@@ -4,7 +4,7 @@ coreos:
     reboot-strategy: "off"
   flannel:
     interface: $private_ipv4
-    etcd_endpoints: {{ .ETCDEndpoints }}
+    etcd_endpoints: {{ .EtcdEndpoints }}
   etcd2:
     name: controller
     advertise-client-urls: http://$private_ipv4:2379
@@ -160,7 +160,7 @@ write_files:
           - /hyperkube
           - apiserver
           - --bind-address=0.0.0.0
-          - --etcd-servers=http://localhost:2379
+          - --etcd-servers={{ .EtcdEndpoints }}
           - --allow-privileged=true
           - --service-cluster-ip-range={{.ServiceCIDR}}
           - --secure-port=443

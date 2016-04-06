@@ -36,6 +36,7 @@ func newDefaultCluster() *Cluster {
 		PodCIDR:                  "10.2.0.0/16",
 		ServiceCIDR:              "10.3.0.0/24",
 		DNSServiceIP:             "10.3.0.10",
+		EtcdEndpoints:            "http://10.0.0.50:2379",
 		K8sVer:                   "v1.2.0_coreos.1",
 		HyperkubeImageRepo:       "quay.io/coreos/hyperkube",
 		ControllerInstanceType:   "m3.medium",
@@ -94,6 +95,7 @@ type Cluster struct {
 	ServiceCIDR              string `yaml:"serviceCIDR"`
 	DNSServiceIP             string `yaml:"dnsServiceIP"`
 	K8sVer                   string `yaml:"kubernetesVersion"`
+	EtcdEndpoints            string `yaml:"etcdEndpoints"`
 	HyperkubeImageRepo       string `yaml:"hyperkubeImageRepo"`
 	KMSKeyARN                string `yaml:"kmsKeyArn"`
 }
@@ -104,7 +106,7 @@ const (
 
 func (c Cluster) Config() (*Config, error) {
 	config := Config{Cluster: c}
-	config.ETCDEndpoints = fmt.Sprintf("http://%s:2379", c.ControllerIP)
+	config.EtcdEndpoints = fmt.Sprintf("%s", c.EtcdEndpoints)
 	config.APIServers = fmt.Sprintf("http://%s:8080", c.ControllerIP)
 	config.SecureAPIServers = fmt.Sprintf("https://%s:443", c.ControllerIP)
 	config.APIServerEndpoint = fmt.Sprintf("https://%s", c.ExternalDNSName)
@@ -295,7 +297,7 @@ func getContextString(buf []byte, offset, lineCount int) string {
 type Config struct {
 	Cluster
 
-	ETCDEndpoints     string
+	EtcdEndpoints     string
 	APIServers        string
 	SecureAPIServers  string
 	APIServerEndpoint string

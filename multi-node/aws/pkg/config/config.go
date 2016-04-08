@@ -97,8 +97,9 @@ type Cluster struct {
 	K8sVer                   string `yaml:"kubernetesVersion"`
 	EtcdEndpoints            string `yaml:"etcdEndpoints"`
 	EtcdEndpoint             string
-	HyperkubeImageRepo       string `yaml:"hyperkubeImageRepo"`
-	KMSKeyARN                string `yaml:"kmsKeyArn"`
+	HyperkubeImageRepo       string              `yaml:"hyperkubeImageRepo"`
+	KMSKeyARN                string              `yaml:"kmsKeyArn"`
+	Tags                     []map[string]string `yaml:"tags"`
 }
 
 const (

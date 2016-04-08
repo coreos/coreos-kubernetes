@@ -134,12 +134,20 @@ func (c *Cluster) Create(stackBody string) error {
 		return err
 	}
 
+	tags := make([]*cloudformation.Tag, len(c.Tags))
+	for i := range c.Tags {
+		for k, v := range c.Tags[i] {
+			tags[i] = &cloudformation.Tag{Key: &k, Value: &v}
+		}
+	}
+
 	cfSvc := cloudformation.New(c.session)
 	creq := &cloudformation.CreateStackInput{
 		StackName:    aws.String(c.ClusterName),
 		OnFailure:    aws.String("DO_NOTHING"),
 		Capabilities: []*string{aws.String(cloudformation.CapabilityCapabilityIam)},
 		TemplateBody: &stackBody,
+		Tags:         tags,
 	}
 
 	resp, err := cfSvc.CreateStack(creq)

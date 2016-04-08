@@ -55,6 +55,9 @@ kmsKeyArn: "{{.KMSKeyARN}}"
 # IP Address for controller in Kubernetes subnet
 # controllerIP: 10.0.0.50
 
+# Comma seperated list of Etcd endpoints defaults to .controllerIP
+# etcdEndpoints: "10.0.0.50"
+
 # CIDR for all service IP addresses
 # serviceCIDR: "10.3.0.0/24"
 
@@ -69,3 +72,8 @@ kmsKeyArn: "{{.KMSKeyARN}}"
 
 # Hyperkube image repository to use.
 # hyperkubeImageRepo: quay.io/coreos/hyperkube
+
+# AWS Tags for cloudformation stack
+#tags:
+#- Name: "Kubernetes" 
+#- Environment: "Production"

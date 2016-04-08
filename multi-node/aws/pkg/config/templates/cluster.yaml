@@ -56,7 +56,7 @@ kmsKeyArn: "{{.KMSKeyARN}}"
 # controllerIP: 10.0.0.50
 
 # Comma seperated list of Etcd endpoints defaults to .controllerIP
-# etcdEndpoints: "http://10.0.0.50:2379"
+# etcdEndpoints: "10.0.0.50"
 
 # CIDR for all service IP addresses
 # serviceCIDR: "10.3.0.0/24"

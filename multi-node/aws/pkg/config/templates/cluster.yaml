@@ -74,6 +74,6 @@ kmsKeyArn: "{{.KMSKeyARN}}"
 # hyperkubeImageRepo: quay.io/coreos/hyperkube
 
 # AWS Tags for cloudformation stack
-tags:
-- Name: "Kubernetes" 
-- Environment: "Production"
+#tags:
+#- Name: "Kubernetes" 
+#- Environment: "Production"

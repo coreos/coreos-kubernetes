@@ -13,9 +13,33 @@ NODE_IP = "172.17.4.99"
 USER_DATA_PATH = File.expand_path("user-data")
 SSL_TARBALL_PATH = File.expand_path("ssl/controller.tar")
 
-system("mkdir -p ssl && ./../lib/init-ssl-ca ssl") or abort ("failed generating SSL CA artifacts")
-system("./../lib/init-ssl ssl apiserver controller IP.1=#{NODE_IP},IP.2=#{CLUSTER_IP}") or abort ("failed generating SSL certificate artifacts")
-system("./../lib/init-ssl ssl admin kube-admin") or abort("failed generating admin SSL artifacts")
+module OS
+  def OS.windows?
+    (/cygwin|mswin|mingw|bccwin|wince|emx/ =~ RUBY_PLATFORM) != nil
+  end
+
+  def OS.mac?
+   (/darwin/ =~ RUBY_PLATFORM) != nil
+  end
+
+  def OS.unix?
+    !OS.windows?
+  end
+
+  def OS.linux?
+    OS.unix? and not OS.mac?
+  end
+end
+
+if OS.windows?
+  system('powershell "mkdir -force ssl | out-null; ./../lib/init-ssl-ca.ps1 ssl"') or abort ("failed generating SSL CA artifacts")
+  system("powershell \"./../lib/init-ssl.ps1 ssl apiserver controller IP.1=#{NODE_IP},IP.2=#{CLUSTER_IP}\"") or abort ("failed generating SSL certificate artifacts")
+  system('powershell "./../lib/init-ssl.ps1 ssl admin kube-admin"') or abort ("failed generating admin SSL artifacts")
+else
+  system("mkdir -p ssl && ./../lib/init-ssl-ca ssl") or abort ("failed generating SSL CA artifacts")
+  system("./../lib/init-ssl ssl apiserver controller IP.1=#{NODE_IP},IP.2=#{CLUSTER_IP}") or abort ("failed generating SSL certificate artifacts")
+  system("./../lib/init-ssl ssl admin kube-admin") or abort("failed generating admin SSL artifacts")
+end
 
 Vagrant.configure("2") do |config|
   # always use Vagrant's insecure key

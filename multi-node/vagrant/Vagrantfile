@@ -69,14 +69,14 @@ end
 
 # Generate root CA
 if OS.windows?
-  system('powershell "mkdir -force ssl | out-null; ./../../lib/init-ssl-ca.ps1 ssl"') or abort ("failed generating SSL artifacts")
+  system('powershell -ExecutionPolicy ByPass "mkdir -force ssl | out-null; ./../../lib/init-ssl-ca.ps1 ssl"') or abort ("failed generating SSL artifacts")
 else
   system("'mkdir -p ssl && ./../../lib/init-ssl-ca ssl'") or abort ("failed generating SSL artifacts")
 end
 
 # Generate admin key/cert
 if OS.windows?
-  system('powershell "./../../lib/init-ssl.ps1 ssl admin kube-admin"') or abort ("failed generating SSL artifacts")
+  system('powershell -ExecutionPolicy ByPass "./../../lib/init-ssl.ps1 ssl admin kube-admin"') or abort ("failed generating SSL artifacts")
 else
   system("./../../lib/init-ssl ssl admin kube-admin") or abort("failed generating admin SSL artifacts")
 end
@@ -87,7 +87,7 @@ def provisionMachineSSL(machine,certBaseName,cn,ipAddrs)
   ipString = ipAddrs.map.with_index { |ip, i| "IP.#{i+1}=#{ip}"}.join(",")
   
   if OS.windows?
-    system("powershell \"./../../lib/init-ssl.ps1 ssl #{certBaseName} #{cn} #{ipString}\"") or abort ("failed generating SSL artifacts")
+    system("powershell -ExecutionPolicy ByPass \"./../../lib/init-ssl.ps1 ssl #{certBaseName} #{cn} #{ipString}\"") or abort ("failed generating SSL artifacts")
   else
     system("./../../lib/init-ssl ssl #{certBaseName} #{cn} #{ipString}") or abort("failed generating #{cn} SSL artifacts")
   end

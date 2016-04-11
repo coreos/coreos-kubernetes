@@ -49,16 +49,49 @@ etcdIPs = [*1..$etcd_count].map{ |i| etcdIP(i) }
 initial_etcd_cluster = etcdIPs.map.with_index{ |ip, i| "e#{i+1}=http://#{ip}:2380" }.join(",")
 etcd_endpoints = etcdIPs.map.with_index{ |ip, i| "http://#{ip}:2379" }.join(",")
 
+module OS
+  def OS.windows?
+    (/cygwin|mswin|mingw|bccwin|wince|emx/ =~ RUBY_PLATFORM) != nil
+  end
+
+  def OS.mac?
+   (/darwin/ =~ RUBY_PLATFORM) != nil
+  end
+
+  def OS.unix?
+    !OS.windows?
+  end
+
+  def OS.linux?
+    OS.unix? and not OS.mac?
+  end
+end
+
 # Generate root CA
-system("mkdir -p ssl && ./../../lib/init-ssl-ca ssl") or abort ("failed generating SSL artifacts")
+if OS.windows?
+  system('powershell "mkdir -force ssl | out-null; ./../../lib/init-ssl-ca.ps1 ssl"') or abort ("failed generating SSL artifacts")
+else
+  system("'mkdir -p ssl && ./../../lib/init-ssl-ca ssl'") or abort ("failed generating SSL artifacts")
+end
 
 # Generate admin key/cert
-system("./../../lib/init-ssl ssl admin kube-admin") or abort("failed generating admin SSL artifacts")
+if OS.windows?
+  system('powershell "./../../lib/init-ssl.ps1 ssl admin kube-admin"') or abort ("failed generating SSL artifacts")
+else
+  system("./../../lib/init-ssl ssl admin kube-admin") or abort("failed generating admin SSL artifacts")
+end
+
 
 def provisionMachineSSL(machine,certBaseName,cn,ipAddrs)
   tarFile = "ssl/#{cn}.tar"
   ipString = ipAddrs.map.with_index { |ip, i| "IP.#{i+1}=#{ip}"}.join(",")
-  system("./../../lib/init-ssl ssl #{certBaseName} #{cn} #{ipString}") or abort("failed generating #{cn} SSL artifacts")
+  
+  if OS.windows?
+    system("powershell \"./../../lib/init-ssl.ps1 ssl #{certBaseName} #{cn} #{ipString}\"") or abort ("failed generating SSL artifacts")
+  else
+    system("./../../lib/init-ssl ssl #{certBaseName} #{cn} #{ipString}") or abort("failed generating #{cn} SSL artifacts")
+  end
+  
   machine.vm.provision :file, :source => tarFile, :destination => "/tmp/ssl.tar"
   machine.vm.provision :shell, :inline => "mkdir -p /etc/kubernetes/ssl && tar -C /etc/kubernetes/ssl -xf /tmp/ssl.tar", :privileged => true
 end
@@ -108,6 +141,7 @@ Vagrant.configure("2") do |config|
       data['coreos']['etcd2']['initial-cluster'] = initial_etcd_cluster
       data['coreos']['etcd2']['name'] = vm_name
       etcd_config_file = Tempfile.new('etcd_config')
+	  etcd_config_file.binmode #Suppress EOL <-> CRLF conversion
       etcd_config_file.write("#cloud-config\n#{data.to_yaml}")
       etcd_config_file.close
 
@@ -135,6 +169,7 @@ Vagrant.configure("2") do |config|
     config.vm.define vm_name = "c%d" % i do |controller|
 
       env_file = Tempfile.new('env_file')
+	  env_file.binmode
       env_file.write("ETCD_ENDPOINTS=#{etcd_endpoints}\n")
       env_file.close
 
@@ -161,6 +196,7 @@ Vagrant.configure("2") do |config|
 
       controller.vm.provision :file, :source => CONTROLLER_CLOUD_CONFIG_PATH, :destination => "/tmp/vagrantfile-user-data"
       controller.vm.provision :shell, :inline => "mv /tmp/vagrantfile-user-data /var/lib/coreos-vagrant/", :privileged => true
+	  controller.vm.provision :shell, :inline => "iptables -A INPUT -m state --state NEW -m tcp -p tcp --dport 443", :privileged => true
     end
   end
 
@@ -169,6 +205,7 @@ Vagrant.configure("2") do |config|
       worker.vm.hostname = vm_name
 
       env_file = Tempfile.new('env_file')
+	  env_file.binmode
       env_file.write("ETCD_ENDPOINTS=#{etcd_endpoints}\n")
       env_file.write("CONTROLLER_ENDPOINT=https://#{controllerIPs[0]}\n") #TODO(aaron): LB or DNS across control nodes
       env_file.close

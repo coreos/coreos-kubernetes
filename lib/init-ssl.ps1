@@ -26,14 +26,14 @@ if(!(Get-Command "7z" -errorAction SilentlyContinue)){
 			$ZIP="C:\Program Files\7-Zip\7z.exe"
 		}else{
 			write-error "7zip is required to proceed."
-			return
+			exit
 		}
 	}
 }else{ $ZIP="7z" }
 
 if(! (test-path $OUTDIR)){
 	write-error "ERROR: output directory does not exist:  $OUTDIR"
-	return
+	exit
 }
 
 $OUTFILE="$OUTDIR\$CN.tar"

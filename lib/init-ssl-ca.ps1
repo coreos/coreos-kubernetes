@@ -10,20 +10,20 @@ function usage {
 
 if($args[0] -eq $null){
 	usage
-	return
+	exit
 }
 
 $OUTDIR=$args[0]
 
 if(! (test-path $OUTDIR)){
 	write-error "ERROR: output directory does not exist:  $OUTDIR"
-	return
+	exit
 }
 
 $OUTFILE="$OUTDIR\ca.pem"
 
 if(test-path $OUTFILE){
-	return
+	exit
 }
 
 #Needed to avoid "unable to write 'random state'" error

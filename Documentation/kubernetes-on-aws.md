@@ -82,6 +82,8 @@ Select a DNS hostname where the cluster's API will be accessible. This informati
 
 When CloudFormation finishes creating your cluster, your controller will expose the TLS-secured API via a public IP address. You will need to create an A record for the DNS hostname which lists the IP address of the API. You can find this IP address later via `kube-aws status`.
 
+`kube-aws` can be optionally be configured to automatically create an A record in an existing route53 hosted zone.
+
 #### KMS Key
 
 [Amazon KMS](http://docs.aws.amazon.com/kms/latest/developerguide/overview.html) keys are used to encrypt and decrypt cluster TLS assets. If you already have a KMS Key that you would like to use, you can skip this step.
@@ -156,6 +158,20 @@ You can now customize your cluster by editing asset files:
 
 You can also now check the `my-cluster` asset directory into version control if you desire. The contents of this directory are your reproducible cluster assets. Please take care not to commit the `my-cluster/credentials` directory, as it contains your TLS secrets. If you're using git, the `credentials` directory will already be ignored for you.
 
+#### Route53 Host Record (optional)
+
+`kube-aws` can optionally create an A record for the controller IP in an existing hosted zone.
+
+Edit the `cluster.yaml` file:
+
+```yaml
+externalDNSName: my-cluster.staging.core-os.net
+createRecordSet: true
+hostedZone: staging.core-os.net
+```
+
+If `createRecordSet` is not set to true, the deployer will be responsible for making externalDNSName routable to the controller IP after the cluster is created.
+
 #### Validate your cluster assets
 
 The `validate` command check the validity of the cloud-config userdata files and the CloudFormation stack description:
@@ -178,7 +194,9 @@ If deploying a production Kubernetes cluster, consider establishing PKI independ
 
 #### Configure your DNS
 
-Navigate to the DNS registrar hosting the zone for the provided external DNS name. Ensure a single A record exists, routing the value of `externalDNSName` defined in `cluster.yaml` to the externally-accessible IP of the master node instance.
+If you configured Route 53 settings in your configuration above via `createRecordSet`, a host record has already been created for you.
+
+Otherwise, navigate to the DNS registrar hosting the zone for the provided external DNS name. Ensure a single A record exists, routing the value of `externalDNSName` defined in `cluster.yaml` to the externally-accessible IP of the master node instance.
 
 You may use `kube-aws status` to get this value after cluster creation, if necessary. This command can take a while.
 

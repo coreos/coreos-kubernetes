@@ -8,7 +8,9 @@ Manual configuration of the required master node services is explained below, bu
 
 The instructions below configure the required master node components using manifests stored in `/etc/kubernetes/manifests`. The kubelet will watch this location for new or modified manifests and run them automatically.
 
-If you are deploying multiple master nodes in a high-availability cluster, these instructions can be repeated for each one you wish to launch. Each of the master components is safe to run on multiple master nodes due to stateless design or built-in leader-election. In the case of leader-election, the service ensures that important cluster management is handled by the leader, with the additional master nodes ready to take over at any time.
+High-availability is achieved by repeating these instructions for each master node. Each of the master components is safe to run on multiple nodes.
+
+The apiserver is stateless, but handles recording the results of leader elections to etcd on behalf of other master components. The controller-manager and scheduler use the leader election mechanism to ensure only one of each is active, leaving the inactive master components ready to assume responsibility in case of failure.
 
 ## Configure Service Components
 

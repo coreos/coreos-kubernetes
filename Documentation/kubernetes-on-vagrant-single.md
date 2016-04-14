@@ -46,6 +46,8 @@ $ cd coreos-kubernetes/single-node/
 
 ## Start the Machine
 
+Ensure the latest CoreOS vagrant image will be used by running `vagrant box update`.
+
 Simply run `vagrant up` and wait for the command to succeed.
 Once Vagrant is finished booting and provisioning your machine, your cluster is good to go.
 

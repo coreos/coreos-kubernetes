@@ -19,7 +19,7 @@ An example systemd kubelet.service file which takes advantage of the kubelet-wra
 
 ```ini
 [Service]
-Environment=KUBELET_VERSION=v1.2.0_coreos.1
+Environment=KUBELET_VERSION=v1.2.2_coreos.0
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \
   --config=/etc/kubernetes/manifests
@@ -53,7 +53,7 @@ For example:
 
 ```ini
 [Service]
-Environment=KUBELET_VERSION=v1.2.0_coreos.1
+Environment=KUBELET_VERSION=v1.2.2_coreos.0
 ExecStart=/opt/bin/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \
   --config=/etc/kubernetes/manifests

@@ -60,7 +60,9 @@ The default cluster configuration is to start a virtual machine for each role &m
 #$etcd_vm_memory=512
 ```
 
-Next, simply run `vagrant up` and wait for the command to succeed.
+Ensure the latest CoreOS vagrant image will be used by running `vagrant box update`.
+
+Then simply run `vagrant up` and wait for the command to succeed.
 Once Vagrant is finished booting and provisioning your machine, your cluster is good to go.
 
 ## Configure kubectl

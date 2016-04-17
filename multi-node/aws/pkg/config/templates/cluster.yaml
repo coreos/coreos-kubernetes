@@ -66,6 +66,13 @@ kmsKeyArn: "{{.KMSKeyARN}}"
 # IP Address for controller in Kubernetes subnet
 # controllerIP: 10.0.0.50
 
+# Comma seperated list of Etcd endpoints. By default this needs to be set to "http://<controllerIP>:2379" 
+# if custom etcdEndpoints are specified then a security group id can also be specified which will expose
+# the etcd security group to the worker & controller instances.
+# etcdEndpoints: "http://10.0.0.50:2379"
+# etcdSecurityGroupId: ""
+
+
 # CIDR for all service IP addresses
 # serviceCIDR: "10.3.0.0/24"
 

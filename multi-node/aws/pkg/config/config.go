@@ -2,7 +2,6 @@ package config
 
 //go:generate go run templates_gen.go
 //go:generate gofmt -w templates.go
-
 import (
 	"bytes"
 	"encoding/json"
@@ -10,6 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
+	"net/url"
 	"strings"
 	"text/template"
 	"unicode/utf8"
@@ -34,6 +34,7 @@ func newDefaultCluster() *Cluster {
 		VPCCIDR:                  "10.0.0.0/16",
 		InstanceCIDR:             "10.0.0.0/24",
 		ControllerIP:             "10.0.0.50",
+		EtcdEndpoints:            "http://10.0.0.50:2379",
 		PodCIDR:                  "10.2.0.0/16",
 		ServiceCIDR:              "10.3.0.0/24",
 		DNSServiceIP:             "10.3.0.10",
@@ -81,23 +82,26 @@ func ClusterFromBytes(data []byte) (*Cluster, error) {
 }
 
 type Cluster struct {
-	ClusterName              string            `yaml:"clusterName"`
-	ExternalDNSName          string            `yaml:"externalDNSName"`
-	KeyName                  string            `yaml:"keyName"`
-	Region                   string            `yaml:"region"`
-	AvailabilityZone         string            `yaml:"availabilityZone"`
-	ReleaseChannel           string            `yaml:"releaseChannel"`
-	ControllerInstanceType   string            `yaml:"controllerInstanceType"`
-	ControllerRootVolumeSize int               `yaml:"controllerRootVolumeSize"`
-	WorkerCount              int               `yaml:"workerCount"`
-	WorkerInstanceType       string            `yaml:"workerInstanceType"`
-	WorkerRootVolumeSize     int               `yaml:"workerRootVolumeSize"`
-	WorkerSpotPrice          string            `yaml:"workerSpotPrice"`
-	VPCID                    string            `yaml:"vpcId"`
-	RouteTableID             string            `yaml:"routeTableId"`
-	VPCCIDR                  string            `yaml:"vpcCIDR"`
-	InstanceCIDR             string            `yaml:"instanceCIDR"`
-	ControllerIP             string            `yaml:"controllerIP"`
+	ClusterName              string `yaml:"clusterName"`
+	ExternalDNSName          string `yaml:"externalDNSName"`
+	KeyName                  string `yaml:"keyName"`
+	Region                   string `yaml:"region"`
+	AvailabilityZone         string `yaml:"availabilityZone"`
+	ReleaseChannel           string `yaml:"releaseChannel"`
+	ControllerInstanceType   string `yaml:"controllerInstanceType"`
+	ControllerRootVolumeSize int    `yaml:"controllerRootVolumeSize"`
+	WorkerCount              int    `yaml:"workerCount"`
+	WorkerInstanceType       string `yaml:"workerInstanceType"`
+	WorkerRootVolumeSize     int    `yaml:"workerRootVolumeSize"`
+	WorkerSpotPrice          string `yaml:"workerSpotPrice"`
+	VPCID                    string `yaml:"vpcId"`
+	RouteTableID             string `yaml:"routeTableId"`
+	VPCCIDR                  string `yaml:"vpcCIDR"`
+	InstanceCIDR             string `yaml:"instanceCIDR"`
+	ControllerIP             string `yaml:"controllerIP"`
+	EtcdEndpoints            string `yaml:"etcdEndpoints"`
+	EtcdEndpoint             string
+	EtcdSecurityGroupId      string            `yaml:"etcdSecurityGroupId"`
 	PodCIDR                  string            `yaml:"podCIDR"`
 	ServiceCIDR              string            `yaml:"serviceCIDR"`
 	DNSServiceIP             string            `yaml:"dnsServiceIP"`
@@ -116,7 +120,9 @@ const (
 
 func (c Cluster) Config() (*Config, error) {
 	config := Config{Cluster: c}
-	config.ETCDEndpoints = fmt.Sprintf("http://%s:2379", c.ControllerIP)
+
+	config.EtcdEndpoint = strings.Split(c.EtcdEndpoints, ",")[0]
+	config.EtcdEndpoints = c.EtcdEndpoints
 	config.APIServers = fmt.Sprintf("http://%s:8080", c.ControllerIP)
 	config.SecureAPIServers = fmt.Sprintf("https://%s:443", c.ControllerIP)
 	config.APIServerEndpoint = fmt.Sprintf("https://%s", c.ExternalDNSName)
@@ -139,6 +145,15 @@ func (c Cluster) Config() (*Config, error) {
 	}
 
 	return &config, nil
+}
+
+func (c Cluster) CustomEtcdEndpoint() bool {
+	endpoint, _ := url.Parse(c.EtcdEndpoint)
+	host := strings.Split(endpoint.Host, ":")[0]
+	if host == c.ControllerIP {
+		return false
+	}
+	return true
 }
 
 type StackTemplateOptions struct {
@@ -309,7 +324,7 @@ func getContextString(buf []byte, offset, lineCount int) string {
 type Config struct {
 	Cluster
 
-	ETCDEndpoints     string
+	EtcdEndpoints     string
 	APIServers        string
 	SecureAPIServers  string
 	APIServerEndpoint string
@@ -393,6 +408,13 @@ func (cfg Cluster) valid() error {
 			cfg.InstanceCIDR,
 			cfg.ControllerIP,
 		)
+	}
+
+	for _, endpoint := range strings.Split(cfg.EtcdEndpoints, ",") {
+		_, err := url.Parse(endpoint)
+		if err != nil {
+			return fmt.Errorf("etcd endpoint invalid (%s): (%v)", endpoint, err)
+		}
 	}
 
 	_, podNet, err := net.ParseCIDR(cfg.PodCIDR)

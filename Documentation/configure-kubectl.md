@@ -1,8 +1,8 @@
-# Setting up `kubectl`
+# Setting up kubectl
 
 `kubectl` is a command-line program for interacting with the Kubernetes API. The following steps should be done from a local workstation to configure `kubectl` to work with a new cluster.
 
-## Download the `kubectl` Executable
+## Download the kubectl Executable
 
 Download `kubectl` from the Kubernetes release artifact site with the `curl` tool.
 
@@ -25,7 +25,7 @@ $ chmod +x kubectl
 $ mv kubectl /usr/local/bin/kubectl
 ```
 
-## Configure `kubectl`
+## Configure kubectl
 
 Configure `kubectl` to connect to the target cluster using the following commands, replacing several values as indicated:
 
@@ -41,7 +41,7 @@ $ kubectl config set-context default-system --cluster=default-cluster --user=def
 $ kubectl config use-context default-system
 ```
 
-## Verify `kubectl` Configuration and Connection
+## Verify kubectl Configuration and Connection
 
 Check that the client is configured properly by using `kubectl` to inspect the cluster:
 

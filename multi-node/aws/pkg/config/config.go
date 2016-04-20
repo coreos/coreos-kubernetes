@@ -332,6 +332,10 @@ func (cfg Cluster) valid() error {
 	if cfg.KMSKeyARN == "" {
 		return errors.New("kmsKeyArn must be set")
 	}
+	var supportedReleaseChannels = []string{"alpha","beta"}
+	if !stringInSlice(cfg.ReleaseChannel, supportedReleaseChannels) {
+		return errors.New("releaseChannel must be 'alpha' or 'beta');
+	}
 
 	if cfg.VPCID == "" && cfg.RouteTableID != "" {
 		return errors.New("vpcId must be specified if routeTableId is specified")
@@ -475,4 +479,14 @@ func incrementIP(netIP net.IP) net.IP {
 //Does the address space of these networks "a" and "b" overlap?
 func cidrOverlap(a, b *net.IPNet) bool {
 	return a.Contains(b.IP) || b.Contains(a.IP)
+}
+
+//Small helper to see if a string is in an array
+func stringInSlice(a string, list []string) bool {
+    for _, b := range list {
+        if b == a {
+            return true
+        }
+    }
+    return false
 }

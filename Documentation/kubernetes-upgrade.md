@@ -15,7 +15,7 @@ For example, modifying the `KUBELET_VERSION` environment variable in the followi
 **/etc/systemd/system/kubelet.service**
 
 ```
-Environment=KUBELET_VERSION=v1.2.0_coreos.1
+Environment=KUBELET_VERSION=v1.2.2_coreos.0
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=https://master [...]
 ```
@@ -38,7 +38,7 @@ The master node components (kube-controller-manager,kube-scheduler, kube-apiserv
 For example, to upgrade the kube-apiserver version you could update the pod image tag in `/etc/kubernetes/manifests/kube-apiserver.yaml`:
 
 From: `image: quay.io/coreos/hyperkube:v1.0.6_coreos.0`
-To: `image: quay.io/coreos//hyperkube:v1.0.7_coreos.0`
+To: `image: quay.io/coreos/hyperkube:v1.0.7_coreos.0`
 
 In high-availability deployments, the control-plane components (apiserver, scheduler, and controller-manager) are deployed to all master nodes. Upgrades of these components will require them being updated on each master node.
 

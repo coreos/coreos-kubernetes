@@ -8,9 +8,11 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/route53"
 
 	"github.com/coreos/coreos-kubernetes/multi-node/aws/pkg/config"
 )
@@ -72,6 +74,7 @@ func (c *Cluster) ValidateStack(stackBody string) (string, error) {
 type ec2Service interface {
 	DescribeVpcs(*ec2.DescribeVpcsInput) (*ec2.DescribeVpcsOutput, error)
 	DescribeSubnets(*ec2.DescribeSubnetsInput) (*ec2.DescribeSubnetsOutput, error)
+	DescribeKeyPairs(*ec2.DescribeKeyPairsInput) (*ec2.DescribeKeyPairsOutput, error)
 }
 
 func (c *Cluster) validateExistingVPCState(ec2Svc ec2Service) error {
@@ -129,9 +132,26 @@ func (c *Cluster) validateExistingVPCState(ec2Svc ec2Service) error {
 }
 
 func (c *Cluster) Create(stackBody string) error {
+	r53Svc := route53.New(c.session)
+	if err := c.validateDNSConfig(r53Svc); err != nil {
+		return err
+	}
+
 	ec2Svc := ec2.New(c.session)
+
+	if err := c.validateKeyPair(ec2Svc); err != nil {
+		return err
+	}
+
 	if err := c.validateExistingVPCState(ec2Svc); err != nil {
 		return err
+	}
+
+	var tags []*cloudformation.Tag
+	for k, v := range c.StackTags {
+		key := k
+		value := v
+		tags = append(tags, &cloudformation.Tag{Key: &key, Value: &value})
 	}
 
 	cfSvc := cloudformation.New(c.session)
@@ -140,6 +160,7 @@ func (c *Cluster) Create(stackBody string) error {
 		OnFailure:    aws.String("DO_NOTHING"),
 		Capabilities: []*string{aws.String(cloudformation.CapabilityCapabilityIam)},
 		TemplateBody: &stackBody,
+		Tags:         tags,
 	}
 
 	resp, err := cfSvc.CreateStack(creq)
@@ -163,7 +184,11 @@ func (c *Cluster) Create(stackBody string) error {
 		case cloudformation.ResourceStatusCreateComplete:
 			return nil
 		case cloudformation.ResourceStatusCreateFailed:
-			errMsg := fmt.Sprintf("Stack creation failed: %s : %s", statusString, aws.StringValue(resp.Stacks[0].StackStatusReason))
+			errMsg := fmt.Sprintf(
+				"Stack creation failed: %s : %s",
+				statusString,
+				aws.StringValue(resp.Stacks[0].StackStatusReason),
+			)
 			return errors.New(errMsg)
 		case cloudformation.ResourceStatusCreateInProgress:
 			time.Sleep(3 * time.Second)
@@ -214,37 +239,21 @@ func (c *Cluster) Update(stackBody string) (string, error) {
 }
 
 func (c *Cluster) Info() (*ClusterInfo, error) {
-	resources := make([]cloudformation.StackResourceSummary, 0)
-	req := cloudformation.ListStackResourcesInput{
-		StackName: aws.String(c.ClusterName),
-	}
 	cfSvc := cloudformation.New(c.session)
-	for {
-		resp, err := cfSvc.ListStackResources(&req)
-		if err != nil {
-			return nil, err
-		}
-		for _, s := range resp.StackResourceSummaries {
-			resources = append(resources, *s)
-		}
-		req.NextToken = resp.NextToken
-		if aws.StringValue(req.NextToken) == "" {
-			break
-		}
+	resp, err := cfSvc.DescribeStackResource(
+		&cloudformation.DescribeStackResourceInput{
+			LogicalResourceId: aws.String("EIPController"),
+			StackName:         aws.String(c.ClusterName),
+		},
+	)
+	if err != nil {
+		errmsg := "unable to get public IP of controller instance:\n" + err.Error()
+		return nil, fmt.Errorf(errmsg)
 	}
 
 	var info ClusterInfo
-	for _, r := range resources {
-		switch aws.StringValue(r.LogicalResourceId) {
-		case "EIPController":
-			if r.PhysicalResourceId != nil {
-				info.ControllerIP = *r.PhysicalResourceId
-			} else {
-				return nil, fmt.Errorf("unable to get public IP of controller instance")
-			}
-		}
-	}
-
+	info.ControllerIP = *resp.StackResourceDetail.PhysicalResourceId
+	info.Name = c.ClusterName
 	return &info, nil
 }
 
@@ -255,4 +264,66 @@ func (c *Cluster) Destroy() error {
 	}
 	_, err := cfSvc.DeleteStack(dreq)
 	return err
+}
+
+func (c *Cluster) validateKeyPair(ec2Svc ec2Service) error {
+	_, err := ec2Svc.DescribeKeyPairs(&ec2.DescribeKeyPairsInput{
+		KeyNames: []*string{aws.String(c.KeyName)},
+	})
+
+	if err != nil {
+		if awsErr, ok := err.(awserr.Error); ok {
+			if awsErr.Code() == "InvalidKeyPair.NotFound" {
+				return fmt.Errorf("Key %s does not exist.", c.KeyName)
+			}
+		}
+		return err
+	}
+	return nil
+}
+
+type r53Service interface {
+	ListHostedZonesByName(*route53.ListHostedZonesByNameInput) (*route53.ListHostedZonesByNameOutput, error)
+	ListResourceRecordSets(*route53.ListResourceRecordSetsInput) (*route53.ListResourceRecordSetsOutput, error)
+}
+
+func (c *Cluster) validateDNSConfig(r53 r53Service) error {
+	if !c.CreateRecordSet {
+		return nil
+	}
+
+	zonesResp, err := r53.ListHostedZonesByName(&route53.ListHostedZonesByNameInput{
+		DNSName: aws.String(c.HostedZone),
+	})
+	if err != nil {
+		return fmt.Errorf("Error validating HostedZone: %s", err)
+	}
+
+	zones := zonesResp.HostedZones
+	if len(zones) == 0 || (*zones[0].Name != c.HostedZone) {
+		return fmt.Errorf(
+			"HostedZone %s does not exist.  You'll need to create it manually",
+			c.HostedZone,
+		)
+	}
+
+	recordSetsResp, err := r53.ListResourceRecordSets(
+		&route53.ListResourceRecordSetsInput{
+			HostedZoneId: zones[0].Id,
+		},
+	)
+
+	if len(recordSetsResp.ResourceRecordSets) > 0 {
+		for _, recordSet := range recordSetsResp.ResourceRecordSets {
+			if *recordSet.Name == config.WithTrailingDot(c.ExternalDNSName) {
+				return fmt.Errorf(
+					"RecordSet for \"%s\" already exists in Hosted Zone \"%s.\"",
+					c.ExternalDNSName,
+					c.HostedZone,
+				)
+			}
+		}
+	}
+
+	return nil
 }

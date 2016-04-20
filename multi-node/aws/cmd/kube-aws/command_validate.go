@@ -25,7 +25,12 @@ var (
 
 func init() {
 	cmdRoot.AddCommand(cmdValidate)
-	cmdValidate.Flags().BoolVar(&validateOpts.awsDebug, "aws-debug", false, "Log debug information from aws-sdk-go library")
+	cmdValidate.Flags().BoolVar(
+		&validateOpts.awsDebug,
+		"aws-debug",
+		false,
+		"Log debug information from aws-sdk-go library",
+	)
 }
 
 func runCmdValidate(cmd *cobra.Command, args []string) error {
@@ -34,14 +39,13 @@ func runCmdValidate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("Unable to load cluster config: %v", err)
 	}
 
-	//Validate cloudconfig userdata
+	fmt.Printf("Validating UserData...\n")
 	if err := cfg.ValidateUserData(stackTemplateOptions); err != nil {
 		return err
 	}
+	fmt.Printf("UserData is valid.\n\n")
 
-	fmt.Printf("UserData is valid\n")
-
-	//Validate stack template
+	fmt.Printf("Validating stack template...\n")
 	data, err := cfg.RenderStackTemplate(stackTemplateOptions)
 	if err != nil {
 		return fmt.Errorf("Failed to render stack template: %v", err)
@@ -54,8 +58,10 @@ func runCmdValidate(cmd *cobra.Command, args []string) error {
 	}
 
 	if err != nil {
-		return fmt.Errorf("Error creating cluster: %v", err)
+		return err
 	}
+	fmt.Printf("stack template is valid.\n\n")
+
 	fmt.Printf("Validation OK!\n")
 	return nil
 }

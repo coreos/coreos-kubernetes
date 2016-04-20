@@ -365,7 +365,7 @@ func (cfg Cluster) valid() error {
 	}
 	var supportedReleaseChannels = []string{"alpha","beta"}
 	if !stringInSlice(cfg.ReleaseChannel, supportedReleaseChannels) {
-		return errors.New("releaseChannel must be 'alpha' or 'beta');
+		return errors.New("releaseChannel must be 'alpha' or 'beta'");
 	}
 
 	if cfg.VPCID == "" && cfg.RouteTableID != "" {

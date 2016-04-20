@@ -363,9 +363,9 @@ func (cfg Cluster) valid() error {
 	if cfg.KMSKeyARN == "" {
 		return errors.New("kmsKeyArn must be set")
 	}
-	var supportedReleaseChannels = []string{"alpha","beta"}
+	var supportedReleaseChannels = []string{"alpha", "beta"}
 	if !stringInSlice(cfg.ReleaseChannel, supportedReleaseChannels) {
-		return errors.New("releaseChannel must be 'alpha' or 'beta');
+		return errors.New("releaseChannel must be 'alpha' or 'beta')
 	}
 
 	if cfg.VPCID == "" && cfg.RouteTableID != "" {
@@ -514,12 +514,12 @@ func cidrOverlap(a, b *net.IPNet) bool {
 
 //Small helper to see if a string is in an array
 func stringInSlice(a string, list []string) bool {
-    for _, b := range list {
-        if b == a {
-            return true
-        }
-    }
-    return false
+	for _, b := range list {
+		if b == a {
+			return true
+ 		}
+	}
+	return false
 }
 
 func WithTrailingDot(s string) string {

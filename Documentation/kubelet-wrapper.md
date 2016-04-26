@@ -34,7 +34,7 @@ Passing customized options or flags to rkt can be accomplished with the RKT_OPTS
 ```ini
 [Service]
 Environment=RKT_OPTS="--volume=resolv,kind=host,source=/etc/resolv.conf --mount volume=resolv,target=/etc/resolv.conf"
-Environment=KUBELET_VERSION=v1.2.0_coreos.1
+Environment=KUBELET_VERSION=v1.2.2_coreos.0
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \
   --config=/etc/kubernetes/manifests

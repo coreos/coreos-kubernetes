@@ -141,7 +141,7 @@ You can now customize your cluster by editing asset files:
 
   This is the configuration file for your cluster. It contains the configuration parameters that are templated into your userdata and CloudFormation stack.
 
-* **cloud-config/**
+* **userdata/**
 
   * `cloud-config-worker`
   * `cloud-config-controller`

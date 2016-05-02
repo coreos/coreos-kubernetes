@@ -29,7 +29,7 @@ coreos:
         - name: 10-etcd.conf
           content: |
             [Service]
-            ExecStartPre=/usr/bin/curl --silent -X PUT -d \
+            ExecStartPre=/usr/bin/curl -f --silent -X PUT -d \
             "value={\"Network\" : \"{{.PodCIDR}}\", \"Backend\" : {\"Type\" : \"vxlan\"}}" \
             http://localhost:2379/v2/keys/coreos.com/network/config?prevExist=false
     - name: kubelet.service
@@ -81,7 +81,7 @@ coreos:
         Type=simple
         StartLimitInterval=0
         Restart=on-failure
-        ExecStartPre=/usr/bin/curl http://127.0.0.1:8080/version
+        ExecStartPre=/usr/bin/curl -f http://127.0.0.1:8080/version
         ExecStart=/opt/bin/install-kube-system
 
 write_files:
@@ -90,18 +90,18 @@ write_files:
     owner: root:root
     content: |
       #!/bin/bash -e
-      /usr/bin/curl -H "Content-Type: application/json" -XPOST -d @"/srv/kubernetes/manifests/kube-system.json" "http://127.0.0.1:8080/api/v1/namespaces"
+      /usr/bin/curl -f -H "Content-Type: application/json" -XPOST -d @"/srv/kubernetes/manifests/kube-system.json" "http://127.0.0.1:8080/api/v1/namespaces"
 
-      /usr/bin/curl  -H "Content-Type: application/json" -XPOST \
+      /usr/bin/curl -f -H "Content-Type: application/json" -XPOST \
       -d @"/srv/kubernetes/manifests/kube-dns-rc.json" \
       "http://127.0.0.1:8080/api/v1/namespaces/kube-system/replicationcontrollers"
 
-      /usr/bin/curl  -H "Content-Type: application/json" -XPOST \
+      /usr/bin/curl -f -H "Content-Type: application/json" -XPOST \
       -d @"/srv/kubernetes/manifests/heapster-dc.json" \
       "http://127.0.0.1:8080/apis/extensions/v1beta1/namespaces/kube-system/deployments"
 
       for manifest in {kube-dns,heapster}-svc.json;do
-          /usr/bin/curl  -H "Content-Type: application/json" -XPOST \
+          /usr/bin/curl -f -H "Content-Type: application/json" -XPOST \
           -d @"/srv/kubernetes/manifests/$manifest" \
           "http://127.0.0.1:8080/api/v1/namespaces/kube-system/services"
       done

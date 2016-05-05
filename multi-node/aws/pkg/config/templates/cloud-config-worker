@@ -4,7 +4,7 @@ coreos:
     reboot-strategy: "off"
   flannel:
     interface: $private_ipv4
-    etcd_endpoints: {{ .ETCDEndpoints }}
+    etcd_endpoints: {{ .EtcdEndpoints }}
   units:
     - name: docker.service
       drop-ins:

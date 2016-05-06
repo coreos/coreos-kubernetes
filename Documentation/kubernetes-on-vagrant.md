@@ -96,6 +96,10 @@ NAME          LABELS                               STATUS
 172.17.4.201   kubernetes.io/hostname=172.17.4.201   Ready
 ```
 
+**NOTE:** When the cluster is first being launched, it must download all container images for the cluster components (Kubernetes, dns, heapster, etc). Depending on the speed of your connection, it can take a few minutes before the Kubernetes api-server is available. Before the api-server is running, the kubectl command above may show output similar to:
+
+`The connection to the server 172.17.4.101:443 was refused - did you specify the right host or port?`
+
 <div class="co-m-docs-next-step">
   <p><strong>Is kubectl working correctly?</strong></p>
   <p>Now that you've got a working Kubernetes cluster with a functional CLI tool, you are free to deploy Kubernetes-ready applications.

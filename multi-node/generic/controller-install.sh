@@ -7,6 +7,9 @@ export ETCD_ENDPOINTS=
 # Specify the version (vX.Y.Z) of Kubernetes assets to deploy
 export K8S_VER=v1.2.3_coreos.0
 
+# Hyperkube image repository to use.
+export HYPERKUBE_IMAGE_REPO=quay.io/coreos/hyperkube
+
 # The CIDR network to use for pod IPs.
 # Each pod launched in the cluster will be assigned an IP out of this range.
 # Each node will be configured such that these IPs will be routable using the flannel overlay network.
@@ -27,13 +30,17 @@ export K8S_SERVICE_IP=10.3.0.1
 # This same IP must be configured on all worker nodes to enable DNS service discovery.
 export DNS_SERVICE_IP=10.3.0.10
 
+# Whether to use Calico for Kubernetes network policy. When using Calico,
+# K8S_VER (above) must be changed to an image tagged with CNI (e.g. v1.2.3_coreos.cni.1).
+export USE_CALICO=false
+
 # The above settings can optionally be overridden using an environment file:
 ENV_FILE=/run/coreos-kubernetes/options.env
 
 # -------------
 
 function init_config {
-    local REQUIRED=('ADVERTISE_IP' 'POD_NETWORK' 'ETCD_ENDPOINTS' 'SERVICE_IP_RANGE' 'K8S_SERVICE_IP' 'DNS_SERVICE_IP' 'K8S_VER' )
+    local REQUIRED=('ADVERTISE_IP' 'POD_NETWORK' 'ETCD_ENDPOINTS' 'SERVICE_IP_RANGE' 'K8S_SERVICE_IP' 'DNS_SERVICE_IP' 'K8S_VER' 'HYPERKUBE_IMAGE_REPO' 'USE_CALICO')
 
     if [ -f $ENV_FILE ]; then
         export $(cat $ENV_FILE | xargs)
@@ -49,6 +56,12 @@ function init_config {
             exit 1
         fi
     done
+
+    if [ $USE_CALICO = "true" ]; then
+        export K8S_NETWORK_PLUGIN="cni"
+    else
+        export K8S_NETWORK_PLUGIN=""
+    fi
 }
 
 function init_flannel {
@@ -81,12 +94,14 @@ function init_templates {
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
 [Service]
-ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
-
 Environment=KUBELET_VERSION=${K8S_VER}
+Environment=KUBELET_ACI=${HYPERKUBE_IMAGE_REPO}
+ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \
   --register-schedulable=false \
+  --network-plugin-dir=/etc/kubernetes/cni/net.d \
+  --network-plugin=${K8S_NETWORK_PLUGIN} \
   --allow-privileged=true \
   --config=/etc/kubernetes/manifests \
   --hostname-override=${ADVERTISE_IP} \
@@ -99,6 +114,40 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
     }
+
+
+    local TEMPLATE=/etc/systemd/system/calico-node.service
+    [ -f $TEMPLATE ] || {
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+[Unit]
+Description=Calico per-host agent
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+Slice=machine.slice
+Environment=CALICO_DISABLE_FILE_LOGGING=true
+Environment=HOSTNAME=${ADVERTISE_IP}
+Environment=IP=${ADVERTISE_IP}
+Environment=FELIX_FELIXHOSTNAME=${ADVERTISE_IP}
+Environment=CALICO_NETWORKING=false
+Environment=NO_DEFAULT_POOLS=true
+Environment=ETCD_ENDPOINTS=${ETCD_ENDPOINTS}
+ExecStart=/usr/bin/rkt run --inherit-env --stage1-from-dir=stage1-fly.aci \
+--volume=modules,kind=host,source=/lib/modules,readOnly=false \
+--mount=volume=modules,target=/lib/modules \
+--trust-keys-from-https quay.io/calico/node:v0.19.0
+KillMode=mixed
+Restart=always
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    }
+
 
     local TEMPLATE=/etc/kubernetes/manifests/kube-proxy.yaml
     [ -f $TEMPLATE ] || {
@@ -114,7 +163,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-proxy
-    image: quay.io/coreos/hyperkube:$K8S_VER
+    image: ${HYPERKUBE_IMAGE_REPO}:$K8S_VER
     command:
     - /hyperkube
     - proxy
@@ -147,7 +196,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-apiserver
-    image: quay.io/coreos/hyperkube:$K8S_VER
+    image: ${HYPERKUBE_IMAGE_REPO}:$K8S_VER
     command:
     - /hyperkube
     - apiserver
@@ -162,7 +211,7 @@ spec:
     - --tls-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
     - --client-ca-file=/etc/kubernetes/ssl/ca.pem
     - --service-account-key-file=/etc/kubernetes/ssl/apiserver-key.pem
-    - --runtime-config=extensions/v1beta1/deployments=true,extensions/v1beta1/daemonsets=true
+    - --runtime-config=extensions/v1beta1/deployments=true,extensions/v1beta1/daemonsets=true,extensions/v1beta1=true,extensions/v1beta1/thirdpartyresources=true
     ports:
     - containerPort: 443
       hostPort: 443
@@ -200,7 +249,7 @@ metadata:
 spec:
   containers:
   - name: kube-controller-manager
-    image: quay.io/coreos/hyperkube:$K8S_VER
+    image: ${HYPERKUBE_IMAGE_REPO}:$K8S_VER
     command:
     - /hyperkube
     - controller-manager
@@ -247,7 +296,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-scheduler
-    image: quay.io/coreos/hyperkube:$K8S_VER
+    image: ${HYPERKUBE_IMAGE_REPO}:$K8S_VER
     command:
     - /hyperkube
     - scheduler
@@ -263,6 +312,41 @@ spec:
 EOF
     }
 
+    local TEMPLATE=/srv/kubernetes/manifests/calico-policy-agent.yaml
+    [ -f $TEMPLATE ] || {
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+apiVersion: v1
+kind: Pod
+metadata:
+  name: calico-policy-agent
+  namespace: calico-system
+spec:
+  hostNetwork: true
+  containers:
+    # The Calico policy agent.
+    - name: k8s-policy-agent
+      image: calico/k8s-policy-agent:v0.1.4
+      env:
+        - name: ETCD_ENDPOINTS
+          value: "${ETCD_ENDPOINTS}"
+        - name: K8S_API
+          value: "http://127.0.0.1:8080"
+        - name: LEADER_ELECTION
+          value: "true"
+    # Leader election container used by the policy agent.
+    - name: leader-elector
+      image: quay.io/calico/leader-elector:v0.1.0
+      imagePullPolicy: IfNotPresent
+      args:
+        - "--election=calico-policy-election"
+        - "--election-namespace=calico-system"
+        - "--http=127.0.0.1:4040"
+
+EOF
+    }
+
     local TEMPLATE=/srv/kubernetes/manifests/kube-system.json
     [ -f $TEMPLATE ] || {
         echo "TEMPLATE: $TEMPLATE"
@@ -274,6 +358,42 @@ EOF
   "metadata": {
     "name": "kube-system"
   }
+}
+EOF
+    }
+
+    local TEMPLATE=/srv/kubernetes/manifests/calico-system.json
+    [ -f $TEMPLATE ] || {
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+{
+  "apiVersion": "v1",
+  "kind": "Namespace",
+  "metadata": {
+    "name": "calico-system"
+  }
+}
+EOF
+    }
+
+    local TEMPLATE=/srv/kubernetes/manifests/network-policy.json
+    [ -f $TEMPLATE ] || {
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+{
+  "kind": "ThirdPartyResource",
+  "apiVersion": "extensions/v1beta1",
+  "metadata": {
+    "name": "network-policy.net.alpha.kubernetes.io"
+  },
+  "description": "Specification for a network isolation policy",
+  "versions": [
+    {
+      "name": "v1alpha1"
+    }
+  ]
 }
 EOF
     }
@@ -655,6 +775,29 @@ After=flanneld.service
 EOF
     }
 
+    local TEMPLATE=/etc/kubernetes/cni/net.d/10-calico.conf
+    [ -f $TEMPLATE ] || {
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+{
+    "name": "calico",
+    "type": "flannel",
+    "delegate": {
+        "type": "calico",
+        "etcd_endpoints": "$ETCD_ENDPOINTS",
+        "log_level": "none",
+        "log_level_stderr": "info",
+        "hostname": "${ADVERTISE_IP}",
+        "policy": {
+            "type": "k8s",
+            "k8s_api_root": "http://127.0.0.1:8080/api/v1/"
+        }
+    }
+}
+EOF
+    }
+
 }
 
 function start_addons {
@@ -674,6 +817,19 @@ function start_addons {
     curl --silent -H "Content-Type: application/json" -XPOST -d"$(cat /srv/kubernetes/manifests/heapster-svc.json)" "http://127.0.0.1:8080/api/v1/namespaces/kube-system/services" > /dev/null
 }
 
+function enable_calico_policy {
+    echo "Waiting for Kubernetes API..."
+    until curl --silent "http://127.0.0.1:8080/version"
+    do
+        sleep 5
+    done
+    echo
+    echo "K8S: Calico Policy"
+    curl --silent -H "Content-Type: application/json" -XPOST -d"$(cat /srv/kubernetes/manifests/calico-system.json)" "http://127.0.0.1:8080/api/v1/namespaces/" > /dev/null
+    curl --silent -H "Content-Type: application/json" -XPOST -d"$(cat /srv/kubernetes/manifests/network-policy.json)" "http://127.0.0.1:8080/apis/extensions/v1beta1/namespaces/default/thirdpartyresources" >/dev/null
+    cp /srv/kubernetes/manifests/calico-policy-agent.yaml /etc/kubernetes/manifests
+}
+
 init_config
 init_templates
 
@@ -682,6 +838,12 @@ init_flannel
 systemctl stop update-engine; systemctl mask update-engine
 
 systemctl daemon-reload
+systemctl enable flanneld; systemctl start flanneld
 systemctl enable kubelet; systemctl start kubelet
+if [ $USE_CALICO = "true" ]; then
+        systemctl enable calico-node; systemctl start calico-node
+        enable_calico_policy
+fi
+
 start_addons
 echo "DONE"

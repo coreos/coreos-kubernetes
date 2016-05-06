@@ -60,6 +60,8 @@ The default cluster configuration is to start a virtual machine for each role &m
 #$etcd_vm_memory=512
 ```
 
+By default, Calico network policy is disabled. To enabled it, change the line `export USE_CALICO=false` to `export USE_CALICO=true` in both the `../generic/controller-install.sh` and the `../generic/worker-install.sh` files. You must also ensure that the `K8S_VER` variable in both of those files refers to an version of the hyperkube image that bundles the CNI binaries, e.g. `export K8S_VER=v1.2.3_coreos.cni.1`. This is not the default and must be manually changed when using Calico.
+
 Ensure the latest CoreOS vagrant image will be used by running `vagrant box update`.
 
 Then simply run `vagrant up` and wait for the command to succeed.

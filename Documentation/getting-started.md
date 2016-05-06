@@ -8,6 +8,7 @@ This guide will walk you through a deployment of a single-master/multi-worker Ku
 - deploy worker nodes
 - configure `kubectl` to work with our cluster
 - deploy the DNS add-on
+- deploy the network policy add-on
 
 Working through this guide may take you a few hours, but it will give you good understanding of the moving pieces of your cluster and set you up for success in the long run. Let's get started.
 

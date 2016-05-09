@@ -119,6 +119,7 @@ coreos:
           --server=https://{{.ControllerIP}}:443 \
           --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml \
           drain $$(hostname) \
+          --ignore-daemonsets \
           --force'
 
         [Install]

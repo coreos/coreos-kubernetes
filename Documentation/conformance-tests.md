@@ -27,7 +27,7 @@ Next, checkout the branch or release you'd like to test against:
 
 ```sh
 $ cd kubernetes
-$ git checkout v1.2.3
+$ git checkout v1.2.4
 ```
 
 ### Create Kubernetes Binaries

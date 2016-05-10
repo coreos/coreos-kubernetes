@@ -219,7 +219,9 @@ A kubectl config file will be written to a `kubeconfig` file, which can be used 
 $ kubectl --kubeconfig=kubeconfig get nodes
 ```
 
-It can take some time after `kube-aws up` completes before the cluster is available. Until then, you will have a `connection refused` error.
+**NOTE**: It can take some time after `kube-aws up` completes before the cluster is available. When the cluster is first being launched, it must download all container images for the cluster components (Kubernetes, dns, heapster, etc). Depending on the speed of your connection, it can take a few minutes before the Kubernetes api-server is available. Before the api-server is running, the kubectl command above may show output similar to:
+
+ `The connection to the server <MASTER>:443 was refused - did you specify the right host or port?`
 
 #### Export your cloudformation stack
 

@@ -165,7 +165,7 @@ The cluster can be configured to use Calico to provide network policy.
 Edit the `cluster.yaml` file:
 ```yaml
 useCalico: true
-kubernetesVersion: v1.2.3_coreos.cni.1
+kubernetesVersion: v1.2.4_coreos.cni.0
 ```
 The hyperkube image version needs to contain the CNI binaries (these are tagged with `_cni`)
 

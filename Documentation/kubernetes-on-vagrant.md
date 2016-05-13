@@ -60,35 +60,35 @@ The default cluster configuration is to start a virtual machine for each role &m
 #$etcd_vm_memory=512
 ```
 
-By default, Calico network policy is disabled. To enabled it, change the line `export USE_CALICO=false` to `export USE_CALICO=true` in both the `../generic/controller-install.sh` and the `../generic/worker-install.sh` files. You must also ensure that the `K8S_VER` variable in both of those files refers to an version of the hyperkube image that bundles the CNI binaries, e.g. `export K8S_VER=v1.2.4_coreos.cni.0`. This is not the default and must be manually changed when using Calico.
+By default, Calico network policy is disabled. To enable it, change the line `export USE_CALICO=false` to `export USE_CALICO=true` in both the `../generic/controller-install.sh` and the `../generic/worker-install.sh` scripts. With Calico enabled, ensure that the `K8S_VER` variable in both of those files refers to a version of the hyperkube image that bundles the CNI binaries, e.g. `export K8S_VER=v1.2.4_coreos.cni.0`. This is not the default, and must be manually changed when using Calico.
 
 Ensure the latest CoreOS vagrant image will be used by running `vagrant box update`.
 
-Then simply run `vagrant up` and wait for the command to succeed.
-Once Vagrant is finished booting and provisioning your machine, your cluster is good to go.
+Then run `vagrant up` and wait for Vagrant to provision and boot the virtual machines.
 
 ## Configure kubectl
-You can choose from one of the two following options.
 
-1. **Use a custom KUBECONFIG path**
+Choose one of the two following ways to configure `kubectl` to connect to the new cluster:
 
-    ```sh
-    $ export KUBECONFIG="${KUBECONFIG}:$(pwd)/kubeconfig"
-    $ kubectl config use-context vagrant-multi
-    ```
+### Use a custom KUBECONFIG path
 
-1. **Update the local-user kubeconfig**
+```sh
+$ export KUBECONFIG="${KUBECONFIG}:$(pwd)/kubeconfig"
+$ kubectl config use-context vagrant-multi
+```
 
-    Configure your local Kubernetes client using the following commands:
+### Update the local-user kubeconfig
 
-    ```sh
-    $ kubectl config set-cluster vagrant-multi-cluster --server=https://172.17.4.101:443 --certificate-authority=${PWD}/ssl/ca.pem
-    $ kubectl config set-credentials vagrant-multi-admin --certificate-authority=${PWD}/ssl/ca.pem --client-key=${PWD}/ssl/admin-key.pem --client-certificate=${PWD}/ssl/admin.pem
-    $ kubectl config set-context vagrant-multi --cluster=vagrant-multi-cluster --user=vagrant-multi-admin
-    $ kubectl config use-context vagrant-multi
-    ```
+Configure your local Kubernetes client using the following commands:
 
-Check that your client is configured properly by using `kubectl` to inspect your cluster:
+```sh
+$ kubectl config set-cluster vagrant-multi-cluster --server=https://172.17.4.101:443 --certificate-authority=${PWD}/ssl/ca.pem
+$ kubectl config set-credentials vagrant-multi-admin --certificate-authority=${PWD}/ssl/ca.pem --client-key=${PWD}/ssl/admin-key.pem --client-certificate=${PWD}/ssl/admin.pem
+$ kubectl config set-context vagrant-multi --cluster=vagrant-multi-cluster --user=vagrant-multi-admin
+$ kubectl config use-context vagrant-multi
+```
+
+Check that `kubectl` is configured properly by inspecting the cluster:
 
 ```sh
 $ kubectl get nodes
@@ -96,7 +96,7 @@ NAME          LABELS                               STATUS
 172.17.4.201   kubernetes.io/hostname=172.17.4.201   Ready
 ```
 
-**NOTE:** When the cluster is first being launched, it must download all container images for the cluster components (Kubernetes, dns, heapster, etc). Depending on the speed of your connection, it can take a few minutes before the Kubernetes api-server is available. Before the api-server is running, the kubectl command above may show output similar to:
+**NOTE:** When the cluster is first launched, it must download all container images for the cluster components (Kubernetes, dns, heapster, etc). Depending on the speed of your connection, it can take a few minutes before the Kubernetes api-server is available. Before the api-server is running, the kubectl command above may show output similar to:
 
 `The connection to the server 172.17.4.101:443 was refused - did you specify the right host or port?`
 

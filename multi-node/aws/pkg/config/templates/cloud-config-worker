@@ -109,11 +109,18 @@ write_files:
     content: |
       #!/bin/bash -e
 
+      if [[ -f /etc/kubernetes/ssl/.decrypted ]]; then
+        echo "Assets already decrypted."
+        exit 0;
+      fi
+
       for encKey in $(find /etc/kubernetes/ssl/*.pem);do
         tmpPath="/tmp/$(basename $encKey).tmp"
         docker run --rm -v /etc/kubernetes/ssl:/etc/kubernetes/ssl --rm quay.io/coreos/awscli aws --region {{.Region}} kms decrypt --ciphertext-blob fileb://$encKey --output text --query Plaintext | base64 --decode > $tmpPath
         mv  $tmpPath $encKey
       done
+
+      touch /etc/kubernetes/ssl/.decrypted
 
   - path: /etc/kubernetes/manifests/kube-proxy.yaml
     content: |

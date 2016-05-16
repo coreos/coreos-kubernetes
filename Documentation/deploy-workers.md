@@ -80,7 +80,7 @@ Create `/etc/systemd/system/kubelet.service` and substitute the following variab
 * Replace `${MASTER_HOST}`
 * Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
 * Replace `${DNS_SERVICE_IP}`
-* Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release. If using Calico a version that includes CNI binaries should be used. e.g. `v1.2.4_coreos.cni.0`
+* Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release. If using Calico a version that includes CNI binaries should be used. e.g. `v1.2.4_coreos.cni.1`
 * Replace `${NETWORK_PLUGIN}` with `cni` if using Calico. Otherwise just leave it blank.
 
 **/etc/systemd/system/kubelet.service**
@@ -159,7 +159,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-proxy
-    image: quay.io/coreos/hyperkube:v1.2.4_coreos.0
+    image: quay.io/coreos/hyperkube:v1.2.4_coreos.1
     command:
     - /hyperkube
     - proxy

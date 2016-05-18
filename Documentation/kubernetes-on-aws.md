@@ -7,7 +7,7 @@ After completing this guide, a deployer will be able to interact with the Kubern
 
 At CoreOS, we use the [kube-aws](https://github.com/coreos/coreos-kubernetes/releases) CLI tool to automate cluster deployment to AWS.
 
-### Download pre-built binary
+## Download pre-built binary
 
 Import the [CoreOS Application Signing Public Key](https://coreos.com/security/app-signing-key/):
 
@@ -45,11 +45,11 @@ Add kube-aws to your path:
 mv ${PLATFORM}/kube-aws /usr/local/bin
 ```
 
-### Configure AWS Credentials
+## Configure AWS credentials
 
 Configure your local workstation with AWS credentials using one of the following methods:
 
-#### Method 1: Environment Variables
+### Method 1: Environment variables
 
 Set `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` to the values of your AWS access and secret keys, respectively:
 
@@ -58,7 +58,7 @@ $ export AWS_ACCESS_KEY_ID=AKID1234567890
 $ export AWS_SECRET_ACCESS_KEY=MY-SECRET-KEY
 ```
 
-#### Method 2: Config File
+### Method 2: Config file
 
 Write your credentials into the file `~/.aws/credentials` using the following template:
 
@@ -68,15 +68,15 @@ aws_access_key_id = AKID1234567890
 aws_secret_access_key = MY-SECRET-KEY
 ```
 
-### Configure Cluster
+## Configure cluster
 
 First, let's define a few parameters that we'll use when we create the cluster.
 
-#### EC2 Key Pair
+### EC2 key pair
 
 The keypair that will authenticate SSH access to your EC2 instances. More info in the [EC2 Keypair docs](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html).
 
-#### External DNS Name
+### External DNS name
 
 Select a DNS hostname where the cluster's API will be accessible. This information will first be used to provision the TLS certificate for the API server.
 
@@ -84,7 +84,7 @@ When CloudFormation finishes creating your cluster, your controller will expose 
 
 `kube-aws` can be optionally be configured to automatically create an A record in an existing route53 hosted zone.
 
-#### KMS Key
+### KMS key
 
 [Amazon KMS](http://docs.aws.amazon.com/kms/latest/developerguide/overview.html) keys are used to encrypt and decrypt cluster TLS assets. If you already have a KMS Key that you would like to use, you can skip this step.
 
@@ -108,7 +108,7 @@ $ aws kms --region=<your-region> create-key --description="kube-aws assets"
 
 Reference the `KeyMetadata.Arn` string on the next step.
 
-#### Initialize an asset directory
+### Initialize an asset directory
 
 Create a directory on your local machine that will hold the generated assets, then initialize your cluster:
 
@@ -125,7 +125,7 @@ $ kube-aws init --cluster-name=my-cluster-name \
 
 There will now be a `cluster.yaml` file in the asset directory.
 
-#### Render contents of the asset directory
+### Render contents of the asset directory
 
 Next, generate a default set of cluster assets in your asset directory:
 
@@ -158,7 +158,7 @@ You can now customize your cluster by editing asset files:
 
 You can also now check the `my-cluster` asset directory into version control if you desire. The contents of this directory are your reproducible cluster assets. Please take care not to commit the `my-cluster/credentials` directory, as it contains your TLS secrets. If you're using git, the `credentials` directory will already be ignored for you.
 
-#### Calico network policy (optional)
+### Optional Calico network policy
 
 The cluster can be configured to use Calico to provide network policy.
 
@@ -169,7 +169,7 @@ kubernetesVersion: v1.2.4_coreos.cni.0
 ```
 The hyperkube image version needs to contain the CNI binaries (these are tagged with `_cni`)
 
-#### Route53 Host Record (optional)
+### Optional Route53 Host Record
 
 `kube-aws` can optionally create an A record for the controller IP in an existing hosted zone.
 
@@ -183,7 +183,7 @@ hostedZone: staging.core-os.net
 
 If `createRecordSet` is not set to true, the deployer will be responsible for making externalDNSName routable to the controller IP after the cluster is created.
 
-#### Validate your cluster assets
+### Validate cluster assets
 
 The `validate` command check the validity of the cloud-config userdata files and the CloudFormation stack description:
 
@@ -191,7 +191,7 @@ The `validate` command check the validity of the cloud-config userdata files and
 $ kube-aws validate
 ```
 
-#### Create a cluster from asset directory
+### Create a cluster from asset directory
 
 Now for the exciting part, create your cluster:
 
@@ -203,7 +203,7 @@ $ kube-aws up
 Each component certificate is only valid for 90 days, while the CA is valid for 365 days.
 If deploying a production Kubernetes cluster, consider establishing PKI independently of this tool first.
 
-#### Configure your DNS
+### Configure DNS
 
 If you configured Route 53 settings in your configuration above via `createRecordSet`, a host record has already been created for you.
 
@@ -211,7 +211,7 @@ Otherwise, navigate to the DNS registrar hosting the zone for the provided exter
 
 You may use `kube-aws status` to get this value after cluster creation, if necessary. This command can take a while.
 
-#### Access the cluster
+### Access the cluster
 
 A kubectl config file will be written to a `kubeconfig` file, which can be used to interact with your Kubernetes cluster like so:
 
@@ -223,18 +223,18 @@ $ kubectl --kubeconfig=kubeconfig get nodes
 
  `The connection to the server <MASTER>:443 was refused - did you specify the right host or port?`
 
-#### Export your cloudformation stack
+### Export the cloudformation stack
 
 ```sh
 $ kube-aws up --export
 ```
 
-#### Destroy
+### Destroy
 
 When you are done with your cluster, simply run `kube-aws destroy` and all cluster components will be destroyed.
 If you created any Kubernetes Services of type `LoadBalancer`, you must delete these first, as the CloudFormation cannot be fully destroyed if any externally-managed resources still exist.
 
-#### Certs & Keys
+### Certificates and Keys
 
 `kube-aws render` begins by initializing the TLS infrastructure needed to securely operate Kubernetes. If you have your own key/certificate management system, you can overwrite the generated TLS assets after `kube-aws render`.
 

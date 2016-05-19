@@ -99,6 +99,7 @@ Note that the kubelet running on a master node may log repeated attempts to post
 * Replace `${DNS_SERVICE_IP}`
 * Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release. If using Calico a version that includes CNI binaries should be used. e.g. `v1.2.4_coreos_cni.1`
 * Replace `${NETWORK_PLUGIN}` with `cni` if using Calico. Otherwise just leave it blank.
+* Decide if you will use [additional features][rkt-opts-examples] such as cluster logging, iSCSI volumes, or addressing workers by hostname in addition to IPs.
 
 **/etc/systemd/system/kubelet.service**
 
@@ -122,6 +123,8 @@ RestartSec=10
 [Install]
 WantedBy=multi-user.target
 ```
+
+[rkt-opts-examples]: kubelet-wrapper.md#customizing-rkt-options
 
 ### Set Up the kube-apiserver Pod
 

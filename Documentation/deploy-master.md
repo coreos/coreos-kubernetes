@@ -34,7 +34,9 @@ $ sudo chown root:root /etc/kubernetes/ssl/*-key.pem
 ```
 
 ### Network Configuration
+
 Networking is provided by Flannel and Calico.
+
 * [flannel][flannel-docs] provides a software-defined overlay network for routing traffic to/from the [pods][pod-overview]
 * [Calico][calico-docs] secures the overlay network by restricting traffic to/from the pods based on fine-grained network policy.
 
@@ -249,7 +251,7 @@ spec:
     - /hyperkube
     - controller-manager
     - --master=http://127.0.0.1:8080
-    - --leader-elect=true 
+    - --leader-elect=true
     - --service-account-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
     - --root-ca-file=/etc/kubernetes/ssl/ca.pem
     livenessProbe:
@@ -363,10 +365,10 @@ When creating `/etc/kubernetes/manifests/policy-agent.yaml`:
 
 ```yaml
 apiVersion: v1
-kind: Pod 
+kind: Pod
 metadata:
   name: calico-policy-agent
-  namespace: calico-system 
+  namespace: calico-system
 spec:
   hostNetwork: true
   containers:
@@ -378,7 +380,7 @@ spec:
           value: "${ETCD_ENDPOINTS}"
         - name: K8S_API
           value: "http://127.0.0.1:8080"
-        - name: LEADER_ELECTION 
+        - name: LEADER_ELECTION
           value: "true"
     # Leader election container used by the policy agent.
     - name: leader-elector

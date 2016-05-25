@@ -1,0 +1,74 @@
+{
+  "apiVersion": "extensions/v1beta1",
+  "kind": "Deployment",
+  "metadata": {
+    "labels": {
+      "app": "grafana"
+    },
+    "name": "grafana"
+  },
+  "spec": {
+    "replicas": 1,
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "grafana"
+        }
+      },
+      "spec": {
+        "containers": [
+          {
+            "env": [
+              {
+                "name": "GF_AUTH_BASIC_ENABLED",
+                "value": "false"
+              },
+              {
+                "name": "GF_AUTH_ANONYMOUS_ENABLED",
+                "value": "true"
+              },
+              {
+                "name": "GF_AUTH_ANONYMOUS_ORG_ROLE",
+                "value": "Admin"
+              },
+              {
+                "name": "GF_SERVER_ROOT_URL",
+                "value": "/api/v1/proxy/namespaces/prometheus/services/grafana"
+              }
+            ],
+            "image": "grafana/grafana:3.0.0-beta7",
+            "name": "grafana",
+            "ports": [
+              {
+                "containerPort": 3000,
+                "hostPort": 3000
+              }
+            ],
+            "resources": {
+              "limits": {
+                "cpu": "100m",
+                "memory": "100Mi"
+              },
+              "requests": {
+                "cpu": "100m",
+                "memory": "100Mi"
+              }
+            },
+            "volumeMounts": [
+              {
+                "mountPath": "/var/lib/grafana",
+                "name": "grafana-persistent-storage"
+              }
+            ]
+          }
+        ],
+        "volumes": [
+          {
+            "name": "grafana-persistent-storage",
+            "emptyDir": {}
+          }
+        ]
+      }
+    }
+  }
+}

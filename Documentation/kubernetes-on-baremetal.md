@@ -1,15 +1,36 @@
 # Kubernetes Installation on Bare Metal &amp; CoreOS
 
-This guide walks a deployer through launching a multi-node Kubernetes cluster on bare metal servers running CoreOS.
-After completing this guide, a deployer will be able to interact with the Kubernetes API from their workstation using the kubectl CLI tool.
+This guide walks a deployer through launching a multi-node Kubernetes cluster on bare metal servers running CoreOS. After completing this guide, a deployer will be able to interact with the Kubernetes API from their workstation using the `kubectl` CLI tool.
 
-## Deployment Prerequisites
+## Deployment requirements
 
-### CoreOS Installation
+### CoreOS version
 
-For all nodes running Kubernetes components (masters & workers), you must use a CoreOS version 962.0.0+ for the `kubelet-wrapper` script to be present in the image. If you wish to use an earlier version (e.g. from the 'stable' channel) see [kubelet-wrapper](kubelet-wrapper.md) for more information.
+All Kubernetes controllers and nodes must use CoreOS version 962.0.0 or greater for the `kubelet-wrapper` script to be present in the image. If you wish to use an earlier version (e.g. from the 'stable' channel) see [kubelet-wrapper](kubelet-wrapper.md) for more information.
 
-Use the official CoreOS bare metal guides for installation instructions:
+### Kubernetes pod network
+
+This configuration uses the [flannel][coreos-flannel] overlay network to manage the [pod network][pod-network]. Many bare metal configurations may instead have an existing self-managed network. In this scenario, it is common to use [Calico][calico-networking] to manage pod network policy while omitting the overlay network, and interoperating with existing physical network gear over BGP.
+
+See the [Kubernetes networking](kubernetes-networking.md) documentation for more information on self-managed networking options.
+
+[coreos-flannel]: https://coreos.com/flannel/docs/latest/flannel-config.html
+[calico-networking]: https://github.com/projectcalico/calico-containers
+[pod-network]: https://github.com/kubernetes/kubernetes/blob/release-1.2/docs/design/networking.md#pod-to-pod
+
+## Automated provisioning
+
+Network booting and provisioning CoreOS clusters can be automated using the [coreos-baremetal](https://github.com/coreos/coreos-baremetal) project. It includes:
+
+* Guides for configuring an network boot environment with iPXE/GRUB
+* An HTTP/gRPC [service](https://github.com/coreos/coreos-baremetal/blob/master/Documentation/bootcfg.md) for booting and provisioning machines. Match machines by their hardware attributes and serve templated [Ignition](https://coreos.com/ignition/docs/latest/c) configs or cloud-configs.
+* Example clusters including an [etcd cluster](https://github.com/coreos/coreos-baremetal/blob/master/Documentation/getting-started-rkt.md), multi-node [Kubernetes cluster](https://github.com/coreos/coreos-baremetal/blob/master/Documentation/kubernetes.md), and [self-hosted](https://github.com/coreos/coreos-baremetal/blob/master/Documentation/bootkube.md) Kubernetes cluster.
+
+[Get started](https://github.com/coreos/coreos-baremetal#bootcfg) provisioning your machines into CoreOS clusters.
+
+## Manual provisioning
+
+Install CoreOS using the bare metal installation instructions:
 
 * [Booting with iPXE][coreos-ipxe]
 * [Booting with PXE][coreos-pxe]
@@ -20,17 +41,6 @@ Mixing multiple methods is possible. For example, doing an install to disk for t
 [coreos-ipxe]: https://coreos.com/os/docs/latest/booting-with-ipxe.html
 [coreos-pxe]: https://coreos.com/os/docs/latest/booting-with-pxe.html
 [coreos-ondisk]: https://coreos.com/os/docs/latest/installing-to-disk.html
-
-### Kubernetes Pod Network
-
-The following guides assume the use of [flannel][coreos-flannel] as a software-defined overlay network to manage routing of the [pod network][pod-network].
-However, bare metal is a common platform where a self-managed network is used, due to the flexibility provided by physical networking gear. One common alternative is to use [Calico][calico-networking] networking, avoiding the use of an overlay and allowing interop with physical networking gear using BGP.
-
-See the [Kubernetes networking](kubernetes-networking.md) documentation for more information on self-managed networking options.
-
-[coreos-flannel]: https://coreos.com/flannel/docs/latest/flannel-config.html
-[calico-networking]: https://github.com/projectcalico/calico-containers
-[pod-network]: https://github.com/kubernetes/kubernetes/blob/release-1.2/docs/design/networking.md#pod-to-pod
 
 <div class="co-m-docs-next-step">
   <p><strong>Did you install CoreOS on your machines?</strong> An SSH connection to each machine is all that's needed. We'll start the configuration next.</p>

@@ -571,7 +571,7 @@ func (c *Cluster) ValidateExistingVPC(existingVPCCIDR string, existingSubnetCIDR
 		}
 	}
 	_, instanceNet, err := net.ParseCIDR(c.InstanceCIDR)
-	if err != nil {
+	if len(c.Subnets) == 0 && err != nil {
 		return fmt.Errorf("error parsing instances cidr %s : %v", c.InstanceCIDR, err)
 	}
 	_, vpcNet, err := net.ParseCIDR(c.VPCCIDR)

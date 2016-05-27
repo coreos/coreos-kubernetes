@@ -398,6 +398,7 @@ spec:
 ```
 
 ### Set Up the CNI config (optional)
+
 This step can be skipped if you do not wish to provide network policy to your cluster using Calico.
 
 The kubelet reads the CNI configuration on startup and uses that to determine which CNI plugin to call. Create the following file which tells the kubelet to call the flannel plugin but to then delegate control to the Calico plugin. Using the flannel plugin ensures that the Calico plugin is called with the IP range for the host that was selected by flannel.
@@ -465,6 +466,7 @@ Created symlink from /etc/systemd/system/multi-user.target.wants/kubelet.service
 ```
 
 ### Start Calico (optional)
+
 This step can be skipped if you do not wish to provide network policy to your cluster using Calico.
 
 Start Calico if you configured your kubelet to use CNI plugins earlier:

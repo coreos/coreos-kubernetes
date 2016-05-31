@@ -117,7 +117,7 @@ Note that this configuration is different to the one on the master nodes. It inc
 
 * Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
 * Replace `${ETCD_ENDPOINTS}`
-* Replace `${CONTROLER_IP}`
+* Replace `${MASTER_HOST}`
 
 **/etc/kubernetes/cni/net.d/10-calico.conf**
 
@@ -127,13 +127,13 @@ Note that this configuration is different to the one on the master nodes. It inc
     "type": "flannel",
     "delegate": {
         "type": "calico",
-        "etcd_endpoints": "$ETCD_ENDPOINTS",
+        "etcd_endpoints": "${ETCD_ENDPOINTS}",
         "log_level": "none",
         "log_level_stderr": "info",
         "hostname": "${ADVERTISE_IP}",
         "policy": {
             "type": "k8s",
-            "k8s_api_root": "https://${CONTROLER_IP}:443/api/v1/",
+            "k8s_api_root": "https://${MASTER_HOST}:443/api/v1/",
             "k8s_client_key": "/etc/kubernetes/ssl/worker-key.pem",
             "k8s_client_certificate": "/etc/kubernetes/ssl/worker.pem"
         }

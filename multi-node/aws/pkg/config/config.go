@@ -41,6 +41,7 @@ func newDefaultCluster() *Cluster {
 		ControllerInstanceType:   "m3.medium",
 		ControllerRootVolumeSize: 30,
 		WorkerCount:              1,
+		MaxWorkerCount:           1,
 		WorkerInstanceType:       "m3.medium",
 		WorkerRootVolumeSize:     30,
 		CreateRecordSet:          false,
@@ -73,6 +74,11 @@ func ClusterFromBytes(data []byte) (*Cluster, error) {
 	// HostedZone needs to end with a '.', amazon will not append it for you.
 	// as it will with RecordSets
 	c.HostedZone = WithTrailingDot(c.HostedZone)
+
+	// MaxWorkerCount must be greater or equal to the worker count
+	if c.MaxWorkerCount < c.WorkerCount {
+		c.MaxWorkerCount = c.WorkerCount
+	}
 
 	// If the user specified no subnets, we assume that a single AZ configuration with the default instanceCIDR is demanded
 	if len(c.Subnets) == 0 && c.InstanceCIDR == "" {
@@ -107,6 +113,7 @@ type Cluster struct {
 	ControllerInstanceType   string            `yaml:"controllerInstanceType,omitempty"`
 	ControllerRootVolumeSize int               `yaml:"controllerRootVolumeSize,omitempty"`
 	WorkerCount              int               `yaml:"workerCount,omitempty"`
+	MaxWorkerCount           int               `yaml:"maxWorkerCount,omitempty"`
 	WorkerInstanceType       string            `yaml:"workerInstanceType,omitempty"`
 	WorkerRootVolumeSize     int               `yaml:"workerRootVolumeSize,omitempty"`
 	WorkerSpotPrice          string            `yaml:"workerSpotPrice,omitempty"`

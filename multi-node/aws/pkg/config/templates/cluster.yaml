@@ -51,6 +51,9 @@ kmsKeyArn: "{{.KMSKeyARN}}"
 # Number of worker nodes to create
 #workerCount: 1
 
+# Maximum number of workers to auto-scale to. It must be greater or equal to the workerCount.
+#maxWorkerCount: 1
+
 # Instance type for worker nodes
 #workerInstanceType: m3.medium
 

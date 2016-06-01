@@ -72,6 +72,8 @@ kmsKeyArn: "{{.KMSKeyARN}}"
 # Price (Dollars) to bid for spot instances. Omit for on-demand instances.
 # workerSpotPrice: "0.05"
 
+# Instance type for etcd node
+
 # ID of existing VPC to create subnet in. Leave blank to create a new VPC
 # vpcId:
 

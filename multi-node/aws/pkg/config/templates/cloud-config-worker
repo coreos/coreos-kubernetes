@@ -4,7 +4,10 @@ coreos:
     reboot-strategy: "off"
   flannel:
     interface: $private_ipv4
-    etcd_endpoints: {{ .ETCDEndpoints }}
+    etcd_endpoints: {{ .EtcdEndpoints }}
+    etcd_cafile: /etc/kubernetes/ssl/ca.pem
+    etcd_certfile: /etc/kubernetes/ssl/etcd-client.pem
+    etcd_keyfile: /etc/kubernetes/ssl/etcd-client-key.pem
   units:
     - name: docker.service
       drop-ins:
@@ -13,6 +16,16 @@ coreos:
             [Unit]
             Requires=flanneld.service
             After=flanneld.service
+
+    - name: flanneld.service
+      drop-ins:
+        - name: 10-etcd.conf
+          content: |
+            [Unit]
+            Requires=decrypt-tls-assets.service
+            After=decrypt-tls-assets.service
+            [Service]
+            Environment="ETCD_SSL_DIR=/etc/kubernetes/ssl"
 
     - name: kubelet.service
       enable: true
@@ -57,7 +70,7 @@ coreos:
         Environment=FELIX_FELIXHOSTNAME=$private_ipv4
         Environment=CALICO_NETWORKING=false
         Environment=NO_DEFAULT_POOLS=true
-        Environment=ETCD_ENDPOINTS={{ .ETCDEndpoints }}
+        Environment=ETCD_ENDPOINTS={{ .EtcdEndpoints }}
         ExecStart=/usr/bin/rkt run --inherit-env --stage1-from-dir=stage1-fly.aci \
         --volume=modules,kind=host,source=/lib/modules,readOnly=false \
         --mount=volume=modules,target=/lib/modules \
@@ -75,19 +88,29 @@ coreos:
       content: |
         [Unit]
         Description=decrypt kubelet tls assets using amazon kms
-        Before=kubelet.service
-        After=docker.service
-        Requires=docker.service
+        Before=kubelet.service flanneld.service
+        After=early-docker.service
+        Requires=early-docker.service
 
         [Service]
         Type=oneshot
         RemainAfterExit=yes
+        Environment="DOCKER_HOST=unix:///var/run/early-docker.sock"
         ExecStart=/opt/bin/decrypt-tls-assets
 
         [Install]
-        RequiredBy=kubelet.service
+        RequiredBy=kubelet.service flanneld.service
+
 
 write_files:
+  - path: /etc/kubernetes/ssl/etcd-client.pem.enc
+    encoding: gzip+base64
+    content: {{.TLSConfig.EtcdClientCert}}
+
+  - path: /etc/kubernetes/ssl/etcd-client-key.pem.enc
+    encoding: gzip+base64
+    content: {{.TLSConfig.EtcdClientKey}}
+
   - path: /etc/kubernetes/ssl/worker.pem.enc
     encoding: gzip+base64
     content: {{.TLSConfig.WorkerCert}}
@@ -108,7 +131,7 @@ write_files:
 
       for encKey in $(find /etc/kubernetes/ssl/*.pem.enc);do
         tmpPath="/tmp/$(basename $encKey).tmp"
-        docker run --rm -v /etc/kubernetes/ssl:/etc/kubernetes/ssl --rm quay.io/coreos/awscli aws --region {{.Region}} kms decrypt --ciphertext-blob fileb://$encKey --output text --query Plaintext | base64 --decode > $tmpPath
+        docker run --net host --rm -v /etc/kubernetes/ssl:/etc/kubernetes/ssl quay.io/coreos/awscli aws --region {{.Region}} kms decrypt --ciphertext-blob fileb://$encKey --output text --query Plaintext | base64 --decode > $tmpPath
         mv  $tmpPath /etc/kubernetes/ssl/$(basename $encKey .enc)
       done
 
@@ -179,7 +202,7 @@ write_files:
             "type": "flannel",
             "delegate": {
                 "type": "calico",
-                "etcd_endpoints": "{{ .ETCDEndpoints }}",
+                "etcd_endpoints": "{{ .EtcdEndpoints }}",
                 "log_level": "none",
                 "log_level_stderr": "info",
                 "hostname": "$private_ipv4",

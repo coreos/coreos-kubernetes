@@ -1,0 +1,16 @@
+#cloud-config
+coreos:
+  update:
+    reboot-strategy: "off"
+  etcd2:
+    name: etcd{{ .EtcdIndex }}
+    advertise-client-urls: http://$private_ipv4:2379
+    initial-advertise-peer-urls: http://$private_ipv4:2380
+    listen-client-urls: http://$private_ipv4:2379,http://127.0.0.1:2379
+    listen-peer-urls: http://$private_ipv4:2380
+    initial-cluster: {{ .EtcdInitialCluster }}
+    initial-cluster-state: new
+    initial-cluster-token: {{ .ClusterName }}
+  units:
+    - name: etcd2.service
+      command: start

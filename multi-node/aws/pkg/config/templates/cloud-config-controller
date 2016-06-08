@@ -32,10 +32,14 @@ coreos:
         - name: 10-etcd.conf
           content: |
             [Service]
+            {{if not .DedicatedEtcd}}
             ExecStartPre=/usr/bin/curl --silent -X PUT -d \
             "value={\"Network\" : \"{{.PodCIDR}}\", \"Backend\" : {\"Type\" : \"vxlan\"}}" \
-            {{if not .DedicatedEtcd}}http://localhost:2379/v2/keys/coreos.com/network/config?prevExist=false
-            {{else}}http://{{index .EtcdIPs 0}}:2379/v2/keys/coreos.com/network/config?prevExist=false
+            http://localhost:2379/v2/keys/coreos.com/network/config?prevExist=false
+            {{else}}
+            Environment="ETCDCTL_PEERS={{.ETCDEndpoints}}"
+            ExecStartPre=/usr/bin/etcdctl set coreos.com/network/config \
+            "{\"Network\" : \"{{.PodCIDR}}\", \"Backend\" : {\"Type\" : \"vxlan\"}}"
             {{end}}
     - name: kubelet.service
       command: start

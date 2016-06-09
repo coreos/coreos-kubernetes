@@ -2,6 +2,12 @@
 
 `kubectl` is a command-line program for interacting with the Kubernetes API. The following steps should be done from a local workstation to configure `kubectl` to work with a new cluster.
 
+To quickly launch a cluster, follow these guides for [AWS][kube-aws], [Vagrant][vagrant-multi], or [full step-by-step][manual] instructions. 
+
+[kube-aws]: kubernetes-on-aws.md
+[vagrant-multi]: kubernetes-on-vagrant-single.md
+[manual]: getting-started.md
+
 ## Download the kubectl Executable
 
 Download `kubectl` from the Kubernetes release artifact site with the `curl` tool.

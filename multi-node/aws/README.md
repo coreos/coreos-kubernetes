@@ -127,8 +127,11 @@ Edit the `cluster.yaml` file:
 ```yaml
 externalDNSName: my-cluster.staging.core-os.net
 createRecordSet: true
-hostedZone: staging.core-os.net
+hostedZoneId: /hostedzone/Z123456789012
 ```
+
+Note: Query the HostedZoneId with the following command:
+`aws route53 list-hosted-zones-by-name --dns-name "saigon.events" | jq -r .HostedZones[0].Id`
 
 If `createRecordSet` is not set to true, the deployer will be responsible for making externalDNSName routable to the controller IP after the cluster is created.
 

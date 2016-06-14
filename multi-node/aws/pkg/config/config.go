@@ -275,11 +275,11 @@ func (c Cluster) ValidateUserData(opts StackTemplateOptions) error {
 	}{
 		{
 			Content: stackConfig.UserDataWorker,
-			Name:    "UserDataWorker",
+			Name:    "cloud-config-worker",
 		},
 		{
 			Content: stackConfig.UserDataController,
-			Name:    "UserDataController",
+			Name:    "cloud-config-controller",
 		},
 	} {
 		report, err := validate.Validate([]byte(userData.Content))

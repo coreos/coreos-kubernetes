@@ -9,6 +9,7 @@ First create `dns-addon.yml` on your local machine and replace the variable. The
 [k8s-dns]: http://kubernetes.io/docs/admin/dns.html
 
 * Replace `${DNS_SERVICE_IP}`
+* Replace `${MASTER_NODE_IP}`
 
 **dns-addon.yml**
 
@@ -108,6 +109,7 @@ spec:
         args:
         # command = "/kube2sky"
         - --domain=cluster.local
+        - --kube-master-url=${MASTER_NODE_IP}:8080
       - name: skydns
         image: gcr.io/google_containers/skydns:2015-10-13-8c72f8c
         resources:

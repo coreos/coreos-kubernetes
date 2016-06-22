@@ -10,7 +10,7 @@ export ETCD_ENDPOINTS=
 export CONTROLLER_ENDPOINT=
 
 # Specify the version (vX.Y.Z) of Kubernetes assets to deploy
-export K8S_VER=v1.2.4_coreos.1
+export K8S_VER=v1.3.0-beta.2_coreos.0
 
 # Hyperkube image repository to use.
 export HYPERKUBE_IMAGE_REPO=quay.io/coreos/hyperkube
@@ -19,8 +19,7 @@ export HYPERKUBE_IMAGE_REPO=quay.io/coreos/hyperkube
 # This must be the same DNS_SERVICE_IP used when configuring the controller nodes.
 export DNS_SERVICE_IP=10.3.0.10
 
-# Whether to use Calico for Kubernetes network policy. When using Calico,
-# K8S_VER (above) must be changed to an image tagged with CNI (e.g. v1.2.4_coreos.cni.1).
+# Whether to use Calico for Kubernetes network policy.
 export USE_CALICO=false
 
 # The above settings can optionally be overridden using an environment file:
@@ -161,7 +160,6 @@ spec:
     - proxy
     - --master=${CONTROLLER_ENDPOINT}
     - --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml
-    - --proxy-mode=iptables
     securityContext:
       privileged: true
     volumeMounts:

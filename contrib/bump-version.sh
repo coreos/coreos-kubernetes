@@ -10,7 +10,7 @@ if [ $# -ne 1 ]; then
     exit 1
 fi
 
-CURRENT_VERSION=${CURRENT_VERSION:-"v1.3.0-beta.1_coreos.0"}
+CURRENT_VERSION=${CURRENT_VERSION:-"v1.3.0_coreos.1"}
 TARGET_VERSION=${1}
 
 GIT_ROOT=$(git rev-parse --show-toplevel)

@@ -4,55 +4,25 @@ The conformance test checks that a kubernetes installation supports a minimum re
 
 ## Prerequisites
 
-You will need to have a Kubernetes cluster already running, and a kubeconfig with the current-context set to the cluster you wish to test.
+You will need to have a Kubernetes cluster already running.
 
 Make sure only the essential pods are running, and there are no failed or pending pods. If you are testing a small / development cluster, you may need to increase the node memory or tests could inconsistently fail (e.g. 2048mb for single-node vagrant).
 
-
 ## Running the Tests
 
-Follow these steps to run the conformance test against the desired Kubernetes release:
+If you are running the conformance tests against a vagrant cluster, you can use the `conformance-test.sh` script located either in the `single-node` or `multi-node/vagrant` directories.
 
-### Clone Kubernetes
+To test a running cluster:
 
-First, clone the Kubernetes codebase:
-
-```sh
-$ git clone https://github.com/kubernetes/kubernetes.git
-```
-
-### Checkout Branch
-
-Next, checkout the branch or release you'd like to test against:
+First, clone a copy of this repository to a host with ssh access to the Kubernetes cluster.
 
 ```sh
-$ cd kubernetes
-$ git checkout v1.2.4
+$ git clone https://github.com/coreos/coreos-kubernetes
 ```
 
-### Create Kubernetes Binaries
-
-Build binaries from the codebase:
+Then run the `contrib/conformance-test.sh` helper script, replacing the <ssh-host> <ssh-port> and <path-to-ssh-key>
 
 ```sh
-$ make clean
-$ make quick-release
+$ cd coreos-kubernets/contrib
+$ ./conformance-test.sh <ssh-host> <ssh-port> <path-to-ssh-key>
 ```
-
-### Set Worker Count
-
-Modify the `WORKERS` count to match the deployment you are testing:
-
-```sh
-$ WORKERS=1; sed -i '' "s/NUM_NODES=[0-9]/NUM_NODES=${WORKERS}/" hack/conformance-test.sh
-```
-
-### Run Conformance Tests
-
-The command below expects a kubeconfig with the current context set to the cluster you wish to test. To set the path, update `KUBECONFIG` in the command below.
-
-```sh
-$ KUBECONFIG=$HOME/.kube/config hack/conformance-test.sh 2>&1 | tee conformance.$(date +%FT%T%z).log
-```
-
-**NOTE:** In single-node installations the test `should function for intra-pod communication`, will not pass because there are no additional workers to communicate with.

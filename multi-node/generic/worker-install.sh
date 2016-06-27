@@ -22,6 +22,9 @@ export DNS_SERVICE_IP=10.3.0.10
 # Whether to use Calico for Kubernetes network policy.
 export USE_CALICO=false
 
+# Whether to enable Distributed Trusted Computing support
+export USE_DTC=false
+
 # The above settings can optionally be overridden using an environment file:
 ENV_FILE=/run/coreos-kubernetes/options.env
 
@@ -250,8 +253,12 @@ systemctl stop update-engine; systemctl mask update-engine
 systemctl daemon-reload
 systemctl enable flanneld; systemctl start flanneld
 systemctl enable kubelet; systemctl start kubelet
+
 if [ $USE_CALICO = "true" ]; then
         systemctl enable calico-node; systemctl start calico-node
 fi
 
-
+if [ $USE_DTC = "true" ]; then
+        systemctl enable tpmd; systemctl start tpmd
+	tpmown
+fi

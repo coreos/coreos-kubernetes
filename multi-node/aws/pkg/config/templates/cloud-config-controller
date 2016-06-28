@@ -148,7 +148,7 @@ write_files:
       "http://127.0.0.1:8080/api/v1/namespaces/kube-system/replicationcontrollers"
 
       /usr/bin/curl  -H "Content-Type: application/json" -XPOST \
-      -d @"/srv/kubernetes/manifests/heapster-dc.json" \
+      -d @"/srv/kubernetes/manifests/heapster-de.json" \
       "http://127.0.0.1:8080/apis/extensions/v1beta1/namespaces/kube-system/deployments"
 
       for manifest in {kube-dns,heapster,kube-dashboard}-svc.json;do
@@ -550,7 +550,7 @@ write_files:
             "namespace": "kube-system"
           },
           "spec": {
-            "clusterIP": "$DNS_SERVICE_IP",
+            "clusterIP": "{{.DNSServiceIP}}",
             "ports": [
               {
                 "name": "dns",
@@ -569,7 +569,7 @@ write_files:
           }
         }
 
-  - path: /srv/kubernetes/manifests/heapster-dc.json
+  - path: /srv/kubernetes/manifests/heapster-de.json
     content: |
         {
           "apiVersion": "extensions/v1beta1",

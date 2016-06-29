@@ -770,27 +770,27 @@ EOF
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
 {
-  "apiVersion": "v1",
-  "kind": "Service",
-  "metadata": {
-    "labels": {
-      "kubernetes.io/cluster-service": "true",
-      "kubernetes.io/name": "Heapster"
+    "apiVersion": "v1",
+    "kind": "Service",
+    "metadata": {
+        "labels": {
+            "k8s-app": "kubernetes-dashboard",
+            "kubernetes.io/cluster-service": "true"
+        },
+        "name": "kubernetes-dashboard",
+        "namespace": "kube-system"
     },
-    "name": "heapster",
-    "namespace": "kube-system"
-  },
-  "spec": {
-    "ports": [
-      {
-        "port": 80,
-        "targetPort": 8082
-      }
-    ],
-    "selector": {
-      "k8s-app": "heapster"
+    "spec": {
+        "ports": [
+            {
+                "port": 80,
+                "targetPort": 9090
+            }
+        ],
+        "selector": {
+            "k8s-app": "kubernetes-dashboard"
+        }
     }
-  }
 }
 EOF
     }

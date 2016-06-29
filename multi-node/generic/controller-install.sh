@@ -717,9 +717,9 @@ EOF
     "labels": {
       "k8s-app": "kubernetes-dashboard",
       "kubernetes.io/cluster-service": "true",
-      "version": "v1.1.0-beta3"
+      "version": "v1.1.0"
     },
-    "name": "kubernetes-dashboard-v1.1.0-beta3",
+    "name": "kubernetes-dashboard-v1.1.0",
     "namespace": "kube-system"
   },
   "spec": {
@@ -732,13 +732,13 @@ EOF
         "labels": {
           "k8s-app": "kubernetes-dashboard",
           "kubernetes.io/cluster-service": "true",
-          "version": "v1.1.0-beta3"
+          "version": "v1.1.0"
         }
       },
       "spec": {
         "containers": [
           {
-            "image": "gcr.io/google_containers/kubernetes-dashboard-amd64:v1.1.0-beta3",
+            "image": "gcr.io/google_containers/kubernetes-dashboard-amd64:v1.1.0",
             "livenessProbe": {
               "httpGet": {
                 "path": "/",

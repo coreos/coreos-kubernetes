@@ -271,6 +271,16 @@ Tell systemd to rescan the units on disk:
 $ sudo systemctl daemon-reload
 ```
 
+### Take ownership of the TPM
+
+This is only required if using Distributed Trusted Computing.
+
+```sh
+$ sudo tpmown
+```
+
+Taking ownership of the TPM may require a reboot, which will be automatically triggered.
+
 ### Start kubelet, flannel and Calico Node
 
 Start the kubelet, which will start the proxy as well as the Calico node (if required).
@@ -290,6 +300,12 @@ $ sudo systemctl enable kubelet
 Created symlink from /etc/systemd/system/multi-user.target.wants/kubelet.service to /etc/systemd/system/kubelet.service.
 $ sudo systemctl enable calico-node
 Created symlink from /etc/systemd/system/multi-user.target.wants/calico-node.service to /etc/systemd/system/calico-node.service.
+```
+
+If using Distributed Trusted Computing:
+
+```sh
+$ sudo systemctl enable tpmd
 ```
 
 To check the health of the kubelet systemd unit that we created, run `systemctl status kubelet.service`.

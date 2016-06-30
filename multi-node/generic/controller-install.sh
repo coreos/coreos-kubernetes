@@ -204,12 +204,12 @@ spec:
     - --service-cluster-ip-range=${SERVICE_IP_RANGE}
     - --secure-port=443
     - --advertise-address=${ADVERTISE_IP}
-    - --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,ResourceQuota
+    - --admission-control=TaintAdmit,NamespaceLifecycle,LimitRanger,ServiceAccount,ResourceQuota
     - --tls-cert-file=/etc/kubernetes/ssl/apiserver.pem
     - --tls-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
     - --client-ca-file=/etc/kubernetes/ssl/ca.pem
     - --service-account-key-file=/etc/kubernetes/ssl/apiserver-key.pem
-    - --runtime-config=extensions/v1beta1/thirdpartyresources=true
+    - --runtime-config=extensions/v1beta1/thirdpartyresources=true,rbac.authorization.k8s.io/v1alpha1=true
     livenessProbe:
       httpGet:
         host: 127.0.0.1
@@ -389,6 +389,109 @@ EOF
       "name": "v1alpha1"
     }
   ]
+}
+EOF
+    }
+
+    local TEMPLATE=/srv/kubernetes/manifests/tpm-policy.json
+    [ -f $TEMPLATE ] || {
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+{
+  "kind": "ThirdPartyResource",
+  "apiVersion": "extensions/v1beta1",
+  "metadata": {
+    "name": "policy.tpm.coreos.com"
+  },
+  "description": "Policy describing TPM attestation measurements",
+  "versions": [
+    {
+      "name": "v1"
+    }
+  ]
+}
+EOF
+    }
+
+    local TEMPLATE=/srv/kubernetes/manifests/tpm.json
+    [ -f $TEMPLATE ] || {
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+{
+  "kind": "ThirdPartyResource",
+  "apiVersion": "extensions/v1beta1",
+  "metadata": {
+    "name": "tpm.coreos.com"
+  },
+  "description": "Data tied to a specific TPM",
+  "versions": [
+    {
+      "name": "v1"
+    }
+  ]
+}
+EOF
+    }
+
+    local TEMPLATE=/srv/kubernetes/manifests/tpmadmin.json
+    [ -f $TEMPLATE ] || {
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+{
+  "kind": "Role",
+  "apiVersion": "rbac.authorization.k8s.io/v1alpha1",
+  "metadata": {
+    "namespace": "kube-system",
+    "name": "tpm-admin",
+  },
+  "rules" {
+    "apiGroups": [""],
+    "verbs": [],
+    "resources": [],
+    "attributeRestrictions": "tpmadmin"
+  }
+}
+EOF
+    }
+
+    local TEMPLATE=/srv/kubernetes/manifests/taintconfig.json
+    [ -f $TEMPLATE ] || {
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+{
+  "kind": "ConfigMap",
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "taint.coreos.com",
+    "namespace": "kube-system",
+  },
+  "data": {
+    "taint": "false"
+  }
+}
+EOF
+    }
+
+    local TEMPLATE=/srv/kubernetes/manifests/tpmconfig.json
+    [ -f $TEMPLATE ] || {
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+{
+  "kind": "ConfigMap",
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "tpm-manager.coreos.com",
+    "namespace": "kube-system",
+  },
+  "data": {
+    "allowunknown": "true",
+    "reverify": "0"
+  }
 }
 EOF
     }
@@ -889,6 +992,21 @@ function enable_calico_policy {
     curl --silent -H "Content-Type: application/json" -XPOST -d"$(cat /srv/kubernetes/manifests/network-policy.json)" "http://127.0.0.1:8080/apis/extensions/v1beta1/namespaces/default/thirdpartyresources" >/dev/null
 }
 
+function enable_dtc_policy {
+    echo "Waiting for Kubernetes API..."
+    until curl --silent "http://127.0.0.1:8080/version"
+    do
+	sleep 5
+    done
+    echo
+    echo "K8S: DTC policy"
+    curl --silent -H "Content-Type: application/json" -XPOST -d"$(cat /srv/kubernetes/manifests/tpm-policy.json)" "http://127.0.0.1:8080/apis/extensions/v1beta1/namespaces/default/thirdpartyresources" >/dev/null
+    curl --silent -H "Content-Type: application/json" -XPOST -d"$(cat /srv/kubernetes/manifests/tpm.json)" "http://127.0.0.1:8080/apis/extensions/v1beta1/namespaces/default/thirdpartyresources" >/dev/null
+    curl --silent -H "Content-Type: application/json" -XPOST -d"$(cat /srv/kubernetes/manifests/tpmadmin.json)" "http://127.0.0.1:8080/apis/rbac.authorization.k8s.io/v1alpha1/roles" >/dev/null
+    curl --silent -H "Content-Type: application/json" -XPOST -d"$(cat /srv/kubernetes/manifests/tpmconfig.json)" "http://127.0.0.1:8080/api/v1/namespaces/defaukt/configmaps" >/dev/null
+    curl --silent -H "Content-Type: application/json" -XPOST -d"$(cat /srv/kubernetes/manifests/taintconfig.json)" "http://127.0.0.1:8080/api/v1/namespaces/default/configmaps" >/dev/null
+}
+
 init_config
 init_templates
 
@@ -902,6 +1020,10 @@ systemctl enable kubelet; systemctl start kubelet
 if [ $USE_CALICO = "true" ]; then
         systemctl enable calico-node; systemctl start calico-node
         enable_calico_policy
+fi
+
+if [ $USE_DTC = "true" ]; then
+        enable_dtc_policy
 fi
 
 start_addons

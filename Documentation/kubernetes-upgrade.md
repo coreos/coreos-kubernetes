@@ -43,7 +43,7 @@ Master nodes consist of the following Kubernetes components:
 * kube-apiserver
 * kube-controller-manager
 * kube-scheduler
-* policy-agent
+* policy-controller
 
 While upgrading the master components, user pods on worker nodes will continue to run normally.
 

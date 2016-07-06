@@ -202,7 +202,7 @@ spec:
     - --tls-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
     - --client-ca-file=/etc/kubernetes/ssl/ca.pem
     - --service-account-key-file=/etc/kubernetes/ssl/apiserver-key.pem
-    - --runtime-config=extensions/v1beta1/thirdpartyresources=true
+    - --runtime-config=extensions/v1beta1/networkpolicies=true
     livenessProbe:
       httpGet:
         host: 127.0.0.1
@@ -314,7 +314,7 @@ spec:
 EOF
     fi
 
-    local TEMPLATE=/etc/kubernetes/manifests/calico-policy-agent.yaml
+    local TEMPLATE=/etc/kubernetes/manifests/calico-policy-controller.yaml
     if [ "${USE_CALICO}" = "true" ] && [ ! -f "${TEMPLATE}" ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
@@ -322,14 +322,14 @@ EOF
 apiVersion: v1
 kind: Pod
 metadata:
-  name: calico-policy-agent
+  name: calico-policy-controller
   namespace: calico-system
 spec:
   hostNetwork: true
   containers:
-    # The Calico policy agent.
-    - name: k8s-policy-agent
-      image: calico/k8s-policy-agent:v0.1.4
+    # The Calico policy controller.
+    - name: kube-policy-controller
+      image: calico/kube-policy-controller:v0.2.0
       env:
         - name: ETCD_ENDPOINTS
           value: "${ETCD_ENDPOINTS}"
@@ -337,7 +337,7 @@ spec:
           value: "http://127.0.0.1:8080"
         - name: LEADER_ELECTION
           value: "true"
-    # Leader election container used by the policy agent.
+    # Leader election container used by the policy controller.
     - name: leader-elector
       image: quay.io/calico/leader-elector:v0.1.0
       imagePullPolicy: IfNotPresent
@@ -360,27 +360,6 @@ EOF
   "metadata": {
     "name": "calico-system"
   }
-}
-EOF
-    fi
-
-    local TEMPLATE=/srv/kubernetes/manifests/network-policy.json
-    if [ ! -f $TEMPLATE ]; then
-        echo "TEMPLATE: $TEMPLATE"
-        mkdir -p $(dirname $TEMPLATE)
-        cat << EOF > $TEMPLATE
-{
-  "kind": "ThirdPartyResource",
-  "apiVersion": "extensions/v1beta1",
-  "metadata": {
-    "name": "network-policy.net.alpha.kubernetes.io"
-  },
-  "description": "Specification for a network isolation policy",
-  "versions": [
-    {
-      "name": "v1alpha1"
-    }
-  ]
 }
 EOF
     fi
@@ -878,7 +857,6 @@ function enable_calico_policy {
     echo
     echo "K8S: Calico Policy"
     curl --silent -H "Content-Type: application/json" -XPOST -d"$(cat /srv/kubernetes/manifests/calico-system.json)" "http://127.0.0.1:8080/api/v1/namespaces/" > /dev/null
-    curl --silent -H "Content-Type: application/json" -XPOST -d"$(cat /srv/kubernetes/manifests/network-policy.json)" "http://127.0.0.1:8080/apis/extensions/v1beta1/namespaces/default/thirdpartyresources" >/dev/null
 }
 
 init_config

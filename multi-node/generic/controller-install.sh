@@ -88,7 +88,7 @@ function init_flannel {
 
 function init_templates {
     local TEMPLATE=/etc/systemd/system/kubelet.service
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -112,11 +112,10 @@ RestartSec=10
 [Install]
 WantedBy=multi-user.target
 EOF
-    }
-
+    fi
 
     local TEMPLATE=/etc/systemd/system/calico-node.service
-    [ "$USE_CALICO" = "true" ] && [ ! -f $TEMPLATE ] && {
+    if [ "${USE_CALICO}" = "true" ] && [ ! -f "${TEMPLATE}" ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -145,11 +144,10 @@ TimeoutStartSec=0
 [Install]
 WantedBy=multi-user.target
 EOF
-    }
-
+    fi
 
     local TEMPLATE=/etc/kubernetes/manifests/kube-proxy.yaml
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -178,10 +176,10 @@ spec:
       path: /usr/share/ca-certificates
     name: ssl-certs-host
 EOF
-    }
+    fi
 
     local TEMPLATE=/etc/kubernetes/manifests/kube-apiserver.yaml
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -239,10 +237,10 @@ spec:
       path: /usr/share/ca-certificates
     name: ssl-certs-host
 EOF
-    }
+    fi
 
     local TEMPLATE=/etc/kubernetes/manifests/kube-controller-manager.yaml
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -288,10 +286,10 @@ spec:
       path: /usr/share/ca-certificates
     name: ssl-certs-host
 EOF
-    }
+    fi
 
     local TEMPLATE=/etc/kubernetes/manifests/kube-scheduler.yaml
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -321,10 +319,10 @@ spec:
       initialDelaySeconds: 15
       timeoutSeconds: 15
 EOF
-    }
+    fi
 
     local TEMPLATE=/etc/kubernetes/manifests/calico-policy-agent.yaml
-    [ "$USE_CALICO" = "true" ] && [ ! -f $TEMPLATE ] && {
+    if [ "${USE_CALICO}" = "true" ] && [ ! -f "${TEMPLATE}" ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -355,10 +353,10 @@ spec:
         - "--election-namespace=calico-system"
         - "--http=127.0.0.1:4040"
 EOF
-    }
+    fi
 
     local TEMPLATE=/srv/kubernetes/manifests/calico-system.json
-    [ "$USE_CALICO" = "true" ] && [ ! -f $TEMPLATE ] && {
+    if [ "${USE_CALICO}" = "true" ] && [ ! -f "${TEMPLATE}" ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -370,10 +368,10 @@ EOF
   }
 }
 EOF
-    }
+    fi
 
     local TEMPLATE=/srv/kubernetes/manifests/network-policy.json
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -391,10 +389,10 @@ EOF
   ]
 }
 EOF
-    }
+    fi
 
     local TEMPLATE=/srv/kubernetes/manifests/kube-dns-rc.json
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -529,10 +527,10 @@ EOF
   }
 }
 EOF
-    }
+    fi
 
     local TEMPLATE=/srv/kubernetes/manifests/kube-dns-svc.json
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -568,10 +566,10 @@ EOF
   }
 }
 EOF
-    }
+    fi
 
     local TEMPLATE=/srv/kubernetes/manifests/heapster-de.json
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -672,10 +670,10 @@ EOF
   }
 }
 EOF
-    }
+    fi
 
     local TEMPLATE=/srv/kubernetes/manifests/heapster-svc.json
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -703,10 +701,10 @@ EOF
   }
 }
 EOF
-    }
+    fi
 
     local TEMPLATE=/srv/kubernetes/manifests/kube-dashboard-rc.json
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -770,10 +768,10 @@ EOF
   }
 }
 EOF
-    }
+    fi
 
     local TEMPLATE=/srv/kubernetes/manifests/kube-dashboard-svc.json
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -801,30 +799,30 @@ EOF
     }
 }
 EOF
-    }
+    fi
 
     local TEMPLATE=/etc/flannel/options.env
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
 FLANNELD_IFACE=$ADVERTISE_IP
 FLANNELD_ETCD_ENDPOINTS=$ETCD_ENDPOINTS
 EOF
-    }
+    fi
 
     local TEMPLATE=/etc/systemd/system/flanneld.service.d/40-ExecStartPre-symlink.conf.conf
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
 [Service]
 ExecStartPre=/usr/bin/ln -sf /etc/flannel/options.env /run/flannel/options.env
 EOF
-    }
+    fi
 
     local TEMPLATE=/etc/systemd/system/docker.service.d/40-flannel.conf
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -832,10 +830,10 @@ EOF
 Requires=flanneld.service
 After=flanneld.service
 EOF
-    }
+    fi
 
     local TEMPLATE=/etc/kubernetes/cni/net.d/10-calico.conf
-    [ "$USE_CALICO" = "true" ] && [ ! -f $TEMPLATE ] && {
+    if [ "${USE_CALICO}" = "true" ] && [ ! -f "${TEMPLATE}" ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -855,8 +853,7 @@ EOF
     }
 }
 EOF
-    }
-
+    fi
 }
 
 function start_addons {

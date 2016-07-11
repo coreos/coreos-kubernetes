@@ -5,7 +5,7 @@ set -e
 export ETCD_ENDPOINTS=
 
 # Specify the version (vX.Y.Z) of Kubernetes assets to deploy
-export K8S_VER=v1.2.4_coreos.1
+export K8S_VER=v1.3.0_coreos.1
 
 # Hyperkube image repository to use.
 export HYPERKUBE_IMAGE_REPO=quay.io/coreos/hyperkube
@@ -30,8 +30,7 @@ export K8S_SERVICE_IP=10.3.0.1
 # This same IP must be configured on all worker nodes to enable DNS service discovery.
 export DNS_SERVICE_IP=10.3.0.10
 
-# Whether to use Calico for Kubernetes network policy. When using Calico,
-# K8S_VER (above) must be changed to an image tagged with CNI (e.g. v1.2.4_coreos.cni.1).
+# Whether to use Calico for Kubernetes network policy.
 export USE_CALICO=false
 
 # The above settings can optionally be overridden using an environment file:
@@ -89,7 +88,7 @@ function init_flannel {
 
 function init_templates {
     local TEMPLATE=/etc/systemd/system/kubelet.service
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -113,11 +112,10 @@ RestartSec=10
 [Install]
 WantedBy=multi-user.target
 EOF
-    }
-
+    fi
 
     local TEMPLATE=/etc/systemd/system/calico-node.service
-    [ -f $TEMPLATE ] || {
+    if [ "${USE_CALICO}" = "true" ] && [ ! -f "${TEMPLATE}" ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -146,11 +144,10 @@ TimeoutStartSec=0
 [Install]
 WantedBy=multi-user.target
 EOF
-    }
-
+    fi
 
     local TEMPLATE=/etc/kubernetes/manifests/kube-proxy.yaml
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -168,7 +165,6 @@ spec:
     - /hyperkube
     - proxy
     - --master=http://127.0.0.1:8080
-    - --proxy-mode=iptables
     securityContext:
       privileged: true
     volumeMounts:
@@ -180,10 +176,10 @@ spec:
       path: /usr/share/ca-certificates
     name: ssl-certs-host
 EOF
-    }
+    fi
 
     local TEMPLATE=/etc/kubernetes/manifests/kube-apiserver.yaml
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -211,7 +207,14 @@ spec:
     - --tls-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
     - --client-ca-file=/etc/kubernetes/ssl/ca.pem
     - --service-account-key-file=/etc/kubernetes/ssl/apiserver-key.pem
-    - --runtime-config=extensions/v1beta1/deployments=true,extensions/v1beta1/daemonsets=true,extensions/v1beta1=true,extensions/v1beta1/thirdpartyresources=true
+    - --runtime-config=extensions/v1beta1/networkpolicies=true
+    livenessProbe:
+      httpGet:
+        host: 127.0.0.1
+        port: 8080
+        path: /healthz
+      initialDelaySeconds: 15
+      timeoutSeconds: 15
     ports:
     - containerPort: 443
       hostPort: 443
@@ -234,10 +237,10 @@ spec:
       path: /usr/share/ca-certificates
     name: ssl-certs-host
 EOF
-    }
+    fi
 
     local TEMPLATE=/etc/kubernetes/manifests/kube-controller-manager.yaml
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -257,13 +260,16 @@ spec:
     - --leader-elect=true
     - --service-account-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
     - --root-ca-file=/etc/kubernetes/ssl/ca.pem
+    resources:
+      requests:
+        cpu: 200m
     livenessProbe:
       httpGet:
         host: 127.0.0.1
         path: /healthz
         port: 10252
       initialDelaySeconds: 15
-      timeoutSeconds: 1
+      timeoutSeconds: 15
     volumeMounts:
     - mountPath: /etc/kubernetes/ssl
       name: ssl-certs-kubernetes
@@ -280,10 +286,10 @@ spec:
       path: /usr/share/ca-certificates
     name: ssl-certs-host
 EOF
-    }
+    fi
 
     local TEMPLATE=/etc/kubernetes/manifests/kube-scheduler.yaml
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -302,32 +308,35 @@ spec:
     - scheduler
     - --master=http://127.0.0.1:8080
     - --leader-elect=true
+    resources:
+      requests:
+        cpu: 100m
     livenessProbe:
       httpGet:
         host: 127.0.0.1
         path: /healthz
         port: 10251
       initialDelaySeconds: 15
-      timeoutSeconds: 1
+      timeoutSeconds: 15
 EOF
-    }
+    fi
 
-    local TEMPLATE=/srv/kubernetes/manifests/calico-policy-agent.yaml
-    [ -f $TEMPLATE ] || {
+    local TEMPLATE=/etc/kubernetes/manifests/calico-policy-controller.yaml
+    if [ "${USE_CALICO}" = "true" ] && [ ! -f "${TEMPLATE}" ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
 apiVersion: v1
 kind: Pod
 metadata:
-  name: calico-policy-agent
+  name: calico-policy-controller
   namespace: calico-system
 spec:
   hostNetwork: true
   containers:
-    # The Calico policy agent.
-    - name: k8s-policy-agent
-      image: calico/k8s-policy-agent:v0.1.4
+    # The Calico policy controller.
+    - name: kube-policy-controller
+      image: calico/kube-policy-controller:v0.2.0
       env:
         - name: ETCD_ENDPOINTS
           value: "${ETCD_ENDPOINTS}"
@@ -335,7 +344,7 @@ spec:
           value: "http://127.0.0.1:8080"
         - name: LEADER_ELECTION
           value: "true"
-    # Leader election container used by the policy agent.
+    # Leader election container used by the policy controller.
     - name: leader-elector
       image: quay.io/calico/leader-elector:v0.1.0
       imagePullPolicy: IfNotPresent
@@ -343,27 +352,11 @@ spec:
         - "--election=calico-policy-election"
         - "--election-namespace=calico-system"
         - "--http=127.0.0.1:4040"
-
 EOF
-    }
-
-    local TEMPLATE=/srv/kubernetes/manifests/kube-system.json
-    [ -f $TEMPLATE ] || {
-        echo "TEMPLATE: $TEMPLATE"
-        mkdir -p $(dirname $TEMPLATE)
-        cat << EOF > $TEMPLATE
-{
-  "apiVersion": "v1",
-  "kind": "Namespace",
-  "metadata": {
-    "name": "kube-system"
-  }
-}
-EOF
-    }
+    fi
 
     local TEMPLATE=/srv/kubernetes/manifests/calico-system.json
-    [ -f $TEMPLATE ] || {
+    if [ "${USE_CALICO}" = "true" ] && [ ! -f "${TEMPLATE}" ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -375,31 +368,10 @@ EOF
   }
 }
 EOF
-    }
-
-    local TEMPLATE=/srv/kubernetes/manifests/network-policy.json
-    [ -f $TEMPLATE ] || {
-        echo "TEMPLATE: $TEMPLATE"
-        mkdir -p $(dirname $TEMPLATE)
-        cat << EOF > $TEMPLATE
-{
-  "kind": "ThirdPartyResource",
-  "apiVersion": "extensions/v1beta1",
-  "metadata": {
-    "name": "network-policy.net.alpha.kubernetes.io"
-  },
-  "description": "Specification for a network isolation policy",
-  "versions": [
-    {
-      "name": "v1alpha1"
-    }
-  ]
-}
-EOF
-    }
+    fi
 
     local TEMPLATE=/srv/kubernetes/manifests/kube-dns-rc.json
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -410,63 +382,33 @@ EOF
     "labels": {
       "k8s-app": "kube-dns",
       "kubernetes.io/cluster-service": "true",
-      "version": "v11"
+      "version": "v15"
     },
-    "name": "kube-dns-v11",
+    "name": "kube-dns-v15",
     "namespace": "kube-system"
   },
   "spec": {
     "replicas": 1,
     "selector": {
       "k8s-app": "kube-dns",
-      "version": "v11"
+      "version": "v15"
     },
     "template": {
       "metadata": {
         "labels": {
           "k8s-app": "kube-dns",
           "kubernetes.io/cluster-service": "true",
-          "version": "v11"
+          "version": "v15"
         }
       },
       "spec": {
         "containers": [
           {
-            "command": [
-              "/usr/local/bin/etcd",
-              "-data-dir",
-              "/var/etcd/data",
-              "-listen-client-urls",
-              "http://127.0.0.1:2379,http://127.0.0.1:4001",
-              "-advertise-client-urls",
-              "http://127.0.0.1:2379,http://127.0.0.1:4001",
-              "-initial-cluster-token",
-              "skydns-etcd"
-            ],
-            "image": "gcr.io/google_containers/etcd-amd64:2.2.1",
-            "name": "etcd",
-            "resources": {
-              "limits": {
-                "cpu": "100m",
-                "memory": "500Mi"
-              },
-              "requests": {
-                "cpu": "100m",
-                "memory": "50Mi"
-              }
-            },
-            "volumeMounts": [
-              {
-                "mountPath": "/var/etcd/data",
-                "name": "etcd-storage"
-              }
-            ]
-          },
-          {
             "args": [
-              "--domain=cluster.local"
+              "--domain=cluster.local.",
+              "--dns-port=10053"
             ],
-            "image": "gcr.io/google_containers/kube2sky:1.14",
+            "image": "gcr.io/google_containers/kubedns-amd64:1.3",
             "livenessProbe": {
               "failureThreshold": 5,
               "httpGet": {
@@ -478,7 +420,19 @@ EOF
               "successThreshold": 1,
               "timeoutSeconds": 5
             },
-            "name": "kube2sky",
+            "name": "kubedns",
+            "ports": [
+              {
+                "containerPort": 10053,
+                "name": "dns-local",
+                "protocol": "UDP"
+              },
+              {
+                "containerPort": 10053,
+                "name": "dns-tcp-local",
+                "protocol": "TCP"
+              }
+            ],
             "readinessProbe": {
               "httpGet": {
                 "path": "/readiness",
@@ -501,13 +455,12 @@ EOF
           },
           {
             "args": [
-              "-machines=http://127.0.0.1:4001",
-              "-addr=0.0.0.0:53",
-              "-ns-rotate=false",
-              "-domain=cluster.local."
+              "--cache-size=1000",
+              "--no-resolv",
+              "--server=127.0.0.1#10053"
             ],
-            "image": "gcr.io/google_containers/skydns:2015-10-13-8c72f8c",
-            "name": "skydns",
+            "image": "gcr.io/google_containers/kube-dnsmasq-amd64:1.3",
+            "name": "dnsmasq",
             "ports": [
               {
                 "containerPort": 53,
@@ -519,24 +472,15 @@ EOF
                 "name": "dns-tcp",
                 "protocol": "TCP"
               }
-            ],
-            "resources": {
-              "limits": {
-                "cpu": "100m",
-                "memory": "200Mi"
-              },
-              "requests": {
-                "cpu": "100m",
-                "memory": "50Mi"
-              }
-            }
+            ]
           },
           {
             "args": [
               "-cmd=nslookup kubernetes.default.svc.cluster.local 127.0.0.1 >/dev/null",
-              "-port=8080"
+              "-port=8080",
+              "-quiet"
             ],
-            "image": "gcr.io/google_containers/exechealthz:1.0",
+            "image": "gcr.io/google_containers/exechealthz-amd64:1.0",
             "name": "healthz",
             "ports": [
               {
@@ -556,22 +500,16 @@ EOF
             }
           }
         ],
-        "dnsPolicy": "Default",
-        "volumes": [
-          {
-            "emptyDir": {},
-            "name": "etcd-storage"
-          }
-        ]
+        "dnsPolicy": "Default"
       }
     }
   }
 }
 EOF
-    }
+    fi
 
     local TEMPLATE=/srv/kubernetes/manifests/kube-dns-svc.json
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -579,26 +517,26 @@ EOF
   "apiVersion": "v1",
   "kind": "Service",
   "metadata": {
-    "name": "kube-dns",
-    "namespace": "kube-system",
     "labels": {
       "k8s-app": "kube-dns",
-      "kubernetes.io/name": "KubeDNS",
-      "kubernetes.io/cluster-service": "true"
-    }
+      "kubernetes.io/cluster-service": "true",
+      "kubernetes.io/name": "KubeDNS"
+    },
+    "name": "kube-dns",
+    "namespace": "kube-system"
   },
   "spec": {
     "clusterIP": "$DNS_SERVICE_IP",
     "ports": [
       {
-        "protocol": "UDP",
         "name": "dns",
-        "port": 53
+        "port": 53,
+        "protocol": "UDP"
       },
       {
-        "protocol": "TCP",
         "name": "dns-tcp",
-        "port": 53
+        "port": 53,
+        "protocol": "TCP"
       }
     ],
     "selector": {
@@ -607,10 +545,10 @@ EOF
   }
 }
 EOF
-    }
+    fi
 
-    local TEMPLATE=/srv/kubernetes/manifests/heapster-dc.json
-    [ -f $TEMPLATE ] || {
+    local TEMPLATE=/srv/kubernetes/manifests/heapster-de.json
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -621,9 +559,9 @@ EOF
     "labels": {
       "k8s-app": "heapster",
       "kubernetes.io/cluster-service": "true",
-      "version": "v1.0.2"
+      "version": "v1.1.0"
     },
-    "name": "heapster-v1.0.2",
+    "name": "heapster-v1.1.0",
     "namespace": "kube-system"
   },
   "spec": {
@@ -631,14 +569,14 @@ EOF
     "selector": {
       "matchLabels": {
         "k8s-app": "heapster",
-        "version": "v1.0.2"
+        "version": "v1.1.0"
       }
     },
     "template": {
       "metadata": {
         "labels": {
           "k8s-app": "heapster",
-          "version": "v1.0.2"
+          "version": "v1.1.0"
         }
       },
       "spec": {
@@ -646,19 +584,18 @@ EOF
           {
             "command": [
               "/heapster",
-              "--source=kubernetes.summary_api:''",
-              "--metric_resolution=60s"
+              "--source=kubernetes.summary_api:''"
             ],
-            "image": "gcr.io/google_containers/heapster:v1.0.2",
+            "image": "gcr.io/google_containers/heapster:v1.1.0",
             "name": "heapster",
             "resources": {
               "limits": {
                 "cpu": "100m",
-                "memory": "250Mi"
+                "memory": "200Mi"
               },
               "requests": {
                 "cpu": "100m",
-                "memory": "250Mi"
+                "memory": "200Mi"
               }
             }
           },
@@ -666,13 +603,14 @@ EOF
             "command": [
               "/pod_nanny",
               "--cpu=100m",
-              "--extra-cpu=0m",
-              "--memory=250Mi",
+              "--extra-cpu=0.5m",
+              "--memory=200Mi",
               "--extra-memory=4Mi",
               "--threshold=5",
-              "--deployment=heapster-v1.0.2",
+              "--deployment=heapster-v1.1.0",
               "--container=heapster",
-              "--poll-period=300000"
+              "--poll-period=300000",
+              "--estimator=exponential"
             ],
             "env": [
               {
@@ -692,7 +630,7 @@ EOF
                 }
               }
             ],
-            "image": "gcr.io/google_containers/addon-resizer:1.0",
+            "image": "gcr.io/google_containers/addon-resizer:1.3",
             "name": "heapster-nanny",
             "resources": {
               "limits": {
@@ -711,23 +649,23 @@ EOF
   }
 }
 EOF
-    }
+    fi
 
     local TEMPLATE=/srv/kubernetes/manifests/heapster-svc.json
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
 {
-  "kind": "Service",
   "apiVersion": "v1",
+  "kind": "Service",
   "metadata": {
-    "name": "heapster",
-    "namespace": "kube-system",
     "labels": {
       "kubernetes.io/cluster-service": "true",
       "kubernetes.io/name": "Heapster"
-    }
+    },
+    "name": "heapster",
+    "namespace": "kube-system"
   },
   "spec": {
     "ports": [
@@ -742,30 +680,128 @@ EOF
   }
 }
 EOF
+    fi
+
+    local TEMPLATE=/srv/kubernetes/manifests/kube-dashboard-rc.json
+    if [ ! -f $TEMPLATE ]; then
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+{
+  "apiVersion": "v1",
+  "kind": "ReplicationController",
+  "metadata": {
+    "labels": {
+      "k8s-app": "kubernetes-dashboard",
+      "kubernetes.io/cluster-service": "true",
+      "version": "v1.1.0"
+    },
+    "name": "kubernetes-dashboard-v1.1.0",
+    "namespace": "kube-system"
+  },
+  "spec": {
+    "replicas": 1,
+    "selector": {
+      "k8s-app": "kubernetes-dashboard"
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "k8s-app": "kubernetes-dashboard",
+          "kubernetes.io/cluster-service": "true",
+          "version": "v1.1.0"
+        }
+      },
+      "spec": {
+        "containers": [
+          {
+            "image": "gcr.io/google_containers/kubernetes-dashboard-amd64:v1.1.0",
+            "livenessProbe": {
+              "httpGet": {
+                "path": "/",
+                "port": 9090
+              },
+              "initialDelaySeconds": 30,
+              "timeoutSeconds": 30
+            },
+            "name": "kubernetes-dashboard",
+            "ports": [
+              {
+                "containerPort": 9090
+              }
+            ],
+            "resources": {
+              "limits": {
+                "cpu": "100m",
+                "memory": "50Mi"
+              },
+              "requests": {
+                "cpu": "100m",
+                "memory": "50Mi"
+              }
+            }
+          }
+        ]
+      }
     }
+  }
+}
+EOF
+    fi
+
+    local TEMPLATE=/srv/kubernetes/manifests/kube-dashboard-svc.json
+    if [ ! -f $TEMPLATE ]; then
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+{
+    "apiVersion": "v1",
+    "kind": "Service",
+    "metadata": {
+        "labels": {
+            "k8s-app": "kubernetes-dashboard",
+            "kubernetes.io/cluster-service": "true"
+        },
+        "name": "kubernetes-dashboard",
+        "namespace": "kube-system"
+    },
+    "spec": {
+        "ports": [
+            {
+                "port": 80,
+                "targetPort": 9090
+            }
+        ],
+        "selector": {
+            "k8s-app": "kubernetes-dashboard"
+        }
+    }
+}
+EOF
+    fi
 
     local TEMPLATE=/etc/flannel/options.env
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
 FLANNELD_IFACE=$ADVERTISE_IP
 FLANNELD_ETCD_ENDPOINTS=$ETCD_ENDPOINTS
 EOF
-    }
+    fi
 
     local TEMPLATE=/etc/systemd/system/flanneld.service.d/40-ExecStartPre-symlink.conf.conf
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
 [Service]
 ExecStartPre=/usr/bin/ln -sf /etc/flannel/options.env /run/flannel/options.env
 EOF
-    }
+    fi
 
     local TEMPLATE=/etc/systemd/system/docker.service.d/40-flannel.conf
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -773,10 +809,10 @@ EOF
 Requires=flanneld.service
 After=flanneld.service
 EOF
-    }
+    fi
 
     local TEMPLATE=/etc/kubernetes/cni/net.d/10-calico.conf
-    [ -f $TEMPLATE ] || {
+    if [ "${USE_CALICO}" = "true" ] && [ ! -f "${TEMPLATE}" ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -796,8 +832,7 @@ EOF
     }
 }
 EOF
-    }
-
+    fi
 }
 
 function start_addons {
@@ -807,14 +842,15 @@ function start_addons {
         sleep 5
     done
     echo
-    echo "K8S: kube-system namespace"
-    curl --silent -H "Content-Type: application/json" -XPOST -d"$(cat /srv/kubernetes/manifests/kube-system.json)" "http://127.0.0.1:8080/api/v1/namespaces" > /dev/null
     echo "K8S: DNS addon"
     curl --silent -H "Content-Type: application/json" -XPOST -d"$(cat /srv/kubernetes/manifests/kube-dns-rc.json)" "http://127.0.0.1:8080/api/v1/namespaces/kube-system/replicationcontrollers" > /dev/null
     curl --silent -H "Content-Type: application/json" -XPOST -d"$(cat /srv/kubernetes/manifests/kube-dns-svc.json)" "http://127.0.0.1:8080/api/v1/namespaces/kube-system/services" > /dev/null
     echo "K8S: Heapster addon"
-    curl --silent -H "Content-Type: application/json" -XPOST -d"$(cat /srv/kubernetes/manifests/heapster-dc.json)" "http://127.0.0.1:8080/apis/extensions/v1beta1/namespaces/kube-system/deployments" > /dev/null
+    curl --silent -H "Content-Type: application/json" -XPOST -d"$(cat /srv/kubernetes/manifests/heapster-de.json)" "http://127.0.0.1:8080/apis/extensions/v1beta1/namespaces/kube-system/deployments" > /dev/null
     curl --silent -H "Content-Type: application/json" -XPOST -d"$(cat /srv/kubernetes/manifests/heapster-svc.json)" "http://127.0.0.1:8080/api/v1/namespaces/kube-system/services" > /dev/null
+    echo "K8S: Dashboard addon"
+    curl --silent -H "Content-Type: application/json" -XPOST -d"$(cat /srv/kubernetes/manifests/kube-dashboard-rc.json)" "http://127.0.0.1:8080/api/v1/namespaces/kube-system/replicationcontrollers" > /dev/null
+    curl --silent -H "Content-Type: application/json" -XPOST -d"$(cat /srv/kubernetes/manifests/kube-dashboard-svc.json)" "http://127.0.0.1:8080/api/v1/namespaces/kube-system/services" > /dev/null
 }
 
 function enable_calico_policy {
@@ -826,8 +862,6 @@ function enable_calico_policy {
     echo
     echo "K8S: Calico Policy"
     curl --silent -H "Content-Type: application/json" -XPOST -d"$(cat /srv/kubernetes/manifests/calico-system.json)" "http://127.0.0.1:8080/api/v1/namespaces/" > /dev/null
-    curl --silent -H "Content-Type: application/json" -XPOST -d"$(cat /srv/kubernetes/manifests/network-policy.json)" "http://127.0.0.1:8080/apis/extensions/v1beta1/namespaces/default/thirdpartyresources" >/dev/null
-    cp /srv/kubernetes/manifests/calico-policy-agent.yaml /etc/kubernetes/manifests
 }
 
 init_config

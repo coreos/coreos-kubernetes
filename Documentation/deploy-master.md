@@ -97,7 +97,7 @@ Note that the kubelet running on a master node may log repeated attempts to post
 
 * Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
 * Replace `${DNS_SERVICE_IP}`
-* Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release. If using Calico a version that includes CNI binaries should be used. e.g. `v1.2.4_coreos.cni.1`
+* Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release.
 * Replace `${NETWORK_PLUGIN}` with `cni` if using Calico. Otherwise just leave it blank.
 * Decide if you will use [additional features][rkt-opts-examples] such as cluster logging, iSCSI volumes, or addressing workers by hostname in addition to IPs.
 
@@ -150,7 +150,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-apiserver
-    image: quay.io/coreos/hyperkube:v1.2.4_coreos.1
+    image: quay.io/coreos/hyperkube:v1.3.0_coreos.1
     command:
     - /hyperkube
     - apiserver
@@ -165,7 +165,7 @@ spec:
     - --tls-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
     - --client-ca-file=/etc/kubernetes/ssl/ca.pem
     - --service-account-key-file=/etc/kubernetes/ssl/apiserver-key.pem
-    - --runtime-config=extensions/v1beta1=true,extensions/v1beta1/thirdpartyresources=true
+    - --runtime-config=extensions/v1beta1=true,extensions/v1beta1/networkpolicies=true
     ports:
     - containerPort: 443
       hostPort: 443
@@ -209,7 +209,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-proxy
-    image: quay.io/coreos/hyperkube:v1.2.4_coreos.1
+    image: quay.io/coreos/hyperkube:v1.3.0_coreos.1
     command:
     - /hyperkube
     - proxy
@@ -249,7 +249,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-controller-manager
-    image: quay.io/coreos/hyperkube:v1.2.4_coreos.1
+    image: quay.io/coreos/hyperkube:v1.3.0_coreos.1
     command:
     - /hyperkube
     - controller-manager
@@ -298,7 +298,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-scheduler
-    image: quay.io/coreos/hyperkube:v1.2.4_coreos.1
+    image: quay.io/coreos/hyperkube:v1.3.0_coreos.1
     command:
     - /hyperkube
     - scheduler
@@ -356,30 +356,30 @@ TimeoutStartSec=0
 WantedBy=multi-user.target
 ```
 
-### Set Up the policy-agent Pod (optional)
+### Set Up the policy-controller Pod (optional)
 
 This step can be skipped if you do not wish to provide network policy to your cluster using Calico.
 
 The policy agent is the last major piece of the master node. It monitors the API for changes related to network policy and configures Calico to implement that policy. 
 
-When creating `/etc/kubernetes/manifests/policy-agent.yaml`:
+When creating `/etc/kubernetes/manifests/policy-controller.yaml`:
 
 * Replace `${ETCD_ENDPOINTS}` with the same endpoints used in calico-node.service, above.
 
-**/etc/kubernetes/manifests/policy-agent.yaml**
+**/etc/kubernetes/manifests/policy-controller.yaml**
 
 ```yaml
 apiVersion: v1
 kind: Pod
 metadata:
-  name: calico-policy-agent
+  name: calico-policy-controller
   namespace: calico-system
 spec:
   hostNetwork: true
   containers:
-    # The Calico policy agent.
-    - name: k8s-policy-agent
-      image: calico/k8s-policy-agent:v0.1.4
+    # The Calico policy controller.
+    - name: k8s-policy-controller
+      image: calico/kube-policy-controller:v0.2.0
       env:
         - name: ETCD_ENDPOINTS
           value: "${ETCD_ENDPOINTS}"
@@ -387,7 +387,7 @@ spec:
           value: "http://127.0.0.1:8080"
         - name: LEADER_ELECTION
           value: "true"
-    # Leader election container used by the policy agent.
+    # Leader election container used by the policy controller.
     - name: leader-elector
       image: quay.io/calico/leader-elector:v0.1.0
       imagePullPolicy: IfNotPresent
@@ -512,32 +512,10 @@ Now we can create the `kube-system` namespace:
 $ curl -H "Content-Type: application/json" -XPOST -d'{"apiVersion":"v1","kind":"Namespace","metadata":{"name":"kube-system"}}' "http://127.0.0.1:8080/api/v1/namespaces"
 ```
 
-The Calico policy-agent runs in its own `calico-system` namespace. Create this namespace:
+The Calico policy-controller runs in its own `calico-system` namespace. Create this namespace:
 
 ```sh
 $ curl -H "Content-Type: application/json" -XPOST -d'{"apiVersion":"v1","kind":"Namespace","metadata":{"name":"calico-system"}}' "http://127.0.0.1:8080/api/v1/namespaces"
-```
-
-### Enable network policy API
-
-Network policy in Kubernetes is currently implemented as a third party resource. To enable it, run the following:
-
-```sh
-$ curl -H "Content-Type: application/json" -XPOST http://127.0.0.1:8080/apis/extensions/v1beta1/namespaces/default/thirdpartyresources --data-binary @- <<BODY
-{
-  "kind": "ThirdPartyResource",
-  "apiVersion": "extensions/v1beta1",
-  "metadata": {
-    "name": "network-policy.net.alpha.kubernetes.io"
-  },
-  "description": "Specification for a network isolation policy",
-  "versions": [
-    {
-      "name": "v1alpha1"
-    }
-  ]
-}
-BODY
 ```
 
 Our Pods should now be starting up and downloading their containers. To check the download progress, you can run `docker ps`.

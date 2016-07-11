@@ -15,7 +15,7 @@ For example, modifying the `KUBELET_VERSION` environment variable in the followi
 **/etc/systemd/system/kubelet.service**
 
 ```
-Environment=KUBELET_VERSION=v1.2.4_coreos.1
+Environment=KUBELET_VERSION=v1.3.0_coreos.1
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=https://master [...]
 ```
@@ -43,7 +43,7 @@ Master nodes consist of the following Kubernetes components:
 * kube-apiserver
 * kube-controller-manager
 * kube-scheduler
-* policy-agent
+* policy-controller
 
 While upgrading the master components, user pods on worker nodes will continue to run normally.
 

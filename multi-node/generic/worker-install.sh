@@ -10,7 +10,7 @@ export ETCD_ENDPOINTS=
 export CONTROLLER_ENDPOINT=
 
 # Specify the version (vX.Y.Z) of Kubernetes assets to deploy
-export K8S_VER=v1.2.4_coreos.1
+export K8S_VER=v1.3.0_coreos.1
 
 # Hyperkube image repository to use.
 export HYPERKUBE_IMAGE_REPO=quay.io/coreos/hyperkube
@@ -19,8 +19,7 @@ export HYPERKUBE_IMAGE_REPO=quay.io/coreos/hyperkube
 # This must be the same DNS_SERVICE_IP used when configuring the controller nodes.
 export DNS_SERVICE_IP=10.3.0.10
 
-# Whether to use Calico for Kubernetes network policy. When using Calico,
-# K8S_VER (above) must be changed to an image tagged with CNI (e.g. v1.2.4_coreos.cni.1).
+# Whether to use Calico for Kubernetes network policy.
 export USE_CALICO=false
 
 # The above settings can optionally be overridden using an environment file:
@@ -55,7 +54,7 @@ function init_config {
 
 function init_templates {
     local TEMPLATE=/etc/systemd/system/kubelet.service
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -82,10 +81,10 @@ RestartSec=10
 [Install]
 WantedBy=multi-user.target
 EOF
-    }
+    fi
 
     local TEMPLATE=/etc/systemd/system/calico-node.service
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -114,10 +113,10 @@ TimeoutStartSec=0
 [Install]
 WantedBy=multi-user.target
 EOF
-    }
+    fi
 
     local TEMPLATE=/etc/kubernetes/worker-kubeconfig.yaml
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -139,10 +138,10 @@ contexts:
   name: kubelet-context
 current-context: kubelet-context
 EOF
-    }
+    fi
 
     local TEMPLATE=/etc/kubernetes/manifests/kube-proxy.yaml
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -161,7 +160,6 @@ spec:
     - proxy
     - --master=${CONTROLLER_ENDPOINT}
     - --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml
-    - --proxy-mode=iptables
     securityContext:
       privileged: true
     volumeMounts:
@@ -184,30 +182,30 @@ spec:
       hostPath:
         path: "/etc/kubernetes/ssl"
 EOF
-    }
+    fi
 
     local TEMPLATE=/etc/flannel/options.env
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
 FLANNELD_IFACE=$ADVERTISE_IP
 FLANNELD_ETCD_ENDPOINTS=$ETCD_ENDPOINTS
 EOF
-    }
+    fi
 
     local TEMPLATE=/etc/systemd/system/flanneld.service.d/40-ExecStartPre-symlink.conf.conf
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
 [Service]
 ExecStartPre=/usr/bin/ln -sf /etc/flannel/options.env /run/flannel/options.env
 EOF
-    }
+    fi
 
     local TEMPLATE=/etc/systemd/system/docker.service.d/40-flannel.conf
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -215,10 +213,10 @@ EOF
 Requires=flanneld.service
 After=flanneld.service
 EOF
-    }
+    fi
 
      local TEMPLATE=/etc/kubernetes/cni/net.d/10-calico.conf
-    [ -f $TEMPLATE ] || {
+    if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -240,7 +238,7 @@ EOF
     }
 }
 EOF
-    }
+    fi
 
 }
 

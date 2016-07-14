@@ -44,12 +44,6 @@ function init_config {
             exit 1
         fi
     done
-
-    if [ $USE_CALICO = "true" ]; then
-        export K8S_NETWORK_PLUGIN="cni"
-    else
-        export K8S_NETWORK_PLUGIN=""
-    fi
 }
 
 function init_templates {
@@ -65,7 +59,7 @@ ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=${CONTROLLER_ENDPOINT} \
   --network-plugin-dir=/etc/kubernetes/cni/net.d \
-  --network-plugin=${K8S_NETWORK_PLUGIN} \
+  --network-plugin=cni \
   --register-node=true \
   --allow-privileged=true \
   --config=/etc/kubernetes/manifests \
@@ -212,11 +206,14 @@ EOF
 [Unit]
 Requires=flanneld.service
 After=flanneld.service
+[Service]
+ExecStart=
+ExecStart=/usr/lib/coreos/dockerd daemon --host=fd:// \$DOCKER_OPTS \$DOCKER_CGROUPS \$DOCKER_OPT_MTU
 EOF
     fi
 
-     local TEMPLATE=/etc/kubernetes/cni/net.d/10-calico.conf
-    if [ ! -f $TEMPLATE ]; then
+    local TEMPLATE=/etc/kubernetes/cni/net.d/10-calico.conf
+    if [ "${USE_CALICO}" = "true" ] && [ ! -f "${TEMPLATE}" ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -235,6 +232,21 @@ EOF
             "k8s_client_key": "/etc/kubernetes/ssl/worker-key.pem",
             "k8s_client_certificate": "/etc/kubernetes/ssl/worker.pem"
         }
+    }
+}
+EOF
+    fi
+
+    local TEMPLATE=/etc/kubernetes/cni/net.d/10-flannel.conf
+    if [ "${USE_CALICO}" = "false" ] && [ ! -f "${TEMPLATE}" ]; then
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+{
+    "name": "podnet",
+    "type": "flannel",
+    "delegate": {
+        "isDefaultGateway": true
     }
 }
 EOF

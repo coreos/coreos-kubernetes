@@ -55,12 +55,6 @@ function init_config {
             exit 1
         fi
     done
-
-    if [ $USE_CALICO = "true" ]; then
-        export K8S_NETWORK_PLUGIN="cni"
-    else
-        export K8S_NETWORK_PLUGIN=""
-    fi
 }
 
 function init_flannel {
@@ -100,7 +94,7 @@ ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \
   --register-schedulable=false \
   --network-plugin-dir=/etc/kubernetes/cni/net.d \
-  --network-plugin=${K8S_NETWORK_PLUGIN} \
+  --network-plugin=cni \
   --allow-privileged=true \
   --config=/etc/kubernetes/manifests \
   --hostname-override=${ADVERTISE_IP} \
@@ -808,6 +802,9 @@ EOF
 [Unit]
 Requires=flanneld.service
 After=flanneld.service
+[Service]
+ExecStart=
+ExecStart=/usr/lib/coreos/dockerd daemon --host=fd:// \$DOCKER_OPTS \$DOCKER_CGROUPS \$DOCKER_OPT_MTU
 EOF
     fi
 
@@ -833,6 +830,22 @@ EOF
 }
 EOF
     fi
+
+    local TEMPLATE=/etc/kubernetes/cni/net.d/10-flannel.conf
+    if [ "${USE_CALICO}" = "false" ] && [ ! -f "${TEMPLATE}" ]; then
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+{
+    "name": "podnet",
+    "type": "flannel",
+    "delegate": {
+        "isDefaultGateway": true
+    }
+}
+EOF
+    fi
+
 }
 
 function start_addons {

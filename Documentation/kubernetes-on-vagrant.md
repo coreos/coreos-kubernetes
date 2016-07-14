@@ -48,7 +48,7 @@ $ cd coreos-kubernetes/multi-node/vagrant
 The default cluster configuration is to start a virtual machine for each role &mdash; master node, worker node, and etcd server. However, you can modify the default cluster settings by copying `config.rb.sample` to `config.rb` and modifying configuration values.
 
 ```
-#$update_channel="alpha"
+#$update_channel="stable"
 
 #$controller_count=1
 #$controller_vm_memory=512

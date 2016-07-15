@@ -6,7 +6,7 @@
 
 if [ $# -ne 1 ]; then
     echo "USAGE: $0 <target-version>"
-    echo "  example: $0 'v1.3.0-beta.1_coreos.0'"
+    echo "  example: $0 'v1.3.0_coreos.1'"
     exit 1
 fi
 

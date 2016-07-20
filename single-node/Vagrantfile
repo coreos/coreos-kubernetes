@@ -8,7 +8,7 @@ require 'yaml'
 
 Vagrant.require_version ">= 1.6.0"
 
-$update_channel = "stable"
+$update_channel = "alpha"
 
 CLUSTER_IP="10.3.0.1"
 NODE_IP = "172.17.4.99"
@@ -25,7 +25,7 @@ Vagrant.configure("2") do |config|
   config.ssh.insert_key = false
 
   config.vm.box = "coreos-%s" % $update_channel
-  config.vm.box_version = ">= 962.0.0"
+  config.vm.box_version = ">= 1122.0.0"
   config.vm.box_url = "http://%s.release.core-os.net/amd64-usr/current/coreos_production_vagrant.json" % $update_channel
 
   ["vmware_fusion", "vmware_workstation"].each do |vmware|

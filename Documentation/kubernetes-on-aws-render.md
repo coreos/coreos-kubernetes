@@ -161,6 +161,19 @@ You can now customize your cluster by editing asset files. Any changes to these 
 [insecure-registry]: https://coreos.com/os/docs/latest/registry-authentication.html#using-a-registry-without-ssl-configured
 [update]: https://coreos.com/os/docs/latest/cloud-config.html#update
 
+### Kubernetes Container Runtime
+
+The kube-aws tool now optionally supports using rkt as the kubernetes container runtime. To configure rkt as the container runtime you must run with a CoreOS version >= `v1122.0.0` and configure the runtime flag.
+
+Edit the `cluster.yaml` file:
+
+```yaml
+containerRuntime: rkt
+releaseChannel: alpha
+```
+
+Note that while using rkt as the runtime is now supported, it is still a new option as of the Kubernetes v1.3 release and has a few [known issues](http://kubernetes.io/docs/getting-started-guides/rkt/notes/).
+
 ### Calico network policy
 
 The cluster can be optionally configured to use Calico to provide network policy. These policies limit and control how different pods, namespaces, etc can communicate with each other. These rules can be managed after the cluster is launched, but the feature needs to be turned on beforehand.

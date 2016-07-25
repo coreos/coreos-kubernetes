@@ -169,9 +169,7 @@ Edit the `cluster.yaml` file:
 
 ```yaml
 useCalico: true
-kubernetesVersion: v1.2.4_coreos.cni.1
 ```
-The hyperkube image version needs to contain the CNI binaries (these are tagged with `_cni`)
 
 ### Route53 Host Record
 

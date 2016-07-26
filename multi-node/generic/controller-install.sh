@@ -94,12 +94,12 @@ Environment=KUBELET_VERSION=${K8S_VER}
 Environment=KUBELET_ACI=${HYPERKUBE_IMAGE_REPO}
 Environment="RKT_OPTS=--volume dns,kind=host,source=/etc/resolv.conf \
   --mount volume=dns,target=/etc/resolv.conf \
-  --volume rktbin,kind=host,source=/usr/bin/rkt \
-  --mount volume=rktbin,target=/usr/bin/rkt \
+  --volume=rkt,kind=host,source=/opt/bin/host-rkt \
+  --mount volume=rkt,target=/usr/bin/rkt \
   --volume var-lib-rkt,kind=host,source=/var/lib/rkt \
   --mount volume=var-lib-rkt,target=/var/lib/rkt \
-  --volume=stage,kind=host,source=/usr/lib/rkt \
-  --mount volume=stage,target=/usr/lib/rkt"
+  --volume=stage,kind=host,source=/tmp \
+  --mount volume=stage,target=/tmp"
 ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \
@@ -121,6 +121,25 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
     fi
+
+    local TEMPLATE=/opt/bin/host-rkt
+    if [ ! -f $TEMPLATE ]; then
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+#!/bin/sh
+# This is bind mounted into the kubelet rootfs and all rkt shell-outs go
+# through this rkt wrapper. It essentially enters the host mount namespace
+# (which it is already in) only for the purpose of breaking out of the chroot
+# before calling rkt. It makes things like rkt gc work and avoids bind mounting
+# in certain rkt filesystem dependancies into the kubelet rootfs. This can
+# eventually be obviated when the write-api stuff gets upstream and rkt gc is
+# through the api-server. Related issue:
+# https://github.com/coreos/rkt/issues/2878
+exec nsenter -m -u -i -n -p -t 1 -- /usr/bin/rkt "\$@"
+EOF
+    fi
+
 
     local TEMPLATE=/etc/systemd/system/load-rkt-stage1.service
     if [ ${CONTAINER_RUNTIME} = "rkt" ] && [ ! -f $TEMPLATE ]; then
@@ -940,6 +959,8 @@ function enable_calico_policy {
 
 init_config
 init_templates
+
+chmod +x /opt/bin/host-rkt
 
 init_flannel
 

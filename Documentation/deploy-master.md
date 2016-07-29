@@ -150,7 +150,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-apiserver
-    image: quay.io/coreos/hyperkube:v1.3.2_coreos.0
+    image: quay.io/coreos/hyperkube:v1.3.3+coreos.0
     command:
     - /hyperkube
     - apiserver
@@ -209,7 +209,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-proxy
-    image: quay.io/coreos/hyperkube:v1.3.2_coreos.0
+    image: quay.io/coreos/hyperkube:v1.3.3+coreos.0
     command:
     - /hyperkube
     - proxy
@@ -249,7 +249,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-controller-manager
-    image: quay.io/coreos/hyperkube:v1.3.2_coreos.0
+    image: quay.io/coreos/hyperkube:v1.3.3+coreos.0
     command:
     - /hyperkube
     - controller-manager
@@ -298,7 +298,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-scheduler
-    image: quay.io/coreos/hyperkube:v1.3.2_coreos.0
+    image: quay.io/coreos/hyperkube:v1.3.3+coreos.0
     command:
     - /hyperkube
     - scheduler

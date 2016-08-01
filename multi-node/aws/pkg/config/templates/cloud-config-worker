@@ -45,7 +45,7 @@ coreos:
         --volume=stage,kind=host,source=/tmp \
         --mount volume=stage,target=/tmp"
         ExecStart=/usr/lib/coreos/kubelet-wrapper \
-        --api-servers={{.SecureAPIServers}} \
+        --api-servers={{.APIServerEndpoint}} \
         --network-plugin-dir=/etc/kubernetes/cni/net.d \
         --network-plugin={{.K8sNetworkPlugin}} \
         --container-runtime={{.ContainerRuntime}} \
@@ -215,7 +215,7 @@ write_files:
             command:
             - /hyperkube
             - proxy
-            - --master=https://{{.ControllerIP}}:443
+            - --master={{.APIServerEndpoint}}
             - --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml
             securityContext:
               privileged: true
@@ -279,7 +279,7 @@ write_files:
                 "hostname": "$private_ipv4",
                 "policy": {
                     "type": "k8s",
-                    "k8s_api_root": "https://{{.ControllerIP}}:443/api/v1/",
+                    "k8s_api_root": "{{.APIServerEndpoint}}/api/v1/",
                     "k8s_client_key": "/etc/kubernetes/ssl/worker-key.pem",
                     "k8s_client_certificate": "/etc/kubernetes/ssl/worker.pem"
                 }

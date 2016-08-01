@@ -34,13 +34,13 @@ func newDefaultCluster() *Cluster {
 		ClusterName:              "kubernetes",
 		ReleaseChannel:           "stable",
 		VPCCIDR:                  "10.0.0.0/16",
-		ControllerIP:             "10.0.0.50",
 		PodCIDR:                  "10.2.0.0/16",
 		ServiceCIDR:              "10.3.0.0/24",
 		DNSServiceIP:             "10.3.0.10",
 		K8sVer:                   "v1.3.6_coreos.0",
 		HyperkubeImageRepo:       "quay.io/coreos/hyperkube",
 		ContainerRuntime:         "docker",
+		ControllerCount:          1,
 		ControllerInstanceType:   "m3.medium",
 		ControllerRootVolumeType: "gp2",
 		ControllerRootVolumeIOPS: 0,
@@ -116,6 +116,7 @@ type Cluster struct {
 	Region                   string            `yaml:"region,omitempty"`
 	AvailabilityZone         string            `yaml:"availabilityZone,omitempty"`
 	ReleaseChannel           string            `yaml:"releaseChannel,omitempty"`
+	ControllerCount          int               `yaml:"controllerCount,omitempty"`
 	ControllerInstanceType   string            `yaml:"controllerInstanceType,omitempty"`
 	ControllerRootVolumeType string            `yaml:"controllerRootVolumeType,omitempty"`
 	ControllerRootVolumeIOPS int               `yaml:"controllerRootVolumeIOPS,omitempty"`
@@ -135,7 +136,6 @@ type Cluster struct {
 	RouteTableID             string            `yaml:"routeTableId,omitempty"`
 	VPCCIDR                  string            `yaml:"vpcCIDR,omitempty"`
 	InstanceCIDR             string            `yaml:"instanceCIDR,omitempty"`
-	ControllerIP             string            `yaml:"controllerIP,omitempty"`
 	PodCIDR                  string            `yaml:"podCIDR,omitempty"`
 	ServiceCIDR              string            `yaml:"serviceCIDR,omitempty"`
 	DNSServiceIP             string            `yaml:"dnsServiceIP,omitempty"`
@@ -171,8 +171,6 @@ var supportedReleaseChannels = map[string]bool{
 func (c Cluster) Config() (*Config, error) {
 	config := Config{Cluster: c}
 
-	config.APIServers = fmt.Sprintf("http://%s:8080", c.ControllerIP)
-	config.SecureAPIServers = fmt.Sprintf("https://%s:443", c.ControllerIP)
 	config.APIServerEndpoint = fmt.Sprintf("https://%s", c.ExternalDNSName)
 	config.K8sNetworkPlugin = "cni"
 
@@ -368,26 +366,6 @@ func (c Cluster) stackConfig(opts StackTemplateOptions, compressUserData bool) (
 
 	stackConfig.Config.TLSConfig = compactAssets
 
-	controllerIPAddr := net.ParseIP(stackConfig.ControllerIP)
-	if controllerIPAddr == nil {
-		return nil, fmt.Errorf("invalid controllerIP: %s", stackConfig.ControllerIP)
-	}
-
-	controllerSubnetFound := false
-	for i, subnet := range stackConfig.Subnets {
-		_, instanceCIDR, err := net.ParseCIDR(subnet.InstanceCIDR)
-		if err != nil {
-			return nil, fmt.Errorf("invalid instanceCIDR: %v", err)
-		}
-		if instanceCIDR.Contains(controllerIPAddr) {
-			stackConfig.ControllerSubnetIndex = i
-			controllerSubnetFound = true
-		}
-	}
-	if !controllerSubnetFound {
-		return nil, fmt.Errorf("Fail-fast occurred possibly because of a bug: ControllerSubnetIndex couldn't be determined for subnets (%v) and controllerIP (%v)", stackConfig.Subnets, stackConfig.ControllerIP)
-	}
-
 	if stackConfig.UserDataWorker, err = execute(opts.WorkerTmplFile, stackConfig.Config, compressUserData); err != nil {
 		return nil, fmt.Errorf("failed to render worker cloud config: %v", err)
 	}
@@ -516,8 +494,6 @@ type Config struct {
 	EtcdInitialCluster string
 	EtcdInstances      []etcdInstance
 
-	APIServers        string
-	SecureAPIServers  string
 	APIServerEndpoint string
 	AMI               string
 
@@ -587,11 +563,6 @@ func (c Cluster) valid() error {
 		return fmt.Errorf("invalid vpcCIDR: %v", err)
 	}
 
-	controllerIPAddr := net.ParseIP(c.ControllerIP)
-	if controllerIPAddr == nil {
-		return fmt.Errorf("invalid controllerIP: %s", c.ControllerIP)
-	}
-
 	if len(c.Subnets) == 0 {
 		if c.AvailabilityZone == "" {
 			return fmt.Errorf("availabilityZone must be set")
@@ -604,12 +575,6 @@ func (c Cluster) valid() error {
 			return fmt.Errorf("vpcCIDR (%s) does not contain instanceCIDR (%s)",
 				c.VPCCIDR,
 				c.InstanceCIDR,
-			)
-		}
-		if !instanceCIDR.Contains(controllerIPAddr) {
-			return fmt.Errorf("instanceCIDR (%s) does not contain controllerIP (%s)",
-				c.InstanceCIDR,
-				c.ControllerIP,
 			)
 		}
 	} else {
@@ -639,22 +604,9 @@ func (c Cluster) valid() error {
 			}
 		}
 
-		controllerInstanceCidrExists := false
-		for _, a := range instanceCIDRs {
-			if a.Contains(controllerIPAddr) {
-				controllerInstanceCidrExists = true
-			}
-		}
-		if !controllerInstanceCidrExists {
-			return fmt.Errorf("No instanceCIDRs in Subnets (%v) contain controllerIP (%s)",
-				instanceCIDRs,
-				c.ControllerIP,
-			)
-		}
-
 		for i, a := range instanceCIDRs {
 			for j, b := range instanceCIDRs[i+1:] {
-				if i > 0 && cidrOverlap(a, b) {
+				if cidrOverlap(a, b) {
 					return fmt.Errorf("CIDR of subnet %d (%s) overlaps with CIDR of subnet %d (%s)", i, a, j, b)
 				}
 			}

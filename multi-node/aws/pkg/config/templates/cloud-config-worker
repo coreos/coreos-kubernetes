@@ -36,7 +36,7 @@ coreos:
         Environment=KUBELET_ACI={{.HyperkubeImageRepo}}
         Environment="RKT_OPTS=--volume dns,kind=host,source=/etc/resolv.conf --mount volume=dns,target=/etc/resolv.conf"
         ExecStart=/usr/lib/coreos/kubelet-wrapper \
-        --api-servers={{.SecureAPIServers}} \
+        --api-servers={{.APIServerEndpoint}} \
         --network-plugin-dir=/etc/kubernetes/cni/net.d \
         --network-plugin={{.K8sNetworkPlugin}} \
         --register-node=true \
@@ -150,7 +150,7 @@ write_files:
             command:
             - /hyperkube
             - proxy
-            - --master=https://{{.ControllerIP}}:443
+            - --master={{.APIServerEndpoint}}
             - --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml
             securityContext:
               privileged: true
@@ -208,7 +208,7 @@ write_files:
                 "hostname": "$private_ipv4",
                 "policy": {
                     "type": "k8s",
-                    "k8s_api_root": "https://{{.ControllerIP}}:443/api/v1/",
+                    "k8s_api_root": "{{.APIServerEndpoint}}/api/v1/",
                     "k8s_client_key": "/etc/kubernetes/ssl/worker-key.pem",
                     "k8s_client_certificate": "/etc/kubernetes/ssl/worker.pem"
                 }

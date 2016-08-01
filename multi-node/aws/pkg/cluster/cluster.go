@@ -24,8 +24,8 @@ import (
 var VERSION = "UNKNOWN"
 
 type Info struct {
-	Name         string
-	ControllerIP string
+	Name              string
+	ControllerELBInfo string
 }
 
 func (c *Info) String() string {
@@ -34,7 +34,7 @@ func (c *Info) String() string {
 	w.Init(buf, 0, 8, 0, '\t', 0)
 
 	fmt.Fprintf(w, "Cluster Name:\t%s\n", c.Name)
-	fmt.Fprintf(w, "Controller IP:\t%s\n", c.ControllerIP)
+	fmt.Fprintf(w, "Controller ELB Info:\t%s\n", c.ControllerELBInfo)
 
 	w.Flush()
 	return buf.String()
@@ -343,7 +343,7 @@ func (c *Cluster) Info() (*Info, error) {
 	cfSvc := cloudformation.New(c.session)
 	resp, err := cfSvc.DescribeStackResource(
 		&cloudformation.DescribeStackResourceInput{
-			LogicalResourceId: aws.String("EIPController"),
+			LogicalResourceId: aws.String("ElbAPIServer"),
 			StackName:         aws.String(c.ClusterName),
 		},
 	)
@@ -353,7 +353,7 @@ func (c *Cluster) Info() (*Info, error) {
 	}
 
 	var info Info
-	info.ControllerIP = *resp.StackResourceDetail.PhysicalResourceId
+	info.ControllerELBInfo = resp.StackResourceDetail.String()
 	info.Name = c.ClusterName
 	return &info, nil
 }

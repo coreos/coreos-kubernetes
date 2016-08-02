@@ -203,8 +203,14 @@ func (c Cluster) Config() (*Config, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error parsing subnet instance cidr %s: %v", subnet.InstanceCIDR, err)
 		}
+
 		if subnet.lastAllocatedAddr == nil {
-			subnet.lastAllocatedAddr = &subnetCIDR.IP
+			ip := subnetCIDR.IP
+			//TODO:(chom) this is sloppy, but "soon-ish" etcd with be self-hosted so we'll leave this be
+			for i := 0; i < 3; i++ {
+				ip = incrementIP(ip)
+			}
+			subnet.lastAllocatedAddr = &ip
 		}
 
 		nextAddr := incrementIP(*subnet.lastAllocatedAddr)
@@ -214,9 +220,12 @@ func (c Cluster) Config() (*Config, error) {
 			SubnetIndex: subnetIndex,
 		}
 
-		//TODO: validate we're not overflowing the address space
+		//TODO(chom): validate we're not overflowing the address space
 		//This is complicated, must also factor in DHCP addresses
 		//for ASG components
+
+		//Punt on this- we're going to have an answer for dynamic etcd clusters at some point. Then we can either throw
+		//the instances in an ASG and use DHCP like all other instances, or simply self-host on cluster
 
 		config.EtcdInstances[etcdIndex] = instance
 

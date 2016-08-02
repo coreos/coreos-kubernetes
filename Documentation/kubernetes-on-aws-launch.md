@@ -30,7 +30,9 @@ $ kubectl --kubeconfig=kubeconfig get nodes
 
 If the container images are still downloading and/or the API server isn't accessible yet, the kubectl command above may show output similar to:
 
-`The connection to the server <externalDNSName>:443 was refused - did you specify the right host or port?`
+```
+The connection to the server <externalDNSName>:443 was refused - did you specify the right host or port?
+```
 
 Wait a few more minutes for everything to complete.
 

@@ -70,8 +70,8 @@ coreos:
       enable: true
       content: |
         [Unit]
-        Description=decrypt kubelet tls assets using amazon kms
-        Before=kubelet.service
+        Description=decrypt etcd2 tls assets using amazon kms
+        Before=etcd2.service
         After=early-docker.service
         Requires=early-docker.service
 
@@ -82,7 +82,7 @@ coreos:
         ExecStart=/opt/bin/decrypt-tls-assets
 
         [Install]
-        RequiredBy=kubelet.service
+        RequiredBy=etcd2.service
 
 
 write_files:

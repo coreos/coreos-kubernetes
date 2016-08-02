@@ -6,11 +6,11 @@
 
 if [ $# -ne 1 ]; then
     echo "USAGE: $0 <target-version>"
-    echo "  example: $0 'v1.3.2_coreos.0'"
+    echo "  example: $0 'v1.3.4_coreos.0'"
     exit 1
 fi
 
-CURRENT_VERSION=${CURRENT_VERSION:-"v1.3.2_coreos.0"}
+CURRENT_VERSION=${CURRENT_VERSION:-"v1.3.4_coreos.0"}
 TARGET_VERSION=${1}
 
 GIT_ROOT=$(git rev-parse --show-toplevel)

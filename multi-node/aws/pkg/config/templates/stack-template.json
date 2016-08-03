@@ -23,8 +23,8 @@
         "LaunchConfigurationName": {
           "Ref": "LaunchConfigurationWorker"
         },
-        "MaxSize": "{{.WorkerCount}}",
-        "MinSize": "{{.WorkerCount}}",
+        "MaxSize": "{{.MaxWorkerCount}}",
+        "MinSize": "{{.MinWorkerCount}}",
         "Tags": [
           {
             "Key": "KubernetesCluster",
@@ -60,7 +60,8 @@
           "MaxBatchSize" : "1",
           "PauseTime" : "PT2M"
         }
-      }
+      },
+      "DependsOn" : ["AutoScaleController"]
     },
     "AutoScaleController": {
       "Type": "AWS::AutoScaling::AutoScalingGroup",
@@ -77,8 +78,8 @@
         "LaunchConfigurationName": {
           "Ref": "LaunchConfigurationController"
         },
-        "MaxSize": "{{.ControllerCount}}",
-        "MinSize": "{{.ControllerCount}}",
+        "MaxSize": "{{.MaxControllerCount}}",
+        "MinSize": "{{.MinControllerCount}}",
         "Tags": [
           {
             "Key": "KubernetesCluster",

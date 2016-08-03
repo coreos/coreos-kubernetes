@@ -167,6 +167,12 @@ var supportedReleaseChannels = map[string]bool{
 func (c Cluster) Config() (*Config, error) {
 	config := Config{Cluster: c}
 
+	config.MinWorkerCount = config.WorkerCount - 1
+	config.MaxWorkerCount = config.WorkerCount + 1
+
+	config.MinControllerCount = config.ControllerCount - 1
+	config.MaxControllerCount = config.ControllerCount + 1
+
 	config.APIServerEndpoint = fmt.Sprintf("https://%s", c.ExternalDNSName)
 	if config.UseCalico {
 		config.K8sNetworkPlugin = "cni"
@@ -445,6 +451,12 @@ type etcdInstance struct {
 
 type Config struct {
 	Cluster
+
+	MinWorkerCount int
+	MaxWorkerCount int
+
+	MinControllerCount int
+	MaxControllerCount int
 
 	EtcdEndpoints      string
 	EtcdInitialCluster string

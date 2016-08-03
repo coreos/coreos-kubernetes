@@ -7,7 +7,13 @@ import (
 	"os"
 	"text/template"
 
+	"crypto/rsa"
+	"crypto/x509"
+
+	"path"
+
 	"github.com/coreos/coreos-kubernetes/multi-node/aws/pkg/config"
+	"github.com/coreos/coreos-kubernetes/multi-node/aws/pkg/tlsutil"
 	"github.com/spf13/cobra"
 )
 
@@ -19,10 +25,20 @@ var (
 		RunE:         runCmdRender,
 		SilenceUsage: true,
 	}
+	renderOpts = struct {
+		generateCredentials bool
+		generateCA          bool
+		caKeyPath           string
+		caCertPath          string
+	}{}
 )
 
 func init() {
 	cmdRoot.AddCommand(cmdRender)
+	cmdRender.Flags().BoolVar(&renderOpts.generateCredentials, "generate-credentials", false, "generate new cluster TLS assets")
+	cmdRender.Flags().BoolVar(&renderOpts.generateCA, "generate-ca", false, "if generating credentials, generate root CA key and cert. NOT RECOMMENDED FOR PRODUCTION USE- use '-ca-key-path' and '-ca-cert-path' options to provide your own certificate authority assets")
+	cmdRender.Flags().StringVar(&renderOpts.caKeyPath, "ca-key-path", "./credentials/ca-key.pem", "path to pem-encoded CA RSA key")
+	cmdRender.Flags().StringVar(&renderOpts.caCertPath, "ca-cert-path", "./credentials/ca.pem", "path to pem-encoded CA x509 certificate")
 }
 
 func runCmdRender(cmd *cobra.Command, args []string) error {
@@ -32,16 +48,45 @@ func runCmdRender(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("Failed to read cluster config: %v", err)
 	}
 
-	// Generate default TLS assets.
-	assets, err := cluster.NewTLSAssets()
-	if err != nil {
-		return fmt.Errorf("Error generating default assets: %v", err)
-	}
-	if err := os.Mkdir("credentials", 0700); err != nil {
-		return err
-	}
-	if err := assets.WriteToDir("./credentials"); err != nil {
-		return fmt.Errorf("Error create assets: %v", err)
+	if renderOpts.generateCredentials {
+		fmt.Printf("Generating TLS credentials...\n")
+		var caKey *rsa.PrivateKey
+		var caCert *x509.Certificate
+		if renderOpts.generateCA {
+			var err error
+			caKey, caCert, err = config.NewTLSCA()
+			if err != nil {
+				return fmt.Errorf("failed generating cluster CA: %v", err)
+			}
+			fmt.Printf("-> Generating new TLS CA\n")
+		} else {
+			fmt.Printf("-> Parsing existing TLS CA\n")
+			if caKeyBytes, err := ioutil.ReadFile(renderOpts.caKeyPath); err != nil {
+				return fmt.Errorf("failed reading ca key file %s : %v", renderOpts.caKeyPath, err)
+			} else {
+				if caKey, err = tlsutil.DecodePrivateKeyPEM(caKeyBytes); err != nil {
+					return fmt.Errorf("failed parsing ca key: %v", err)
+				}
+			}
+			if caCertBytes, err := ioutil.ReadFile(renderOpts.caCertPath); err != nil {
+				return fmt.Errorf("failed reading ca cert file %s : %v", renderOpts.caCertPath, err)
+			} else {
+				if caCert, err = tlsutil.DecodeCertificatePEM(caCertBytes); err != nil {
+					return fmt.Errorf("failed parsing ca cert: %v", err)
+				}
+			}
+		}
+		fmt.Printf("-> Generating new TLS assets\n")
+		assets, err := cluster.NewTLSAssets(caKey, caCert)
+		if err != nil {
+			return fmt.Errorf("Error generating default assets: %v", err)
+		}
+		if err := os.MkdirAll("credentials", 0700); err != nil {
+			return err
+		}
+		if err := assets.WriteToDir("./credentials", renderOpts.generateCA); err != nil {
+			return fmt.Errorf("Error create assets: %v", err)
+		}
 	}
 
 	// Create a Config and attempt to render a kubeconfig for it.
@@ -59,10 +104,6 @@ func runCmdRender(cmd *cobra.Command, args []string) error {
 	}
 
 	// Write all assets to disk.
-	userdataDir := "userdata"
-	if err := os.Mkdir(userdataDir, 0755); err != nil {
-		return err
-	}
 	files := []struct {
 		name string
 		data []byte
@@ -76,6 +117,10 @@ func runCmdRender(cmd *cobra.Command, args []string) error {
 		{"kubeconfig", kubeconfig.Bytes(), 0600},
 	}
 	for _, file := range files {
+		if err := os.MkdirAll(path.Dir(file.name), 0755); err != nil {
+			return err
+		}
+
 		if err := ioutil.WriteFile(file.name, file.data, file.mode); err != nil {
 			return err
 		}

@@ -137,7 +137,7 @@ Next, start the DNS add-on:
 $ kubectl create -f dns-addon.yml
 ```
 
-And check for `kube-dns-v11-*` pod up and running:
+And check for `kube-dns-v19-*` pod up and running:
 
 ```sh
 $ kubectl get pods --namespace=kube-system | grep kube-dns-v19

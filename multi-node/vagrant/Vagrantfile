@@ -5,6 +5,7 @@ require 'fileutils'
 require 'open-uri'
 require 'tempfile'
 require 'yaml'
+require_relative '../../lib/create_ssl.rb'
 
 Vagrant.require_version ">= 1.6.0"
 
@@ -26,6 +27,8 @@ if $worker_vm_memory < 1024
 end
 
 CONTROLLER_CLUSTER_IP="10.3.0.1"
+
+CERT_BASE_DIR="ssl"
 
 ETCD_CLOUD_CONFIG_PATH = File.expand_path("etcd-cloud-config.yaml")
 
@@ -49,18 +52,34 @@ etcdIPs = [*1..$etcd_count].map{ |i| etcdIP(i) }
 initial_etcd_cluster = etcdIPs.map.with_index{ |ip, i| "e#{i+1}=http://#{ip}:2380" }.join(",")
 etcd_endpoints = etcdIPs.map.with_index{ |ip, i| "http://#{ip}:2379" }.join(",")
 
+FileUtils.mkdir_p(CERT_BASE_DIR)
+
 # Generate root CA
-system("mkdir -p ssl && ./../../lib/init-ssl-ca ssl") or abort ("failed generating SSL artifacts")
+CA_CERT_PATHS = create_ca_cert(CERT_BASE_DIR)
 
 # Generate admin key/cert
-system("./../../lib/init-ssl ssl admin kube-admin") or abort("failed generating admin SSL artifacts")
+create_ssl_cert(CERT_BASE_DIR, "admin", "kube-admin", [], CA_CERT_PATHS)
 
-def provisionMachineSSL(machine,certBaseName,cn,ipAddrs)
-  tarFile = "ssl/#{cn}.tar"
-  ipString = ipAddrs.map.with_index { |ip, i| "IP.#{i+1}=#{ip}"}.join(",")
-  system("./../../lib/init-ssl ssl #{certBaseName} #{cn} #{ipString}") or abort("failed generating #{cn} SSL artifacts")
-  machine.vm.provision :file, :source => tarFile, :destination => "/tmp/ssl.tar"
-  machine.vm.provision :shell, :inline => "mkdir -p /etc/kubernetes/ssl && tar -C /etc/kubernetes/ssl -xf /tmp/ssl.tar", :privileged => true
+def provision_machine_ssl(machine, basename, cn, ip_addrs)
+  fs = create_ssl_cert(CERT_BASE_DIR, basename, cn, ip_addrs, CA_CERT_PATHS)
+
+  [:ca, :key, :pem].each do |k|
+    machine.vm.provision(
+      :file,
+      :source => fs[k],
+      :destination => "/tmp/ssl/#{File.basename(fs[k])}"
+    )
+  end
+
+  machine.vm.provision(
+    :shell,
+    :inline => (
+      "mkdir -p /etc/kubernetes/ssl" \
+      " && " \
+      "mv -f /tmp/ssl/* /etc/kubernetes/ssl"
+    ),
+    :privileged => true
+  )
 end
 
 Vagrant.configure("2") do |config|
@@ -154,7 +173,12 @@ Vagrant.configure("2") do |config|
       controller.vm.network :private_network, ip: controllerIP
 
       # Each controller gets the same cert
-      provisionMachineSSL(controller,"apiserver","kube-apiserver-#{controllerIP}",controllerIPs)
+      provision_machine_ssl(
+        controller,
+        "apiserver",
+        "kube-apiserver-#{controllerIP}",
+        controllerIPs
+      )
 
       controller.vm.provision :file, :source => env_file, :destination => "/tmp/coreos-kube-options.env"
       controller.vm.provision :shell, :inline => "mkdir -p /run/coreos-kubernetes && mv /tmp/coreos-kube-options.env /run/coreos-kubernetes/options.env", :privileged => true
@@ -186,7 +210,12 @@ Vagrant.configure("2") do |config|
       workerIP = workerIP(i)
       worker.vm.network :private_network, ip: workerIP
 
-      provisionMachineSSL(worker,"worker","kube-worker-#{workerIP}",[workerIP])
+      provision_machine_ssl(
+        worker,
+        "worker",
+        "kube-worker-#{workerIP}",
+        [workerIP]
+      )
 
       worker.vm.provision :file, :source => env_file, :destination => "/tmp/coreos-kube-options.env"
       worker.vm.provision :shell, :inline => "mkdir -p /run/coreos-kubernetes && mv /tmp/coreos-kube-options.env /run/coreos-kubernetes/options.env", :privileged => true

@@ -39,27 +39,27 @@ spec:
 apiVersion: v1
 kind: ReplicationController
 metadata:
-  name: kube-dns-v19
+  name: kube-dns-v17.1
   namespace: kube-system
   labels:
     k8s-app: kube-dns
-    version: v19
+    version: v17.1
     kubernetes.io/cluster-service: "true"
 spec:
   replicas: 1
   selector:
     k8s-app: kube-dns
-    version: v19
+    version: v17.1
   template:
     metadata:
       labels:
         k8s-app: kube-dns
-        version: v19
+        version: v17.1
         kubernetes.io/cluster-service: "true"
     spec:
       containers:
       - name: kubedns
-        image: gcr.io/google_containers/kubedns-amd64:1.6
+        image: gcr.io/google_containers/kubedns-amd64:1.5
         resources:
           limits:
             cpu: 100m
@@ -107,7 +107,7 @@ spec:
           name: dns-tcp
           protocol: TCP
       - name: healthz
-        image: gcr.io/google_containers/exechealthz-amd64:1.0
+        image: gcr.io/google_containers/exechealthz-amd64:1.1
         resources:
           limits:
             cpu: 10m
@@ -116,7 +116,7 @@ spec:
             cpu: 10m
             memory: 50Mi
         args:
-        - -cmd=nslookup kubernetes.default.svc.cluster.local 127.0.0.1 >/dev/null && nslookup kubernetes.default.svc.cluster.local 127.0.0.1:10053 >/dev/null
+        - -cmd=nslookup kubernetes.default.svc.cluster.local 127.0.0.1 >/dev/null
         - -port=8080
         - -quiet
         ports:
@@ -137,10 +137,10 @@ Next, start the DNS add-on:
 $ kubectl create -f dns-addon.yml
 ```
 
-And check for `kube-dns-v19-*` pod up and running:
+And check for `kube-dns-v17.1-*` pod up and running:
 
 ```sh
-$ kubectl get pods --namespace=kube-system | grep kube-dns-v19
+$ kubectl get pods --namespace=kube-system | grep kube-dns-v17.1
 ```
 
 <div class="co-m-docs-next-step">

@@ -73,7 +73,7 @@ In order for flannel to manage the pod network in the cluster, Docker needs to b
 
 *Note:* If the pod-network is being managed independently, this step can be skipped. See [kubernetes networking](kubernetes-networking.md) for more detail.
 
-We're going to do this, like we proceeded above with flannel, using a [systemd drop-in][dropins]:
+Again, we will use a [systemd drop-in][dropins]:
 
 **/etc/systemd/system/docker.service.d/40-flannel.conf**
 
@@ -97,7 +97,7 @@ Note that the kubelet running on a master node may log repeated attempts to post
 
 * Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
 * Replace `${DNS_SERVICE_IP}`
-* Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release.
+* Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release, e.g. `v1.3.4_coreos.0`.
 * Replace `${NETWORK_PLUGIN}` with `cni` if using Calico. Otherwise just leave it blank.
 * Decide if you will use [additional features][rkt-opts-examples] such as cluster logging, iSCSI volumes, or addressing workers by hostname in addition to IPs.
 
@@ -450,6 +450,13 @@ Earlier it was mentioned that flannel stores cluster-level configuration in etcd
 $ curl -X PUT -d "value={\"Network\":\"$POD_NETWORK\",\"Backend\":{\"Type\":\"vxlan\"}}" "$ETCD_SERVER/v2/keys/coreos.com/network/config"
 ```
 
+After configuring flannel, we should restart it for our changes to take effect. Note that this will also restart the docker daemon and could impact running containers.
+
+```sh
+$ sudo systemctl start flanneld
+$ sudo systemctl enable flanneld
+```
+
 ### Start kubelet
 
 Now that everything is configured, we can start the kubelet, which will also start the Pod manifests for the API server, the controller manager, proxy and scheduler.
@@ -518,11 +525,19 @@ The Calico policy-controller runs in its own `calico-system` namespace. Create t
 $ curl -H "Content-Type: application/json" -XPOST -d'{"apiVersion":"v1","kind":"Namespace","metadata":{"name":"calico-system"}}' "http://127.0.0.1:8080/api/v1/namespaces"
 ```
 
-Our Pods should now be starting up and downloading their containers. To check the download progress, you can run `docker ps`.
-
 To check the health of the kubelet systemd unit that we created, run `systemctl status kubelet.service`.
 
+Our Pods should now be starting up and downloading their containers. Once the kubelet has started, you can check it's creating its pods via the metadata api:
+
+```sh
+$ curl -s localhost:10255/pods | jq -r '.items[].metadata.name'
+kube-scheduler-$node
+kube-apiserver-$node
+kube-controller-$node
+kube-proxy-$node
+```
+
 <div class="co-m-docs-next-step">
-  <p><strong>Did the containers start downloading?</strong> As long as they started to download, everything is working properly.</p>
+  <p><strong>Did the containers start downloading?</strong> As long as the kubelet knows about them, everything is working properly.</p>
   <a href="deploy-workers.md" class="btn btn-primary btn-icon-right" data-category="Docs Next" data-event="Kubernetes: Workers">Yes, ready to deploy the Workers</a>
 </div>

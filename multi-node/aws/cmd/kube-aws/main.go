@@ -19,6 +19,7 @@ const configPath = "cluster.yaml"
 
 var stackTemplateOptions = config.StackTemplateOptions{
 	TLSAssetsDir:          "credentials",
+	EtcdTmplFile:          "userdata/cloud-config-etcd",
 	ControllerTmplFile:    "userdata/cloud-config-controller",
 	WorkerTmplFile:        "userdata/cloud-config-worker",
 	StackTemplateTmplFile: "stack-template.json",

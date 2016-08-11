@@ -249,6 +249,87 @@
       },
       "Type": "AWS::IAM::Role"
     },
+    {{ range $index, $ip := .EtcdIPs}}
+      "InstanceEtcd{{ $index }}": {
+        "Properties": {
+          "AvailabilityZone": "{{(index $.Subnets (index $.EtcdSubnetIndex $index)).AvailabilityZone}}",
+          "BlockDeviceMappings": [
+            {
+              "DeviceName": "/dev/xvda",
+              "Ebs": {
+                "VolumeSize": "{{$.EtcdRootVolumeSize}}"
+              }
+            }
+          ],
+          "ImageId": "{{$.AMI}}",
+          "InstanceType": "{{$.EtcdInstanceType}}",
+          "KeyName": "{{$.KeyName}}",
+          "NetworkInterfaces": [
+            {
+              "AssociatePublicIpAddress": true,
+              "DeleteOnTermination": true,
+              "DeviceIndex": "0",
+              "GroupSet": [
+                {
+                  "Ref": "SecurityGroupEtcd"
+                }
+              ],
+              "PrivateIpAddress": "{{ (index $.EtcdIPs $index) }}",
+              "SubnetId": {
+                "Ref": "Subnet{{ (index $.EtcdSubnetIndex $index) }}"
+              }
+            }
+          ],
+          "Tags": [
+            {
+              "Key": "KubernetesCluster",
+              "Value": "{{$.ClusterName}}"
+            },
+            {
+              "Key": "Name",
+              "Value": "{{$.ClusterName}}-kube-aws-etcd{{ $index }}"
+            }
+          ],
+          "UserData": "{{ (index $.UserDataEtcd $index ) }}"
+        },
+        "Type": "AWS::EC2::Instance"
+      },
+      "AlarmEtcd{{ $index }}Recover": {
+        "Properties": {
+          "AlarmActions": [
+            {
+              "Fn::Join": [
+                "",
+                [
+                  "arn:aws:automate:",
+                  {
+                    "Ref": "AWS::Region"
+                  },
+                  ":ec2:recover"
+                ]
+              ]
+            }
+          ],
+          "AlarmDescription": "Trigger a recovery when system check fails for 5 consecutive minutes.",
+          "ComparisonOperator": "GreaterThanThreshold",
+          "Dimensions": [
+            {
+              "Name": "InstanceId",
+              "Value": {
+                "Ref": "InstanceEtcd{{ $index }}"
+              }
+            }
+          ],
+          "EvaluationPeriods": "5",
+          "MetricName": "StatusCheckFailed_System",
+          "Namespace": "AWS/EC2",
+          "Period": "60",
+          "Statistic": "Minimum",
+          "Threshold": "0"
+        },
+        "Type": "AWS::CloudWatch::Alarm"
+      },
+    {{end}}
     "InstanceController": {
       "Properties": {
         "AvailabilityZone": "{{(index .Subnets .ControllerSubnetIndex).AvailabilityZone}}",
@@ -332,6 +413,93 @@
       },
       "Type": "AWS::AutoScaling::LaunchConfiguration"
     },
+    {{if .DedicatedEtcd}}
+    "SecurityGroupEtcd": {
+      "Properties": {
+        "GroupDescription": {
+          "Ref": "AWS::StackName"
+        },
+        "SecurityGroupEgress": [
+          {
+            "CidrIp": "0.0.0.0/0",
+            "FromPort": 0,
+            "IpProtocol": "tcp",
+            "ToPort": 65535
+          },
+          {
+            "CidrIp": "0.0.0.0/0",
+            "FromPort": 0,
+            "IpProtocol": "udp",
+            "ToPort": 65535
+          }
+        ],
+        "SecurityGroupIngress": [
+          {
+            "CidrIp": "0.0.0.0/0",
+            "FromPort": 3,
+            "IpProtocol": "icmp",
+            "ToPort": -1
+          },
+          {
+            "CidrIp": "0.0.0.0/0",
+            "FromPort": 22,
+            "IpProtocol": "tcp",
+            "ToPort": 22
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "KubernetesCluster",
+            "Value": "{{.ClusterName}}"
+          }
+        ],
+        "VpcId": {{.VPCRef}}
+      },
+      "Type": "AWS::EC2::SecurityGroup"
+    },
+    "SecurityGroupEtcdIngressFromEtcdToEtcd": {
+      "Properties": {
+        "FromPort": 2379,
+        "GroupId": {
+          "Ref": "SecurityGroupEtcd"
+        },
+        "IpProtocol": "tcp",
+        "SourceSecurityGroupId": {
+          "Ref": "SecurityGroupEtcd"
+        },
+        "ToPort": 2380
+      },
+      "Type": "AWS::EC2::SecurityGroupIngress"
+    },
+    "SecurityGroupEtcdIngressFromControllerToEtcd": {
+      "Properties": {
+        "FromPort": 2379,
+        "GroupId": {
+          "Ref": "SecurityGroupEtcd"
+        },
+        "IpProtocol": "tcp",
+        "SourceSecurityGroupId": {
+          "Ref": "SecurityGroupController"
+        },
+        "ToPort": 2379
+      },
+      "Type": "AWS::EC2::SecurityGroupIngress"
+    },
+    "SecurityGroupEtcdIngressFromWorkerToEtcd": {
+      "Properties": {
+        "FromPort": 2379,
+        "GroupId": {
+          "Ref": "SecurityGroupEtcd"
+        },
+        "IpProtocol": "tcp",
+        "SourceSecurityGroupId": {
+          "Ref": "SecurityGroupWorker"
+        },
+        "ToPort": 2379
+      },
+      "Type": "AWS::EC2::SecurityGroupIngress"
+    },
+    {{end}}
     "SecurityGroupController": {
       "Properties": {
         "GroupDescription": {
@@ -387,6 +555,7 @@
       },
       "Type": "AWS::EC2::SecurityGroup"
     },
+    {{if not .DedicatedEtcd}}
     "SecurityGroupControllerIngressFromWorkerToEtcd": {
       "Properties": {
         "FromPort": 2379,
@@ -401,6 +570,7 @@
       },
       "Type": "AWS::EC2::SecurityGroupIngress"
     },
+    {{end}}
     "SecurityGroupWorker": {
       "Properties": {
         "GroupDescription": {

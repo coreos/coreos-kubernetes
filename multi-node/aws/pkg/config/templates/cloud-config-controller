@@ -5,6 +5,7 @@ coreos:
   flannel:
     interface: $private_ipv4
     etcd_endpoints: {{ .ETCDEndpoints }}
+  {{if not .DedicatedEtcd}}
   etcd2:
     name: controller
     advertise-client-urls: http://$private_ipv4:2379
@@ -12,10 +13,12 @@ coreos:
     listen-client-urls: http://0.0.0.0:2379
     listen-peer-urls: http://0.0.0.0:2380
     initial-cluster: controller=http://$private_ipv4:2380
+  {{end}}
   units:
+    {{if not .DedicatedEtcd}}
     - name: etcd2.service
       command: start
-
+    {{end}}
     - name: docker.service
       drop-ins:
         - name: 40-flannel.conf
@@ -29,9 +32,15 @@ coreos:
         - name: 10-etcd.conf
           content: |
             [Service]
+            {{if not .DedicatedEtcd}}
             ExecStartPre=/usr/bin/curl --silent -X PUT -d \
             "value={\"Network\" : \"{{.PodCIDR}}\", \"Backend\" : {\"Type\" : \"vxlan\"}}" \
             http://localhost:2379/v2/keys/coreos.com/network/config?prevExist=false
+            {{else}}
+            Environment="ETCDCTL_PEERS={{.ETCDEndpoints}}"
+            ExecStartPre=/usr/bin/etcdctl set coreos.com/network/config \
+            "{\"Network\" : \"{{.PodCIDR}}\", \"Backend\" : {\"Type\" : \"vxlan\"}}"
+            {{end}}
     - name: kubelet.service
       command: start
       enable: true
@@ -223,7 +232,9 @@ write_files:
           - /hyperkube
           - apiserver
           - --bind-address=0.0.0.0
-          - --etcd-servers=http://localhost:2379
+          {{if .DedicatedEtcd }}- --etcd-servers={{.ETCDEndpoints}}
+          {{else}}- --etcd-servers=http://localhost:2379
+          {{end}}
           - --allow-privileged=true
           - --service-cluster-ip-range={{.ServiceCIDR}}
           - --secure-port=443

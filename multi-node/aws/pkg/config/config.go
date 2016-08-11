@@ -38,6 +38,8 @@ func newDefaultCluster() *Cluster {
 		DNSServiceIP:             "10.3.0.10",
 		K8sVer:                   "v1.3.4_coreos.0",
 		HyperkubeImageRepo:       "quay.io/coreos/hyperkube",
+		EtcdInstanceType:         "m3.medium",
+		EtcdRootVolumeSize:       8,
 		ControllerInstanceType:   "m3.medium",
 		ControllerRootVolumeType: "gp2",
 		ControllerRootVolumeIOPS: 0,
@@ -50,6 +52,7 @@ func newDefaultCluster() *Cluster {
 		CreateRecordSet:          false,
 		RecordSetTTL:             300,
 		Subnets:                  []Subnet{},
+		EtcdIPs:                  []string{},
 	}
 }
 
@@ -137,6 +140,9 @@ type Cluster struct {
 	StackTags                map[string]string `yaml:"stackTags,omitempty"`
 	UseCalico                bool              `yaml:"useCalico,omitempty"`
 	Subnets                  []Subnet          `yaml:"subnets,omitempty"`
+	EtcdInstanceType         string            `yaml:"etcdInstanceType,omitempty"`
+	EtcdRootVolumeSize       int               `yaml:"etcdRootVolumeSize,omitempty"`
+	EtcdIPs                  []string          `yaml:"etcdIPs,omitempty"`
 }
 
 type Subnet struct {
@@ -156,7 +162,12 @@ var supportedReleaseChannels = map[string]bool{
 
 func (c Cluster) Config() (*Config, error) {
 	config := Config{Cluster: c}
-	config.ETCDEndpoints = fmt.Sprintf("http://%s:2379", c.ControllerIP)
+	config.DedicatedEtcd = len(config.EtcdIPs) > 0
+	if config.DedicatedEtcd {
+		config.ETCDEndpoints = "http://" + strings.Join(c.EtcdIPs, ":2379,http://") + ":2379"
+	} else {
+		config.ETCDEndpoints = fmt.Sprintf("http://%s:2379", c.ControllerIP)
+	}
 	config.APIServers = fmt.Sprintf("http://%s:8080", c.ControllerIP)
 	config.SecureAPIServers = fmt.Sprintf("https://%s:443", c.ControllerIP)
 	config.APIServerEndpoint = fmt.Sprintf("https://%s", c.ExternalDNSName)
@@ -186,6 +197,7 @@ func (c Cluster) Config() (*Config, error) {
 
 type StackTemplateOptions struct {
 	TLSAssetsDir          string
+	EtcdTmplFile          string
 	ControllerTmplFile    string
 	WorkerTmplFile        string
 	StackTemplateTmplFile string
@@ -195,7 +207,9 @@ type stackConfig struct {
 	*Config
 	UserDataWorker        string
 	UserDataController    string
+	UserDataEtcd          []string
 	ControllerSubnetIndex int
+	EtcdSubnetIndex       []int
 }
 
 func execute(filename string, data interface{}, compress bool) (string, error) {
@@ -245,19 +259,36 @@ func (c Cluster) stackConfig(opts StackTemplateOptions, compressUserData bool) (
 	if controllerIPAddr == nil {
 		return nil, fmt.Errorf("invalid controllerIP: %s", stackConfig.ControllerIP)
 	}
-	controllerSubnetFound := false
-	for i, subnet := range stackConfig.Subnets {
-		_, instanceCIDR, err := net.ParseCIDR(subnet.InstanceCIDR)
-		if err != nil {
-			return nil, fmt.Errorf("invalid instanceCIDR: %v", err)
-		}
-		if instanceCIDR.Contains(controllerIPAddr) {
-			stackConfig.ControllerSubnetIndex = i
-			controllerSubnetFound = true
-		}
+
+	stackConfig.ControllerSubnetIndex, err = stackConfig.SubnetIndexForInstanceIP(controllerIPAddr)
+	if err != nil {
+		return nil, fmt.Errorf("cannot determine controller instance subnet: %v", err)
 	}
-	if !controllerSubnetFound {
-		return nil, fmt.Errorf("Fail-fast occurred possibly because of a bug: ControllerSubnetIndex couldn't be determined for subnets (%v) and controllerIP (%v)", stackConfig.Subnets, stackConfig.ControllerIP)
+
+	etcdClusterMembers := []string{}
+	stackConfig.EtcdSubnetIndex = make([]int, len(c.EtcdIPs))
+	stackConfig.UserDataEtcd = make([]string, len(c.EtcdIPs))
+	for i, etcdIP := range c.EtcdIPs {
+		etcdIPAddr := net.ParseIP(etcdIP)
+		if etcdIPAddr == nil {
+			return nil, fmt.Errorf("invalid etcd IP: %s", etcdIP)
+		}
+
+		stackConfig.EtcdSubnetIndex[i], err = stackConfig.SubnetIndexForInstanceIP(etcdIPAddr)
+		if err != nil {
+			return nil, fmt.Errorf("cannot determine etcd instance subnet: %v", err)
+		}
+
+		etcdClusterMembers = append(etcdClusterMembers, fmt.Sprintf("etcd%d=http://%v:2380", i, etcdIP))
+	}
+
+	stackConfig.Config.EtcdInitialCluster = strings.Join(etcdClusterMembers, ",")
+
+	for i, _ := range etcdClusterMembers {
+		stackConfig.Config.EtcdIndex = i
+		if stackConfig.UserDataEtcd[i], err = execute(opts.EtcdTmplFile, stackConfig.Config, compressUserData); err != nil {
+			return nil, fmt.Errorf("failed to render etcd%d cloud config: %v", i, err)
+		}
 	}
 
 	if stackConfig.UserDataWorker, err = execute(opts.WorkerTmplFile, stackConfig.Config, compressUserData); err != nil {
@@ -270,6 +301,19 @@ func (c Cluster) stackConfig(opts StackTemplateOptions, compressUserData bool) (
 	return &stackConfig, nil
 }
 
+func (s stackConfig) SubnetIndexForInstanceIP(instanceIP net.IP) (int, error) {
+	for i, subnet := range s.Subnets {
+		_, instanceCIDR, err := net.ParseCIDR(subnet.InstanceCIDR)
+		if err != nil {
+			return -1, fmt.Errorf("invalid instanceCIDR: %v", err)
+		}
+		if instanceCIDR.Contains(instanceIP) {
+			return i, nil
+		}
+	}
+	return -1, fmt.Errorf("Fail-fast occurred possibly because of a bug: SubnetIndex couldn't be determined for subnets (%v) and instance IP (%v)", s.Subnets, instanceIP)
+}
+
 func (c Cluster) ValidateUserData(opts StackTemplateOptions) error {
 	stackConfig, err := c.stackConfig(opts, false)
 	if err != nil {
@@ -278,10 +322,12 @@ func (c Cluster) ValidateUserData(opts StackTemplateOptions) error {
 
 	errors := []string{}
 
-	for _, userData := range []struct {
+	type userDataStruct struct {
 		Name    string
 		Content string
-	}{
+	}
+
+	userDataEntries := []userDataStruct{
 		{
 			Content: stackConfig.UserDataWorker,
 			Name:    "UserDataWorker",
@@ -290,7 +336,16 @@ func (c Cluster) ValidateUserData(opts StackTemplateOptions) error {
 			Content: stackConfig.UserDataController,
 			Name:    "UserDataController",
 		},
-	} {
+	}
+
+	for i := range stackConfig.EtcdIPs {
+		userDataEntries = append(userDataEntries, userDataStruct{
+			Content: stackConfig.UserDataEtcd[i],
+			Name:    fmt.Sprintf("UserDataEtcd%d", i),
+		})
+	}
+
+	for _, userData := range userDataEntries {
 		report, err := validate.Validate([]byte(userData.Content))
 
 		if err != nil {
@@ -372,6 +427,7 @@ func getContextString(buf []byte, offset, lineCount int) string {
 type Config struct {
 	Cluster
 
+	DedicatedEtcd     bool
 	ETCDEndpoints     string
 	APIServers        string
 	SecureAPIServers  string
@@ -388,6 +444,9 @@ type Config struct {
 	VPCRef string
 
 	K8sNetworkPlugin string
+
+	EtcdInitialCluster string
+	EtcdIndex          int
 }
 
 func (c Cluster) valid() error {

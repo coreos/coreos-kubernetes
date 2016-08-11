@@ -116,7 +116,7 @@ coreos:
         ExecStart=/bin/true
         ExecStop=/bin/sh -c '/usr/bin/docker run --rm -v /etc/kubernetes:/etc/kubernetes {{.HyperkubeImageRepo}}:{{.K8sVer}} \
           /hyperkube kubectl \
-          --server=https://{{.ControllerIP}}:443 \
+          --server=https://{{.ExternalDNSName}}:443 \
           --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml \
           drain $$(hostname) \
           --ignore-daemonsets \

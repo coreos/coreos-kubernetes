@@ -706,7 +706,7 @@ nodeDrainer:
 	}
 
 	for _, conf := range validConfigs {
-		confBody := minimalConfigYaml + conf.conf
+		confBody := singleAzConfigYaml + conf.conf
 		c, err := ClusterFromBytes([]byte(confBody))
 		if err != nil {
 			t.Errorf("failed to parse config %s: %v", confBody, err)
@@ -723,26 +723,39 @@ nodeDrainer:
 
 }
 
-func newMinimalConfig() Config {
+func newMinimalConfig() (*Config, error) {
 	cluster := newDefaultCluster()
-	config := Config{
-		Cluster:           *cluster,
-		ETCDEndpoints:     "http://etcd.example.com:2379",
-		APIServers:        "http://apiserver.example.com:8080",
-		SecureAPIServers:  "https://apiserver.example.com:443",
-		APIServerEndpoint: "https://apiserver.example.com",
-		TLSConfig: &CompactTLSAssets{
-			CACert:        "examplecacert",
-			CAKey:         "examplecakey",
-			APIServerCert: "exampleapiservercert",
-			APIServerKey:  "exampleapiserverkey",
-			WorkerCert:    "exampleworkercert",
-			WorkerKey:     "exampleworkerkey",
-			AdminCert:     "exampleadmincert",
-			AdminKey:      "exampleadminkey",
+	cluster.ExternalDNSName = "k8s.example.com"
+	cluster.Region = "us-west-1"
+	cluster.Subnets = []*Subnet{
+		&Subnet{
+			AvailabilityZone: "us-west-1a",
+			InstanceCIDR:     "10.0.0.0/24",
+		},
+		&Subnet{
+			AvailabilityZone: "us-west-1b",
+			InstanceCIDR:     "10.0.1.0/24",
 		},
 	}
-	return config
+	c, err := cluster.Config()
+	if err != nil {
+		return nil, err
+	}
+	c.TLSConfig = &CompactTLSAssets{
+		CACert:         "examplecacert",
+		CAKey:          "examplecakey",
+		APIServerCert:  "exampleapiservercert",
+		APIServerKey:   "exampleapiserverkey",
+		WorkerCert:     "exampleworkercert",
+		WorkerKey:      "exampleworkerkey",
+		AdminCert:      "exampleadmincert",
+		AdminKey:       "exampleadminkey",
+		EtcdCert:       "exampleetcdcert",
+		EtcdClientCert: "exampleetcdclientcert",
+		EtcdClientKey:  "exampleetcdclientkey",
+		EtcdKey:        "exampleetcdkey",
+	}
+	return c, nil
 }
 
 func renderTemplate(name string, templateBody []byte, data interface{}) (string, error) {
@@ -768,12 +781,15 @@ func parseYaml(text string) (map[interface{}]interface{}, error) {
 }
 
 func TestNodeDrainerWorkerUserData(t *testing.T) {
-	config := newMinimalConfig()
+	config, err := newMinimalConfig()
+
+	if err != nil {
+		t.Errorf("Unexpected error while setting up a test data: %s", err)
+	}
 
 	var cloudConfig string
-	var err error
 
-	config.Cluster.Experimental.NodeDrainer.Enabled = true
+	config.Experimental.NodeDrainer.Enabled = true
 	if cloudConfig, err = renderCloudConfigWorker(config); err != nil {
 		t.Errorf("failed to render worker cloud config: %v", err)
 	}

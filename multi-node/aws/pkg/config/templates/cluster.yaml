@@ -98,6 +98,9 @@ kmsKeyArn: "{{.KMSKeyARN}}"
 # serviceCIDR: "10.3.0.0/24"
 
 # CIDR for all pod IP addresses
+# this subnet must be at least as large as serviceCIDR * workerCount
+# If that is not the case, flannel will refuse to start on some workers,
+# as it can not elect a subnet (it will want at least a /24) for local use.
 # podCIDR: "10.2.0.0/16"
 
 # IP address of Kubernetes dns service (must be contained by serviceCIDR)

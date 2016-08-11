@@ -16,7 +16,7 @@ See the [Kubernetes networking](kubernetes-networking.md) documentation for more
 
 [coreos-flannel]: https://coreos.com/flannel/docs/latest/flannel-config.html
 [calico-networking]: https://github.com/projectcalico/calico-containers
-[pod-network]: https://github.com/kubernetes/kubernetes/blob/release-1.2/docs/design/networking.md#pod-to-pod
+[pod-network]: https://github.com/kubernetes/kubernetes/blob/release-1.3/docs/design/networking.md#pod-to-pod
 
 ## Automated provisioning
 

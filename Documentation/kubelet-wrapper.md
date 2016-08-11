@@ -95,4 +95,4 @@ ExecStart=/opt/bin/kubelet-wrapper \
 
 [#2141]: https://github.com/coreos/rkt/issues/2141
 [kubelet-wrapper]: https://github.com/coreos/coreos-overlay/blob/master/app-admin/kubelet-wrapper/files/kubelet-wrapper
-[addon-logging]: https://github.com/kubernetes/kubernetes/tree/release-1.2/cluster/addons/fluentd-elasticsearch
+[addon-logging]: https://github.com/kubernetes/kubernetes/tree/release-1.3/cluster/addons/fluentd-elasticsearch

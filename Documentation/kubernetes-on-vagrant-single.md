@@ -44,6 +44,12 @@ $ git clone https://github.com/coreos/coreos-kubernetes.git
 $ cd coreos-kubernetes/single-node/
 ```
 
+## Choose Container Runtime (optional)
+
+The runtime defaults to docker. If you wish to use rkt simply edit the user-data and change the line beginning with `export CONTAINER_RUNTIME` to:
+
+`export CONTAINER_RUNTIME=rkt`
+
 ## Start the Machine
 
 Ensure the latest CoreOS vagrant image will be used by running `vagrant box update`.

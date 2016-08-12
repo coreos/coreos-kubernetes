@@ -19,6 +19,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/kms"
 
 	"github.com/coreos/coreos-cloudinit/config/validate"
+	"github.com/coreos/coreos-kubernetes/multi-node/aws/pkg/coreosutil"
+	"github.com/coreos/go-semver/semver"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -38,6 +40,7 @@ func newDefaultCluster() *Cluster {
 		DNSServiceIP:             "10.3.0.10",
 		K8sVer:                   "v1.3.4_coreos.0",
 		HyperkubeImageRepo:       "quay.io/coreos/hyperkube",
+		ContainerRuntime:         "docker",
 		ControllerInstanceType:   "m3.medium",
 		ControllerRootVolumeType: "gp2",
 		ControllerRootVolumeIOPS: 0,
@@ -129,6 +132,7 @@ type Cluster struct {
 	DNSServiceIP             string            `yaml:"dnsServiceIP,omitempty"`
 	K8sVer                   string            `yaml:"kubernetesVersion,omitempty"`
 	HyperkubeImageRepo       string            `yaml:"hyperkubeImageRepo,omitempty"`
+	ContainerRuntime         string            `yaml:"containerRuntime,omitempty"`
 	KMSKeyARN                string            `yaml:"kmsKeyArn,omitempty"`
 	CreateRecordSet          bool              `yaml:"createRecordSet,omitempty"`
 	RecordSetTTL             int               `yaml:"recordSetTTL,omitempty"`
@@ -160,8 +164,22 @@ func (c Cluster) Config() (*Config, error) {
 	config.APIServers = fmt.Sprintf("http://%s:8080", c.ControllerIP)
 	config.SecureAPIServers = fmt.Sprintf("https://%s:443", c.ControllerIP)
 	config.APIServerEndpoint = fmt.Sprintf("https://%s", c.ExternalDNSName)
-	if config.UseCalico {
-		config.K8sNetworkPlugin = "cni"
+	config.K8sNetworkPlugin = "cni"
+
+	// Check if we are running CoreOS 1122.0.0 or greater when using rkt as
+	// runtime. Proceed regardless if running alpha. TODO(pb) delete when rkt
+	// works well with stable.
+	if config.ContainerRuntime == "rkt" && config.ReleaseChannel != "alpha" {
+		minVersion := semver.Version{Major: 1122}
+
+		ok, err := isMinImageVersion(minVersion, config.ReleaseChannel)
+		if err != nil {
+			return nil, err
+		}
+
+		if !ok {
+			return nil, fmt.Errorf("The container runtime is 'rkt' but the latest CoreOS version for the %s channel is less then the minimum version %s. Please select the 'alpha' release channel to use the rkt runtime.", config.ReleaseChannel, minVersion)
+		}
 	}
 
 	var err error
@@ -182,6 +200,32 @@ func (c Cluster) Config() (*Config, error) {
 	}
 
 	return &config, nil
+}
+
+// isMinImageVersion will return true if the supplied version is greater then
+// or equal to the current CoreOS release indicated by the given release
+// channel.
+func isMinImageVersion(minVersion semver.Version, release string) (bool, error) {
+	metaData, err := coreosutil.GetAMIData(release)
+	if err != nil {
+		return false, fmt.Errorf("Unable to retrieve current release channel version: %v", err)
+	}
+
+	version, ok := metaData["release_info"]["version"]
+	if !ok {
+		return false, fmt.Errorf("Error parsing image metadata for version")
+	}
+
+	current, err := semver.NewVersion(version)
+	if err != nil {
+		return false, fmt.Errorf("Error parsing semver from image version %v", err)
+	}
+
+	if minVersion.LessThan(*current) {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 type StackTemplateOptions struct {

@@ -48,7 +48,7 @@ $ cd coreos-kubernetes/multi-node/vagrant
 The default cluster configuration is to start a virtual machine for each role &mdash; master node, worker node, and etcd server. However, you can modify the default cluster settings by copying `config.rb.sample` to `config.rb` and modifying configuration values.
 
 ```
-#$update_channel="stable"
+#$update_channel="alpha"
 
 #$controller_count=1
 #$controller_vm_memory=512
@@ -61,6 +61,8 @@ The default cluster configuration is to start a virtual machine for each role &m
 ```
 
 By default, Calico network policy is disabled. To enable it, change the line `export USE_CALICO=false` to `export USE_CALICO=true` in both the `../generic/controller-install.sh` and the `../generic/worker-install.sh` scripts.
+
+Also by default, the container runtime used is docker. To use rkt as the container runtime, change the line `export CONTAINER_RUNTIME=docker` to `export CONTAINER_RUNTIME=rkt` in both the `../generic/controller-install.sh` and the `../generic/worker-install.sh` scripts.
 
 Ensure the latest CoreOS vagrant image will be used by running `vagrant box update`.
 

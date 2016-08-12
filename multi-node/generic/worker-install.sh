@@ -22,6 +22,9 @@ export DNS_SERVICE_IP=10.3.0.10
 # Whether to use Calico for Kubernetes network policy.
 export USE_CALICO=false
 
+# Determines the container runtime for kubernetes to use. Accepts 'docker' or 'rkt'.
+export CONTAINER_RUNTIME=docker
+
 # The above settings can optionally be overridden using an environment file:
 ENV_FILE=/run/coreos-kubernetes/options.env
 
@@ -44,12 +47,6 @@ function init_config {
             exit 1
         fi
     done
-
-    if [ $USE_CALICO = "true" ]; then
-        export K8S_NETWORK_PLUGIN="cni"
-    else
-        export K8S_NETWORK_PLUGIN=""
-    fi
 }
 
 function init_templates {
@@ -61,11 +58,22 @@ function init_templates {
 [Service]
 Environment=KUBELET_VERSION=${K8S_VER}
 Environment=KUBELET_ACI=${HYPERKUBE_IMAGE_REPO}
+Environment="RKT_OPTS=--volume dns,kind=host,source=/etc/resolv.conf \
+  --mount volume=dns,target=/etc/resolv.conf \
+  --volume=rkt,kind=host,source=/opt/bin/host-rkt \
+  --mount volume=rkt,target=/usr/bin/rkt \
+  --volume var-lib-rkt,kind=host,source=/var/lib/rkt \
+  --mount volume=var-lib-rkt,target=/var/lib/rkt \
+  --volume=stage,kind=host,source=/tmp \
+  --mount volume=stage,target=/tmp"
 ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=${CONTROLLER_ENDPOINT} \
   --network-plugin-dir=/etc/kubernetes/cni/net.d \
-  --network-plugin=${K8S_NETWORK_PLUGIN} \
+  --network-plugin=cni \
+  --container-runtime=${CONTAINER_RUNTIME} \
+  --rkt-path=/usr/bin/rkt \
+  --rkt-stage1-image=coreos.com/rkt/stage1-coreos \
   --register-node=true \
   --allow-privileged=true \
   --config=/etc/kubernetes/manifests \
@@ -83,8 +91,66 @@ WantedBy=multi-user.target
 EOF
     fi
 
-    local TEMPLATE=/etc/systemd/system/calico-node.service
+    local TEMPLATE=/opt/bin/host-rkt
     if [ ! -f $TEMPLATE ]; then
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+#!/bin/sh
+# This is bind mounted into the kubelet rootfs and all rkt shell-outs go
+# through this rkt wrapper. It essentially enters the host mount namespace
+# (which it is already in) only for the purpose of breaking out of the chroot
+# before calling rkt. It makes things like rkt gc work and avoids bind mounting
+# in certain rkt filesystem dependancies into the kubelet rootfs. This can
+# eventually be obviated when the write-api stuff gets upstream and rkt gc is
+# through the api-server. Related issue:
+# https://github.com/coreos/rkt/issues/2878
+exec nsenter -m -u -i -n -p -t 1 -- /usr/bin/rkt "\$@"
+EOF
+    fi
+
+    local TEMPLATE=/etc/systemd/system/load-rkt-stage1.service
+    if [ ${CONTAINER_RUNTIME} = "rkt" ] && [ ! -f $TEMPLATE ]; then
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+[Unit]
+Description=Load rkt stage1 images
+Documentation=http://github.com/coreos/rkt
+Requires=network-online.target
+After=network-online.target
+Before=rkt-api.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/rkt fetch /usr/lib/rkt/stage1-images/stage1-coreos.aci /usr/lib/rkt/stage1-images/stage1-fly.aci  --insecure-options=image
+
+[Install]
+RequiredBy=rkt-api.service
+EOF
+    fi
+
+    local TEMPLATE=/etc/systemd/system/rkt-api.service
+    if [ ${CONTAINER_RUNTIME} = "rkt" ] && [ ! -f $TEMPLATE ]; then
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+[Unit]
+Before=kubelet.service
+
+[Service]
+ExecStart=/usr/bin/rkt api-service
+Restart=always
+RestartSec=10
+
+[Install]
+RequiredBy=kubelet.service
+EOF
+    fi
+
+    local TEMPLATE=/etc/systemd/system/calico-node.service
+    if [ "${USE_CALICO}" = "true" ] && [ ! -f "${TEMPLATE}" ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -150,6 +216,8 @@ kind: Pod
 metadata:
   name: kube-proxy
   namespace: kube-system
+  annotations:
+    rkt.alpha.kubernetes.io/stage1-name-override: coreos.com/rkt/stage1-fly
 spec:
   hostNetwork: true
   containers:
@@ -163,24 +231,30 @@ spec:
     securityContext:
       privileged: true
     volumeMounts:
-      - mountPath: /etc/ssl/certs
-        name: "ssl-certs"
-      - mountPath: /etc/kubernetes/worker-kubeconfig.yaml
-        name: "kubeconfig"
-        readOnly: true
-      - mountPath: /etc/kubernetes/ssl
-        name: "etc-kube-ssl"
-        readOnly: true
+    - mountPath: /etc/ssl/certs
+      name: "ssl-certs"
+    - mountPath: /etc/kubernetes/worker-kubeconfig.yaml
+      name: "kubeconfig"
+      readOnly: true
+    - mountPath: /etc/kubernetes/ssl
+      name: "etc-kube-ssl"
+      readOnly: true
+    - mountPath: /var/run/dbus
+      name: dbus
+      readOnly: false
   volumes:
-    - name: "ssl-certs"
-      hostPath:
-        path: "/usr/share/ca-certificates"
-    - name: "kubeconfig"
-      hostPath:
-        path: "/etc/kubernetes/worker-kubeconfig.yaml"
-    - name: "etc-kube-ssl"
-      hostPath:
-        path: "/etc/kubernetes/ssl"
+  - name: "ssl-certs"
+    hostPath:
+      path: "/usr/share/ca-certificates"
+  - name: "kubeconfig"
+    hostPath:
+      path: "/etc/kubernetes/worker-kubeconfig.yaml"
+  - name: "etc-kube-ssl"
+    hostPath:
+      path: "/etc/kubernetes/ssl"
+  - hostPath:
+      path: /var/run/dbus
+    name: dbus
 EOF
     fi
 
@@ -212,11 +286,14 @@ EOF
 [Unit]
 Requires=flanneld.service
 After=flanneld.service
+[Service]
+ExecStart=
+ExecStart=/usr/lib/coreos/dockerd daemon --host=fd:// \$DOCKER_OPTS \$DOCKER_CGROUPS \$DOCKER_OPT_MTU
 EOF
     fi
 
-     local TEMPLATE=/etc/kubernetes/cni/net.d/10-calico.conf
-    if [ ! -f $TEMPLATE ]; then
+    local TEMPLATE=/etc/kubernetes/cni/net.d/10-calico.conf
+    if [ "${USE_CALICO}" = "true" ] && [ ! -f "${TEMPLATE}" ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
@@ -240,18 +317,40 @@ EOF
 EOF
     fi
 
+    local TEMPLATE=/etc/kubernetes/cni/net.d/10-flannel.conf
+    if [ "${USE_CALICO}" = "false" ] && [ ! -f "${TEMPLATE}" ]; then
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+{
+    "name": "podnet",
+    "type": "flannel",
+    "delegate": {
+        "isDefaultGateway": true
+    }
+}
+EOF
+    fi
+
 }
 
 init_config
 init_templates
 
+chmod +x /opt/bin/host-rkt
+
 systemctl stop update-engine; systemctl mask update-engine
 
 systemctl daemon-reload
+
+if [ $CONTAINER_RUNTIME = "rkt" ]; then
+        systemctl enable load-rkt-stage1
+        systemctl enable rkt-api
+fi
+
 systemctl enable flanneld; systemctl start flanneld
 systemctl enable kubelet; systemctl start kubelet
+
 if [ $USE_CALICO = "true" ]; then
         systemctl enable calico-node; systemctl start calico-node
 fi
-
-

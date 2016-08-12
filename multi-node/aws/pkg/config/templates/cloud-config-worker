@@ -13,6 +13,9 @@ coreos:
             [Unit]
             Requires=flanneld.service
             After=flanneld.service
+            [Service]
+            ExecStart=
+            ExecStart=/usr/lib/coreos/dockerd daemon --host=fd:// $DOCKER_OPTS $DOCKER_CGROUPS $DOCKER_OPT_MTU
 
     - name: kubelet.service
       enable: true
@@ -21,11 +24,21 @@ coreos:
         [Service]
         Environment=KUBELET_VERSION={{.K8sVer}}
         Environment=KUBELET_ACI={{.HyperkubeImageRepo}}
-        Environment="RKT_OPTS=--volume dns,kind=host,source=/etc/resolv.conf --mount volume=dns,target=/etc/resolv.conf"
+        Environment="RKT_OPTS=--volume dns,kind=host,source=/etc/resolv.conf \
+        --mount volume=dns,target=/etc/resolv.conf \
+        --volume=rkt,kind=host,source=/opt/bin/host-rkt \
+        --mount volume=rkt,target=/usr/bin/rkt \
+        --volume var-lib-rkt,kind=host,source=/var/lib/rkt \
+        --mount volume=var-lib-rkt,target=/var/lib/rkt \
+        --volume=stage,kind=host,source=/tmp \
+        --mount volume=stage,target=/tmp"
         ExecStart=/usr/lib/coreos/kubelet-wrapper \
         --api-servers={{.SecureAPIServers}} \
         --network-plugin-dir=/etc/kubernetes/cni/net.d \
         --network-plugin={{.K8sNetworkPlugin}} \
+        --container-runtime={{.ContainerRuntime}} \
+        --rkt-path=/usr/bin/rkt \
+        --rkt-stage1-image=coreos.com/rkt/stage1-coreos \
         --register-node=true \
         --allow-privileged=true \
         --config=/etc/kubernetes/manifests \
@@ -39,6 +52,36 @@ coreos:
         RestartSec=10
         [Install]
         WantedBy=multi-user.target
+
+{{ if eq .ContainerRuntime "rkt" }}
+    - name: rkt-api.service
+      enable: true
+      content: |
+        [Unit]
+        Before=kubelet.service
+        [Service]
+        ExecStart=/usr/bin/rkt api-service
+        Restart=always
+        RestartSec=10
+        [Install]
+        RequiredBy=kubelet.service
+
+    - name: load-rkt-stage1.service
+      enable: true
+      content: |
+        [Unit]
+        Description=Load rkt stage1 images
+        Documentation=http://github.com/coreos/rkt
+        Requires=network-online.target
+        After=network-online.target
+        Before=rkt-api.service
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=/usr/bin/rkt fetch /usr/lib/rkt/stage1-images/stage1-coreos.aci /usr/lib/rkt/stage1-images/stage1-fly.aci  --insecure-options=image
+        [Install]
+        RequiredBy=rkt-api.service
+{{ end }}
 
 {{ if .UseCalico }}
     - name: calico-node.service
@@ -88,6 +131,21 @@ coreos:
         RequiredBy=kubelet.service
 
 write_files:
+  - path: /opt/bin/host-rkt
+    permissions: 0755
+    owner: root:root
+    content: |
+      #!/bin/sh
+      # This is bind mounted into the kubelet rootfs and all rkt shell-outs go
+      # through this rkt wrapper. It essentially enters the host mount namespace
+      # (which it is already in) only for the purpose of breaking out of the chroot
+      # before calling rkt. It makes things like rkt gc work and avoids bind mounting
+      # in certain rkt filesystem dependancies into the kubelet rootfs. This can
+      # eventually be obviated when the write-api stuff gets upstream and rkt gc is
+      # through the api-server. Related issue:
+      # https://github.com/coreos/rkt/issues/2878
+      exec nsenter -m -u -i -n -p -t 1 -- /usr/bin/rkt "$@"
+
   - path: /etc/kubernetes/ssl/worker.pem.enc
     encoding: gzip+base64
     content: {{.TLSConfig.WorkerCert}}
@@ -119,6 +177,8 @@ write_files:
         metadata:
           name: kube-proxy
           namespace: kube-system
+          annotations:
+            rkt.alpha.kubernetes.io/stage1-name-override: coreos.com/rkt/stage1-fly
         spec:
           hostNetwork: true
           containers:
@@ -140,6 +200,9 @@ write_files:
               - mountPath: /etc/kubernetes/ssl
                 name: "etc-kube-ssl"
                 readOnly: true
+              - mountPath: /var/run/dbus
+                name: dbus
+                readOnly: false
           volumes:
             - name: "ssl-certs"
               hostPath:
@@ -150,6 +213,9 @@ write_files:
             - name: "etc-kube-ssl"
               hostPath:
                 path: "/etc/kubernetes/ssl"
+            - hostPath:
+                path: /var/run/dbus
+              name: dbus
 
   - path: /etc/kubernetes/worker-kubeconfig.yaml
     content: |
@@ -191,5 +257,14 @@ write_files:
                 }
             }
         }
+{{ else }}
+  - path: /etc/kubernetes/cni/net.d/10-flannel.conf
+    content: |
+        {
+            "name": "podnet",
+            "type": "flannel",
+            "delegate": {
+                "isDefaultGateway": true
+            }
+        }
 {{ end }}
-

@@ -169,6 +169,121 @@ And check for `kube-dns-v11-*` pod up and running:
 $ kubectl get pods --namespace=kube-system | grep kube-dns-v11
 ```
 
+## Deploy the kube Dashboard Add-on
+
+Create `kube-dashboard-rc.json` and `kube-dashboard-svc.json` on your local machine.
+
+**kube-dashboard-rc.json**
+
+
+```json
+{
+  "apiVersion": "v1",
+  "kind": "ReplicationController",
+  "metadata": {
+    "labels": {
+      "k8s-app": "kubernetes-dashboard",
+      "kubernetes.io/cluster-service": "true",
+      "version": "v1.1.0"
+    },
+    "name": "kubernetes-dashboard-v1.1.0",
+    "namespace": "kube-system"
+  },
+  "spec": {
+    "replicas": 1,
+    "selector": {
+      "k8s-app": "kubernetes-dashboard"
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "k8s-app": "kubernetes-dashboard",
+          "kubernetes.io/cluster-service": "true",
+          "version": "v1.1.0"
+        }
+      },
+      "spec": {
+        "containers": [
+          {
+            "image": "gcr.io/google_containers/kubernetes-dashboard-amd64:v1.1.0",
+            "livenessProbe": {
+              "httpGet": {
+                "path": "/",
+                "port": 9090
+              },
+              "initialDelaySeconds": 30,
+              "timeoutSeconds": 30
+            },
+            "name": "kubernetes-dashboard",
+            "ports": [
+              {
+                "containerPort": 9090
+              }
+            ],
+            "resources": {
+              "limits": {
+                "cpu": "100m",
+                "memory": "50Mi"
+              },
+              "requests": {
+                "cpu": "100m",
+                "memory": "50Mi"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+**kube-dashboard-svc.json**
+
+
+```json
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "labels": {
+      "k8s-app": "kubernetes-dashboard",
+      "kubernetes.io/cluster-service": "true"
+    },
+    "name": "kubernetes-dashboard",
+    "namespace": "kube-system"
+  },
+  "spec": {
+    "ports": [
+      {
+        "port": 80,
+        "targetPort": 9090
+      }
+    ],
+    "selector": {
+      "k8s-app": "kubernetes-dashboard"
+    }
+  }
+}
+```
+
+Create the Replication Controller and Service.
+
+```sh
+$ kubectl create -f kube-dashboard-rc.json
+$ kubectl create -f kube-dashboard-svc.json
+```
+
+Access the dashboard by port forwarding with `kubectl`.
+
+
+```sh
+$ kubectl get pods
+$ kubectl port-forward kubernetes-dashboard-v1.1.0-SOME-ID 9090 --namespace=kube-system
+```
+
+Then visit [http://127.0.0.1:9090](http://127.0.0.1:9090/) in your browser.
+
 <div class="co-m-docs-next-step">
   <p>Now that you have a working Kubernetes cluster with a functional CLI tool, you are free to deploy Kubernetes-ready applications.</p>
   <p>Start with a multi-tier web application (Guestbook) from the official Kubernetes documentation to visualize how the various Kubernetes components fit together.</p>

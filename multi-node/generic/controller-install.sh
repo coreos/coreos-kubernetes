@@ -113,7 +113,8 @@ ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --config=/etc/kubernetes/manifests \
   --hostname-override=${ADVERTISE_IP} \
   --cluster_dns=${DNS_SERVICE_IP} \
-  --cluster_domain=cluster.local
+  --cluster_domain=cluster.local \
+  --volume-plugin-dir=/etc/kubernetes/kubelet-plugins/volume/exec
 Restart=always
 RestartSec=10
 

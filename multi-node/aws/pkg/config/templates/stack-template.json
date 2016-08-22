@@ -1,6 +1,7 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
   "Description": "kube-aws Kubernetes cluster {{.ClusterName}}",
+  {{if .EtcdInitialCluster}}
   "Mappings" : {
     "EtcdInstanceParams" : {
       "UserData" : {
@@ -8,6 +9,7 @@
       }
     }
   },
+  {{end}
   "Resources": {
     "AutoScaleWorker": {
       "Properties": {
@@ -152,6 +154,7 @@
       },
       "Type": "AWS::IAM::InstanceProfile"
     },
+    {{if .EtcdInitialCluster}}
     "IAMInstanceProfileEtcd": {
       "Properties": {
         "Path": "/",
@@ -163,6 +166,7 @@
       },
       "Type": "AWS::IAM::InstanceProfile"
     },
+    {{end}}
     "IAMRoleController": {
       "Properties": {
         "AssumeRolePolicyDocument": {
@@ -275,6 +279,7 @@
       },
       "Type": "AWS::IAM::Role"
     },
+    {{if .EtcdInitialCluster}}
     "IAMRoleEtcd": {
       "Properties": {
         "AssumeRolePolicyDocument": {
@@ -369,6 +374,7 @@
       },
       "Type": "AWS::EC2::Instance"
     },
+    {{end}}
     {{end}}
     "LaunchConfigurationWorker": {
       "Properties": {
@@ -541,6 +547,7 @@
       },
       "Type": "AWS::EC2::SecurityGroup"
     },
+    {{if .EtcdInitialCluster}}
     "SecurityGroupControllerIngressFromWorkerToEtcd": {
       "Properties": {
         "FromPort": 2379,
@@ -555,6 +562,7 @@
       },
       "Type": "AWS::EC2::SecurityGroupIngress"
     },
+    {{end}}
     "SecurityGroupWorker": {
       "Properties": {
         "GroupDescription": {
@@ -660,6 +668,7 @@
       },
       "Type": "AWS::EC2::SecurityGroupIngress"
     },
+    {{if .EtcdInitialCluster}}
     "SecurityGroupEtcdIngressFromControllerToEtcd": {
       "Properties": {
         "FromPort": 2379,
@@ -688,6 +697,7 @@
       },
       "Type": "AWS::EC2::SecurityGroupIngress"
     },
+    {{end}}
     "SecurityGroupWorkerIngressFromWorkerToFlannel": {
       "Properties": {
         "FromPort": 8472,
@@ -730,6 +740,7 @@
       },
       "Type": "AWS::EC2::SecurityGroupIngress"
     },
+    {{if .EtcdInitialCluster}}
     "SecurityGroupEtcd": {
       "Properties": {
         "GroupDescription": {
@@ -787,6 +798,7 @@
       },
       "Type": "AWS::EC2::SecurityGroupIngress"
     }
+    {{end}}
     {{range $index, $subnet := .Subnets}}
     {{with $subnetLogicalName := printf "Subnet%d" $index}}
     ,

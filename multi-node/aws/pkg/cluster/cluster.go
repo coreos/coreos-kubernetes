@@ -224,23 +224,34 @@ func (c *Cluster) createStack(cfSvc cloudformationService, stackBody string) (*c
 		tags = append(tags, &cloudformation.Tag{Key: &key, Value: &value})
 	}
 
-	creq := &cloudformation.CreateStackInput{
-		StackName:    aws.String(c.ClusterName),
-		OnFailure:    aws.String(cloudformation.OnFailureDoNothing),
-		Capabilities: []*string{aws.String(cloudformation.CapabilityCapabilityIam)},
-		TemplateBody: &stackBody,
-		Tags:         tags,
-		StackPolicyBody: aws.String(`{
-  "Statement" : [
-    {
-      "Effect" : "Deny",
-      "Action" : "Update:*",
-      "Principal" : "*",
-      "Resource" : "LogicalResourceId/InstanceEtcd*"
-    }
-  ]
-}
-`),
+	var creq *cloudformation.CreateStackInput
+	if(c.EtcdLoadBalancer != "") {
+		creq = &cloudformation.CreateStackInput{
+			StackName:    aws.String(c.ClusterName),
+			OnFailure:    aws.String(cloudformation.OnFailureDoNothing),
+			Capabilities: []*string{aws.String(cloudformation.CapabilityCapabilityIam)},
+			TemplateBody: &stackBody,
+			Tags:         tags,
+			StackPolicyBody: aws.String(`{
+		"Statement" : [
+			{
+					"Effect" : "Deny",
+				"Action" : "Update:*",
+				"Principal" : "*",
+				"Resource" : "LogicalResourceId/InstanceEtcd*"
+			}
+		]
+	}
+	`),
+		}
+	} else {
+		creq = &cloudformation.CreateStackInput{
+			StackName:    aws.String(c.ClusterName),
+			OnFailure:    aws.String(cloudformation.OnFailureDoNothing),
+			Capabilities: []*string{aws.String(cloudformation.CapabilityCapabilityIam)},
+			TemplateBody: &stackBody,
+			Tags:         tags,
+		}
 	}
 
 	return cfSvc.CreateStack(creq)
@@ -317,9 +328,11 @@ func (c *Cluster) lockEtcdResources(cfSvc *cloudformation.CloudFormation, stackB
 func (c *Cluster) Update(stackBody string) (string, error) {
 
 	cfSvc := cloudformation.New(c.session)
-	var err error
-	if stackBody, err = c.lockEtcdResources(cfSvc, stackBody); err != nil {
-		return "", err
+	if(c.EtcdLoadBalancer != "") {
+		var err error
+		if stackBody, err = c.lockEtcdResources(cfSvc, stackBody); err != nil {
+			return "", err
+		}
 	}
 	input := &cloudformation.UpdateStackInput{
 		Capabilities: []*string{aws.String(cloudformation.CapabilityCapabilityIam)},

@@ -134,6 +134,10 @@ kmsKeyArn: "{{.KMSKeyARN}}"
 # Use Calico for network policy.
 # useCalico: false
 
+# Uncomment to provision nodes without a public IP. This assumes your VPC network (including the route table!) is setup to route to the internet.
+# If you did not set vpcId and routeTableId your cluster will not bootstrap
+# mapPublicIPs: false
+
 # AWS Tags for cloudformation stack resources
 #stackTags:
 #  Name: "Kubernetes"

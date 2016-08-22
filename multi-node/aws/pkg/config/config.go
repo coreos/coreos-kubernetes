@@ -54,6 +54,7 @@ func newDefaultCluster() *Cluster {
 		CreateRecordSet:          false,
 		RecordSetTTL:             300,
 		Subnets:                  []*Subnet{},
+		MapPublicIPs:             true,
 	}
 }
 
@@ -146,6 +147,7 @@ type Cluster struct {
 	StackTags                map[string]string `yaml:"stackTags,omitempty"`
 	UseCalico                bool              `yaml:"useCalico,omitempty"`
 	Subnets                  []*Subnet         `yaml:"subnets,omitempty"`
+	MapPublicIPs             bool              `yaml:"mapPublicIPs,omitempty"`
 }
 
 type Subnet struct {

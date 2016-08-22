@@ -812,8 +812,8 @@
     }
     {{end}}
     {{end}}
-    ,
     {{if not .VPCID}}
+    ,
     "{{.VPCLogicalName}}": {
       "Properties": {
         "CidrBlock": "{{.VPCCIDR}}",
@@ -893,6 +893,7 @@
     {{if .RouteTableID}}
     {{range $index, $subnet := .Subnets}}
     {{with $subnetLogicalName := printf "Subnet%d" $index}}
+    ,
     "{{$subnetLogicalName}}RouteTableAssociation": {
       "Properties": {
         "RouteTableId": "{{$.RouteTableID}}",

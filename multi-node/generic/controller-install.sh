@@ -451,130 +451,130 @@ EOF
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
 {
-  "apiVersion": "v1",
-  "kind": "ReplicationController",
+  "apiVersion": "v1", 
+  "kind": "ReplicationController", 
   "metadata": {
     "labels": {
-      "k8s-app": "kube-dns",
-      "kubernetes.io/cluster-service": "true",
-      "version": "v15"
-    },
-    "name": "kube-dns-v15",
+      "k8s-app": "kube-dns", 
+      "kubernetes.io/cluster-service": "true", 
+      "version": "v17.1"
+    }, 
+    "name": "kube-dns-v17.1", 
     "namespace": "kube-system"
-  },
+  }, 
   "spec": {
-    "replicas": 1,
+    "replicas": 1, 
     "selector": {
-      "k8s-app": "kube-dns",
-      "version": "v15"
-    },
+      "k8s-app": "kube-dns", 
+      "version": "v17.1"
+    }, 
     "template": {
       "metadata": {
         "labels": {
-          "k8s-app": "kube-dns",
-          "kubernetes.io/cluster-service": "true",
-          "version": "v15"
+          "k8s-app": "kube-dns", 
+          "kubernetes.io/cluster-service": "true", 
+          "version": "v17.1"
         }
-      },
+      }, 
       "spec": {
         "containers": [
           {
             "args": [
-              "--domain=cluster.local.",
+              "--domain=cluster.local.", 
               "--dns-port=10053"
-            ],
-            "image": "gcr.io/google_containers/kubedns-amd64:1.3",
+            ], 
+            "image": "gcr.io/google_containers/kubedns-amd64:1.5", 
             "livenessProbe": {
-              "failureThreshold": 5,
+              "failureThreshold": 5, 
               "httpGet": {
-                "path": "/healthz",
-                "port": 8080,
+                "path": "/healthz", 
+                "port": 8080, 
                 "scheme": "HTTP"
-              },
-              "initialDelaySeconds": 60,
-              "successThreshold": 1,
+              }, 
+              "initialDelaySeconds": 60, 
+              "successThreshold": 1, 
               "timeoutSeconds": 5
-            },
-            "name": "kubedns",
+            }, 
+            "name": "kubedns", 
             "ports": [
               {
-                "containerPort": 10053,
-                "name": "dns-local",
+                "containerPort": 10053, 
+                "name": "dns-local", 
                 "protocol": "UDP"
-              },
+              }, 
               {
-                "containerPort": 10053,
-                "name": "dns-tcp-local",
+                "containerPort": 10053, 
+                "name": "dns-tcp-local", 
                 "protocol": "TCP"
               }
-            ],
+            ], 
             "readinessProbe": {
               "httpGet": {
-                "path": "/readiness",
-                "port": 8081,
+                "path": "/readiness", 
+                "port": 8081, 
                 "scheme": "HTTP"
-              },
-              "initialDelaySeconds": 30,
+              }, 
+              "initialDelaySeconds": 30, 
               "timeoutSeconds": 5
-            },
+            }, 
             "resources": {
               "limits": {
-                "cpu": "100m",
-                "memory": "200Mi"
-              },
+                "cpu": "100m", 
+                "memory": "170Mi"
+              }, 
               "requests": {
-                "cpu": "100m",
-                "memory": "50Mi"
+                "cpu": "100m", 
+                "memory": "70Mi"
               }
             }
-          },
+          }, 
           {
             "args": [
-              "--cache-size=1000",
-              "--no-resolv",
+              "--cache-size=1000", 
+              "--no-resolv", 
               "--server=127.0.0.1#10053"
-            ],
-            "image": "gcr.io/google_containers/kube-dnsmasq-amd64:1.3",
-            "name": "dnsmasq",
+            ], 
+            "image": "gcr.io/google_containers/kube-dnsmasq-amd64:1.3", 
+            "name": "dnsmasq", 
             "ports": [
               {
-                "containerPort": 53,
-                "name": "dns",
+                "containerPort": 53, 
+                "name": "dns", 
                 "protocol": "UDP"
-              },
+              }, 
               {
-                "containerPort": 53,
-                "name": "dns-tcp",
+                "containerPort": 53, 
+                "name": "dns-tcp", 
                 "protocol": "TCP"
               }
             ]
-          },
+          }, 
           {
             "args": [
-              "-cmd=nslookup kubernetes.default.svc.cluster.local 127.0.0.1 >/dev/null",
-              "-port=8080",
+              "-cmd=nslookup kubernetes.default.svc.cluster.local 127.0.0.1 >/dev/null && nslookup kubernetes.default.svc.cluster.local 127.0.0.1:10053 >/dev/null", 
+              "-port=8080", 
               "-quiet"
-            ],
-            "image": "gcr.io/google_containers/exechealthz-amd64:1.0",
-            "name": "healthz",
+            ], 
+            "image": "gcr.io/google_containers/exechealthz-amd64:1.1", 
+            "name": "healthz", 
             "ports": [
               {
-                "containerPort": 8080,
+                "containerPort": 8080, 
                 "protocol": "TCP"
               }
-            ],
+            ], 
             "resources": {
               "limits": {
-                "cpu": "10m",
-                "memory": "20Mi"
-              },
+                "cpu": "10m", 
+                "memory": "50Mi"
+              }, 
               "requests": {
-                "cpu": "10m",
-                "memory": "20Mi"
+                "cpu": "10m", 
+                "memory": "50Mi"
               }
             }
           }
-        ],
+        ], 
         "dnsPolicy": "Default"
       }
     }
@@ -589,31 +589,31 @@ EOF
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
 {
-  "apiVersion": "v1",
-  "kind": "Service",
+  "apiVersion": "v1", 
+  "kind": "Service", 
   "metadata": {
     "labels": {
-      "k8s-app": "kube-dns",
-      "kubernetes.io/cluster-service": "true",
+      "k8s-app": "kube-dns", 
+      "kubernetes.io/cluster-service": "true", 
       "kubernetes.io/name": "KubeDNS"
-    },
-    "name": "kube-dns",
+    }, 
+    "name": "kube-dns", 
     "namespace": "kube-system"
-  },
+  }, 
   "spec": {
-    "clusterIP": "$DNS_SERVICE_IP",
+    "clusterIP": "${DNS_SERVICE_IP}", 
     "ports": [
       {
-        "name": "dns",
-        "port": 53,
+        "name": "dns", 
+        "port": 53, 
         "protocol": "UDP"
-      },
+      }, 
       {
-        "name": "dns-tcp",
-        "port": 53,
+        "name": "dns-tcp", 
+        "port": 53, 
         "protocol": "TCP"
       }
-    ],
+    ], 
     "selector": {
       "k8s-app": "kube-dns"
     }

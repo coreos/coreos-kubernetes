@@ -19,7 +19,7 @@ An example systemd kubelet.service file which takes advantage of the kubelet-wra
 
 ```ini
 [Service]
-Environment=KUBELET_VERSION=v1.3.4_coreos.0
+Environment=KUBELET_VERSION=v1.3.5_coreos.1
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \
   --config=/etc/kubernetes/manifests
@@ -38,7 +38,7 @@ Mount the host's `/etc/resolv.conf` file directly into the container in order to
 ```ini
 [Service]
 Environment="RKT_OPTS=--volume=resolv,kind=host,source=/etc/resolv.conf --mount volume=resolv,target=/etc/resolv.conf"
-Environment=KUBELET_VERSION=v1.3.4_coreos.0
+Environment=KUBELET_VERSION=v1.3.5_coreos.1
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \
   --config=/etc/kubernetes/manifests
@@ -52,7 +52,7 @@ Pods running in your cluster can reference remote storage volumes located on an 
 ```ini
 [Service]
 Environment="RKT_OPTS=--volume iscsiadm,kind=host,source=/usr/sbin/iscsiadm --mount volume=iscsiadm,target=/usr/sbin/iscsiadm"
-Environment=KUBELET_VERSION=v1.3.4_coreos.0
+Environment=KUBELET_VERSION=v1.3.5_coreos.1
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \
   --config=/etc/kubernetes/manifests
@@ -66,7 +66,7 @@ Export the logs collected by the kubelet via a volume mount, so that [other logg
 ```ini
 [Service]
 Environment="RKT_OPTS=--volume var-log,kind=host,source=/var/log --mount volume=var-log,target=/var/log"
-Environment=KUBELET_VERSION=v1.3.4_coreos.0
+Environment=KUBELET_VERSION=v1.3.5_coreos.1
 ExecStartPre=/usr/bin/mkdir -p /var/log/containers
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \
@@ -87,7 +87,7 @@ For example:
 
 ```ini
 [Service]
-Environment=KUBELET_VERSION=v1.3.4_coreos.0
+Environment=KUBELET_VERSION=v1.3.5_coreos.1
 ExecStart=/opt/bin/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \
   --config=/etc/kubernetes/manifests

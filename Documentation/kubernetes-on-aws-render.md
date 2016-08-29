@@ -163,7 +163,7 @@ You can now customize your cluster by editing asset files. Any changes to these 
 
 ### Kubernetes Container Runtime
 
-The kube-aws tool now optionally supports using rkt as the kubernetes container runtime. To configure rkt as the container runtime you must run with a CoreOS version >= `v1122.0.0` and configure the runtime flag.
+The kube-aws tool now optionally supports using rkt as the kubernetes container runtime. To configure rkt as the container runtime you must run with a CoreOS version >= `v1151.0.0` and configure the runtime flag.
 
 Edit the `cluster.yaml` file:
 

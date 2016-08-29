@@ -198,6 +198,21 @@ hostedZone: staging.example.com
 
 If `createRecordSet` is not set to true, the deployer will be responsible for making externalDNSName routable to the controller IP after the cluster is created.
 
+### Multi-AZ Clusters
+
+Kube-aws supports "spreading" a cluster across any number of Availability Zones in a given region.
+
+```yaml
+ subnets:
+   - availabilityZone: us-west-1a
+     instanceCIDR: "10.0.0.0/24"
+   - availabilityZone: us-west-1b
+     instanceCIDR: "10.0.1.0/24"
+```
+__A word of caution about EBS and Persistent Volumes__: Any pods deployed to a Multi-AZ cluster must mount EBS volumes via [Persistent Volume Claims](http://kubernetes.io/docs/user-guide/persistent-volumes/#persistentvolumeclaims). Specifying the ID of the EBS volume directly in the pod spec will not work consistently if nodes are spread across multiple zones.
+
+Read more about Kubernetes Multi-AZ cluster support [here](http://kubernetes.io/docs/admin/multiple-zones/).
+
 ### Certificates and Keys
 
 `kube-aws render` begins by initializing the TLS infrastructure needed to securely operate Kubernetes. If you have your own key/certificate management system, you can overwrite the generated TLS assets after `kube-aws render`. More information on [Kubernetes certificate generation.][k8s-openssl]

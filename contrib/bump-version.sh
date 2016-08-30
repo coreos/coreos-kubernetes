@@ -6,11 +6,11 @@
 
 if [ $# -ne 1 ] || [ `expr match $1 ".*_.*"` == 0 ]; then
     echo "USAGE: $0 <target-version>"
-    echo "  example: $0 'v1.3.5_coreos.1'"
+    echo "  example: $0 'v1.3.6_coreos.0'"
     exit 1
 fi
 
-CURRENT_VERSION=${CURRENT_VERSION:-"v1.3.5_coreos.1"}
+CURRENT_VERSION=${CURRENT_VERSION:-"v1.3.6_coreos.0"}
 TARGET_VERSION=${1}
 
 CURRENT_VERSION_BASE=${CURRENT_VERSION:0:`expr index $CURRENT_VERSION _` -1}

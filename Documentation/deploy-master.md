@@ -99,7 +99,13 @@ Note that the kubelet running on a master node may log repeated attempts to post
 * Replace `${DNS_SERVICE_IP}`
 * Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release, e.g. `v1.3.6_coreos.0`.
 * Replace `${NETWORK_PLUGIN}` with `cni` if using Calico. Otherwise just leave it blank.
-* Decide if you will use [additional features][rkt-opts-examples] such as cluster logging, iSCSI volumes, or addressing workers by hostname in addition to IPs.
+* Decide if you will use [additional features][rkt-opts-examples] such as:
+  - [mounting ephemeral disks][mount-disks]
+  - [allow pods to mount RDB][rdb] or [iSCSI volumes][iscsi]
+  - [allowing access to insecure container registries][insecure-registry]
+  - [use host DNS configuration instead of a public DNS server][host-dns]
+  - [enable the cluster logging add-on][cluster-logging]
+  - [changing your CoreOS auto-update settings][update]
 
 **/etc/systemd/system/kubelet.service**
 
@@ -123,8 +129,6 @@ RestartSec=10
 [Install]
 WantedBy=multi-user.target
 ```
-
-[rkt-opts-examples]: kubelet-wrapper.md#customizing-rkt-options
 
 ### Set Up the kube-apiserver Pod
 
@@ -541,3 +545,9 @@ kube-proxy-$node
   <p><strong>Did the containers start downloading?</strong> As long as the kubelet knows about them, everything is working properly.</p>
   <a href="deploy-workers.md" class="btn btn-primary btn-icon-right" data-category="Docs Next" data-event="Kubernetes: Workers">Yes, ready to deploy the Workers</a>
 </div>
+
+[rkt-opts-examples]: kubelet-wrapper.md#customizing-rkt-options
+[rdb]: kubelet-wrapper.md#allow-pods-to-use-rbd-volumes
+[iscsi]: kubelet-wrapper.md#allow-pods-to-use-iscsi-mounts
+[host-dns]: kubelet-wrapper.md#use-the-hosts-dns-configuration
+[cluster-logging]: kubelet-wrapper.md#use-the-cluster-logging-add-on

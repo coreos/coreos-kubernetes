@@ -38,6 +38,17 @@ In addition to identifying itself with `ADVERTISE_IP`, each worker must be confi
 
 To view the complete list of environment variables, view the top of the `worker-install.sh` script.
 
+## Optional Configuration
+
+You may modify the kubelet's unit file to use [additional features][rkt-opts-examples] such as:
+
+- [mounting ephemeral disks][mount-disks]
+- [allow pods to mount RDB][rdb] or [iSCSI volumes][iscsi]
+- [allowing access to insecure container registries][insecure-registry]
+- [use host DNS configuration instead of a public DNS server][host-dns]
+- [enable the cluster logging add-on][cluster-logging]
+- [changing your CoreOS auto-update settings][update]
+
 ## Boot Controllers
 
 Follow these instructions for each controller you wish to boot:
@@ -79,3 +90,8 @@ $ journalctl -u kubelet -f
 
 [openssl]: openssl.md
 [networking]: kubernetes-networking.md
+[rkt-opts-examples]: kubelet-wrapper.md#customizing-rkt-options
+[rdb]: kubelet-wrapper.md#allow-pods-to-use-rbd-volumes
+[iscsi]: kubelet-wrapper.md#allow-pods-to-use-iscsi-mounts
+[host-dns]: kubelet-wrapper.md#use-the-hosts-dns-configuration
+[cluster-logging]: kubelet-wrapper.md#use-the-cluster-logging-add-on

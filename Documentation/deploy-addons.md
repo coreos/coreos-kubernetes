@@ -133,7 +133,7 @@ spec:
 
 *Note:* The above YAML definition is based on the upstream DNS addon in the [Kubernetes addon folder][k8s-dns-addon].
 
-[k8s-dns-addon]: https://github.com/kubernetes/kubernetes/tree/v1.3.5/cluster/saltbase/salt/kube-dns
+[k8s-dns-addon]: https://github.com/kubernetes/kubernetes/tree/v1.3.6/cluster/saltbase/salt/kube-dns
 
 This single YAML file is actually creating 2 different Kubernetes objects, separated by `---`.
 

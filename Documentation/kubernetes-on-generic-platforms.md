@@ -95,3 +95,6 @@ $ journalctl -u kubelet -f
 [iscsi]: kubelet-wrapper.md#allow-pods-to-use-iscsi-mounts
 [host-dns]: kubelet-wrapper.md#use-the-hosts-dns-configuration
 [cluster-logging]: kubelet-wrapper.md#use-the-cluster-logging-add-on
+[mount-disks]: https://coreos.com/os/docs/latest/mounting-storage.html
+[insecure-registry]: https://coreos.com/os/docs/latest/registry-authentication.html#using-a-registry-without-ssl-configured
+[update]: https://coreos.com/os/docs/latest/switching-channels.html

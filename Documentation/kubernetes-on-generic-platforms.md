@@ -28,7 +28,7 @@ This cluster must adhere to the [Kubernetes networking model][networking]. Nodes
 
 ### Controller Requirements
 
-Each controller node must sets its `ADVERTISE_IP` to an IP that accepts connections on port 443 from the workers. If using a load balancer, it must accept connections on 443 and pass that to the pool of controllers.
+Each controller node must set its `ADVERTISE_IP` to an IP that accepts connections on port 443 from the workers. If using a load balancer, it must accept connections on 443 and pass that to the pool of controllers.
 
 To view the complete list of environment variables, view the top of the `controller-install.sh` script.
 
@@ -54,7 +54,7 @@ You may modify the kubelet's unit file to use [additional features][rkt-opts-exa
 Follow these instructions for each controller you wish to boot:
 
 1. Boot CoreOS
-1. Copy `controller-install.sh` onto disk.
+1. [Download][controller-script] and copy `controller-install.sh` onto disk.
 1. Copy TLS assets onto disk.
 1. Execute `controller-install.sh` with environment variables set.
 1. Wait for the script to complete. About 300 MB of containers will be downloaded before the cluster is running.
@@ -64,7 +64,7 @@ Follow these instructions for each controller you wish to boot:
 Follow these instructions for each worker you wish to boot:
 
 1. Boot CoreOS
-1. Copy `worker-install.sh` onto disk.
+1. [Download][worker-script] and copy `worker-install.sh` onto disk.
 1. Copy TLS assets onto disk.
 1. Execute `worker-install.sh` with environment variables set.
 1. Wait for the script to complete. About 300 MB of containers will be downloaded before the cluster is running.
@@ -98,3 +98,5 @@ $ journalctl -u kubelet -f
 [mount-disks]: https://coreos.com/os/docs/latest/mounting-storage.html
 [insecure-registry]: https://coreos.com/os/docs/latest/registry-authentication.html#using-a-registry-without-ssl-configured
 [update]: https://coreos.com/os/docs/latest/switching-channels.html
+[controller-script]: ../multi-node/generic/controller-install.sh
+[worker-script]: ../multi-node/generic/worker-install.sh

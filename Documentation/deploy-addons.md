@@ -168,9 +168,9 @@ Create `kube-dashboard-rc.json` and `kube-dashboard-svc.json` on your local mach
     "labels": {
       "k8s-app": "kubernetes-dashboard",
       "kubernetes.io/cluster-service": "true",
-      "version": "v1.1.0"
+      "version": "v1.1.1"
     },
-    "name": "kubernetes-dashboard-v1.1.0",
+    "name": "kubernetes-dashboard-v1.1.1",
     "namespace": "kube-system"
   },
   "spec": {
@@ -183,13 +183,13 @@ Create `kube-dashboard-rc.json` and `kube-dashboard-svc.json` on your local mach
         "labels": {
           "k8s-app": "kubernetes-dashboard",
           "kubernetes.io/cluster-service": "true",
-          "version": "v1.1.0"
+          "version": "v1.1.1"
         }
       },
       "spec": {
         "containers": [
           {
-            "image": "gcr.io/google_containers/kubernetes-dashboard-amd64:v1.1.0",
+            "image": "gcr.io/google_containers/kubernetes-dashboard-amd64:v1.1.1",
             "livenessProbe": {
               "httpGet": {
                 "path": "/",
@@ -263,7 +263,7 @@ Access the dashboard by port forwarding with `kubectl`.
 
 ```sh
 $ kubectl get pods
-$ kubectl port-forward kubernetes-dashboard-v1.1.0-SOME-ID 9090 --namespace=kube-system
+$ kubectl port-forward kubernetes-dashboard-v1.1.1-SOME-ID 9090 --namespace=kube-system
 ```
 
 Then visit [http://127.0.0.1:9090](http://127.0.0.1:9090/) in your browser.

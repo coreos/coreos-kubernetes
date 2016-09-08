@@ -9,14 +9,14 @@ import (
 )
 
 // askForConfirmation asks the user for confirmation. A user must type in "yes" or "no" and
-// then press enter. It has fuzzy matching, so "y", "Y", "yes", "YES", and "Yes" all count as
+// then press enter. It has fuzzy matching, so "yes", "YES", and "Yes" all count as
 // confirmations. If the input is not recognized, it will ask again. The function does not return
 // until it gets a valid response from the user.
 func askForConfirmation(s string) bool {
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
-		fmt.Printf("%s [y/n]: ", s)
+		fmt.Printf("%s [yes/no]: ", s)
 
 		response, err := reader.ReadString('\n')
 		if err != nil {
@@ -25,9 +25,9 @@ func askForConfirmation(s string) bool {
 
 		response = strings.ToLower(strings.TrimSpace(response))
 
-		if response == "y" || response == "yes" {
+		if response == "yes" {
 			return true
-		} else if response == "n" || response == "no" {
+		} else if response == "no" {
 			return false
 		}
 	}

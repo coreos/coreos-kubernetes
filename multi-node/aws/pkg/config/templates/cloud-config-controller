@@ -67,6 +67,7 @@ coreos:
         --cloud-provider=aws
         Restart=always
         RestartSec=10
+        TimeoutStartSec=infinity
 
         [Install]
         WantedBy=multi-user.target

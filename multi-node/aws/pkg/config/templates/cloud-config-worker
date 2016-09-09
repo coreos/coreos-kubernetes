@@ -52,6 +52,8 @@ coreos:
         --tls-private-key-file=/etc/kubernetes/ssl/worker-key.pem
         Restart=always
         RestartSec=10
+        TimeoutStartSec=infinity
+
         [Install]
         WantedBy=multi-user.target
 

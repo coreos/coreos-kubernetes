@@ -104,7 +104,6 @@ Note that the kubelet running on a master node may log repeated attempts to post
   - [allow pods to mount RDB][rdb] or [iSCSI volumes][iscsi]
   - [allowing access to insecure container registries][insecure-registry]
   - [use host DNS configuration instead of a public DNS server][host-dns]
-  - [enable the cluster logging add-on][cluster-logging]
   - [changing your CoreOS auto-update settings][update]
 
 **/etc/systemd/system/kubelet.service**
@@ -112,8 +111,12 @@ Note that the kubelet running on a master node may log repeated attempts to post
 ```yaml
 [Service]
 ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
+ExecStartPre=/usr/bin/mkdir -p /var/log/containers
 
 Environment=KUBELET_VERSION=${K8S_VER}
+Environment="RKT_OPTS=--volume var-log,kind=host,source=/var/log \
+  --mount volume=var-log,target=/var/log"
+
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \
   --network-plugin-dir=/etc/kubernetes/cni/net.d \
@@ -550,4 +553,3 @@ kube-proxy-$node
 [rdb]: kubelet-wrapper.md#allow-pods-to-use-rbd-volumes
 [iscsi]: kubelet-wrapper.md#allow-pods-to-use-iscsi-mounts
 [host-dns]: kubelet-wrapper.md#use-the-hosts-dns-configuration
-[cluster-logging]: kubelet-wrapper.md#use-the-cluster-logging-add-on

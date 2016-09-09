@@ -59,21 +59,6 @@ ExecStart=/usr/lib/coreos/kubelet-wrapper \
   ...other flags...
 ```
 
-### Use the cluster logging add-on
-
-Export the logs collected by the kubelet via a volume mount, so that [other logging applications][addon-logging] can consume it. In addition to setting `RKT_OPTS`, an `ExecStartPre` is included to create the log directory.
-
-```ini
-[Service]
-Environment="RKT_OPTS=--volume var-log,kind=host,source=/var/log --mount volume=var-log,target=/var/log"
-Environment=KUBELET_VERSION=v1.3.6_coreos.0
-ExecStartPre=/usr/bin/mkdir -p /var/log/containers
-ExecStart=/usr/lib/coreos/kubelet-wrapper \
-  --api-servers=http://127.0.0.1:8080 \
-  --config=/etc/kubernetes/manifests
-  ...other flags...
-```
-
 ### Allow pods to use rbd volumes
 
 Pods using the [rbd volume plugin][rbd-example] to consume data from ceph must ensure that the kubelet has access to modprobe. Add the following options to the `RKT_OPTS` env before launching the kubelet via kubelet-wrapper:
@@ -111,5 +96,4 @@ ExecStart=/opt/bin/kubelet-wrapper \
 
 [#2141]: https://github.com/coreos/rkt/issues/2141
 [kubelet-wrapper]: https://github.com/coreos/coreos-overlay/blob/master/app-admin/kubelet-wrapper/files/kubelet-wrapper
-[addon-logging]: https://github.com/kubernetes/kubernetes/tree/release-1.3/cluster/addons/fluentd-elasticsearch
 [rbd-example]: https://github.com/kubernetes/kubernetes/tree/master/examples/volumes/rbd

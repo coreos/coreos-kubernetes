@@ -94,13 +94,16 @@ Environment=KUBELET_VERSION=${K8S_VER}
 Environment=KUBELET_ACI=${HYPERKUBE_IMAGE_REPO}
 Environment="RKT_OPTS=--volume dns,kind=host,source=/etc/resolv.conf \
   --mount volume=dns,target=/etc/resolv.conf \
-  --volume=rkt,kind=host,source=/opt/bin/host-rkt \
+  --volume rkt,kind=host,source=/opt/bin/host-rkt \
   --mount volume=rkt,target=/usr/bin/rkt \
   --volume var-lib-rkt,kind=host,source=/var/lib/rkt \
   --mount volume=var-lib-rkt,target=/var/lib/rkt \
-  --volume=stage,kind=host,source=/tmp \
-  --mount volume=stage,target=/tmp"
+  --volume stage,kind=host,source=/tmp \
+  --mount volume=stage,target=/tmp \
+  --volume var-log,kind=host,source=/var/log \
+  --mount volume=var-log,target=/var/log"
 ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
+ExecStartPre=/usr/bin/mkdir -p /var/log/containers
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \
   --register-schedulable=false \

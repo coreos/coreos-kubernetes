@@ -87,7 +87,6 @@ Create `/etc/systemd/system/kubelet.service` and substitute the following variab
   - [allow pods to mount RDB][rdb] or [iSCSI volumes][iscsi]
   - [allowing access to insecure container registries][insecure-registry]
   - [use host DNS configuration instead of a public DNS server][host-dns]
-  - [enable the cluster logging add-on][cluster-logging]
   - [changing your CoreOS auto-update settings][update]
 
 **/etc/systemd/system/kubelet.service**
@@ -95,8 +94,12 @@ Create `/etc/systemd/system/kubelet.service` and substitute the following variab
 ```yaml
 [Service]
 ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
+ExecStartPre=/usr/bin/mkdir -p /var/log/containers
 
 Environment=KUBELET_VERSION=${K8S_VER}
+Environment="RKT_OPTS=--volume var-log,kind=host,source=/var/log \
+  --mount volume=var-log,target=/var/log"
+
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=https://${MASTER_HOST} \
   --network-plugin-dir=/etc/kubernetes/cni/net.d \
@@ -311,4 +314,3 @@ To check the health of the calico-node systemd unit that we created, run `system
 [rdb]: kubelet-wrapper.md#allow-pods-to-use-rbd-volumes
 [iscsi]: kubelet-wrapper.md#allow-pods-to-use-iscsi-mounts
 [host-dns]: kubelet-wrapper.md#use-the-hosts-dns-configuration
-[cluster-logging]: kubelet-wrapper.md#use-the-cluster-logging-add-on

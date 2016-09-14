@@ -25,6 +25,7 @@ type ServerCertConfig struct {
 	CommonName  string
 	DNSNames    []string
 	IPAddresses []string
+	Duration    time.Duration
 }
 
 type ClientCertConfig struct {
@@ -66,6 +67,9 @@ func NewSignedServerCertificate(cfg ServerCertConfig, key *rsa.PrivateKey, caCer
 		return nil, err
 	}
 
+	if cfg.Duration == time.Hour*0 {
+		cfg.Duration = Duration90d
+	}
 	certTmpl := x509.Certificate{
 		Subject: pkix.Name{
 			CommonName:   cfg.CommonName,
@@ -75,7 +79,7 @@ func NewSignedServerCertificate(cfg ServerCertConfig, key *rsa.PrivateKey, caCer
 		IPAddresses:  ips,
 		SerialNumber: serial,
 		NotBefore:    caCert.NotBefore,
-		NotAfter:     time.Now().Add(Duration90d).UTC(),
+		NotAfter:     time.Now().Add(cfg.Duration).UTC(),
 		KeyUsage:     x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 	}

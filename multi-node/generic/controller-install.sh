@@ -812,6 +812,25 @@ EOF
     fi
 }
 
+function kubectl-create {
+  if [[ ! $# -eq 1 ]];then
+    echo "usage: kubectl-create <path-to-addon-manifest>"
+    exit 1
+  fi
+
+  local -r uuid_file_save="/var/run/coreos/rkt-kubectl-${RANDOM}.uuid"
+  sudo rkt run \
+       --net=host \
+       --uuid-file-save="$uuid_file_save" \
+       --trust-keys-from-https \
+       --volume manifests,kind=host,source=/srv/kubernetes \
+       --mount volume=manifests,target=/srv/kubernetes \
+       "${HYPERKUBE_IMAGE_REPO}":"${K8S_VER}" \
+       --exec /hyperkube -- kubectl create -f "${1}"
+  sudo rkt rm --uuid-file="$uuid_file_save"
+  sudo rm "$uuid_file_save"
+}
+
 function start_addons {
     echo "Waiting for Kubernetes API..."
     until curl --silent "http://127.0.0.1:8080/version"
@@ -819,20 +838,12 @@ function start_addons {
         sleep 5
     done
 
-    for f in /srv/kubernetes/addons/{kube-{dns-{rc,svc},dashboard-{rc,svc}},heapster-{de,svc}}.yaml;do
-      uuid_file_save="/var/run/coreos/rkt-kubectl-${RANDOM}.uuid"
-      sudo rkt run \
-           --net=host \
-           --uuid-file-save="$uuid_file_save" \
-           --trust-keys-from-https \
-           --volume manifests,kind=host,source=/srv/kubernetes \
-           --mount volume=manifests,target=/srv/kubernetes \
-           "${HYPERKUBE_IMAGE_REPO}":"${K8S_VER}" \
-           --exec /hyperkube -- kubectl create -f $f
-      sudo rkt rm --uuid-file="$uuid_file_save"
-      sudo rm "$uuid_file_save"
-    done
-
+    kubectl-create /srv/kubernetes/addons/kube-dns-rc.yaml
+    kubectl-create /srv/kubernetes/addons/kube-dns-svc.yaml
+    kubectl-create /srv/kubernetes/addons/kube-dashboard-rc.yaml
+    kubectl-create /srv/kubernetes/addons/kube-dashboard-svc.yaml
+    kubectl-create /srv/kubernetes/addons/heapster-de.yaml
+    kubectl-create /srv/kubernetes/addons/heapster-svc.yaml
 }
 
 function enable_calico_policy {
@@ -843,17 +854,7 @@ function enable_calico_policy {
     done
     echo
     echo "K8S: Calico Policy"
-    uuid_file_save="/var/run/coreos/rkt-kubectl-${RANDOM}.uuid"
-    sudo rkt run \
-         --net=host \
-         --uuid-file-save="$uuid_file_save" \
-         --trust-keys-from-https \
-         --volume manifests,kind=host,source=/srv/kubernetes \
-         --mount volume=manifests,target=/srv/kubernetes \
-         "${HYPERKUBE_IMAGE_REPO}":"${K8S_VER}" \
-         --exec /hyperkube -- kubectl create -f /srv/kubernetes/addons/calico-system.yaml
-    sudo rkt rm --uuid-file="$uuid_file_save"
-    sudo rm "$uuid_file_save"
+    kubectl-create /srv/kubernetes/addons/calico-system.yaml
 }
 
 init_config

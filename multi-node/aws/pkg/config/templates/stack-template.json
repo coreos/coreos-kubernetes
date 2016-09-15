@@ -69,9 +69,13 @@
           {{range $index, $subnet := .Subnets}}
           {{with $subnetLogicalName := printf "Subnet%d" $index}}
           {{if gt $index 0}},{{end}}
+          {{if $subnet.Id}}
+          "{{$subnet.Id}}"
+          {{else}}
           {
             "Ref": "{{$subnetLogicalName}}"
           }
+          {{end}}
           {{end}}
           {{end}}
         ]
@@ -281,9 +285,14 @@
               }
             ],
             "PrivateIpAddress": "{{.ControllerIP}}",
-            "SubnetId": {
+            "SubnetId":
+            {{if (index .Subnets .ControllerSubnetIndex).Id}}
+            "{{(index .Subnets .ControllerSubnetIndex).Id}}"
+            {{else}}
+            {
               "Ref": "Subnet{{.ControllerSubnetIndex}}"
             }
+            {{end}}
           }
         ],
         "Tags": [
@@ -550,6 +559,7 @@
     }
     {{range $index, $subnet := .Subnets}}
     {{with $subnetLogicalName := printf "Subnet%d" $index}}
+    {{if not $subnet.Id}}
     ,
     "{{$subnetLogicalName}}": {
       "Properties": {
@@ -566,6 +576,7 @@
       },
       "Type": "AWS::EC2::Subnet"
     }
+    {{end}}
     {{end}}
     {{end}}
     {{if not .VPCID}}
@@ -637,9 +648,13 @@
     "{{$subnetLogicalName}}RouteTableAssociation": {
       "Properties": {
         "RouteTableId": { "Ref" : "RouteTable"},
+        {{if $subnet.Id}}
+        "SubnetId": "{{$subnet.Id}}"
+        {{else}}
         "SubnetId": {
           "Ref": "{{$subnetLogicalName}}"
         }
+        {{end}}
       },
       "Type": "AWS::EC2::SubnetRouteTableAssociation"
     }
@@ -649,6 +664,7 @@
     {{if .RouteTableID}}
     {{range $index, $subnet := .Subnets}}
     {{with $subnetLogicalName := printf "Subnet%d" $index}}
+    {{if not $subnet.Id}}
     ,
     "{{$subnetLogicalName}}RouteTableAssociation": {
       "Properties": {
@@ -659,6 +675,7 @@
       },
       "Type": "AWS::EC2::SubnetRouteTableAssociation"
     }
+    {{end}}
     {{end}}
     {{end}}
     {{end}}

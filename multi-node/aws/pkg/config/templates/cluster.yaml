@@ -73,10 +73,10 @@ kmsKeyArn: "{{.KMSKeyARN}}"
 # workerSpotPrice: "0.05"
 
 # ID of existing VPC to create subnet in. Leave blank to create a new VPC
-# vpcId:
+# vpcId: vpc-UNIQUEID
 
 # ID of existing route table in existing VPC to attach subnet to. Leave blank to use the VPC's main route table.
-# routeTableId:
+# routeTableId: rtb-UNIQUEID
 
 # CIDR for Kubernetes VPC. If vpcId is specified, must match the CIDR of existing vpc.
 # vpcCIDR: "10.0.0.0/16"
@@ -90,6 +90,12 @@ kmsKeyArn: "{{.KMSKeyARN}}"
 #     instanceCIDR: "10.0.0.0/24"
 #   - availabilityZone: us-west-1b
 #     instanceCIDR: "10.0.1.0/24"
+
+# Alternatively, define the IDs of existing subnets in the existing VPC
+# subnets:
+#   - id: subnet-UNIQUEID
+#   - id: subnet-UNIQUEID
+#   - id: subnet-UNIQUEID
 
 # IP Address for the controller in Kubernetes subnet. When we have 2 or more subnets, the controller is placed in the first subnet and controllerIP must be included in the instanceCIDR of the first subnet. This convention will change once we have H/A controllers
 # controllerIP: 10.0.0.50

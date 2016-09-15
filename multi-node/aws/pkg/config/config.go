@@ -146,6 +146,7 @@ type Cluster struct {
 type Subnet struct {
 	AvailabilityZone string `yaml:"availabilityZone,omitempty"`
 	InstanceCIDR     string `yaml:"instanceCIDR,omitempty"`
+	Id               string `yaml:"id,omitempty"`
 }
 
 const (

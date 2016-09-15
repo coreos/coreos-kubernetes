@@ -834,6 +834,7 @@ function enable_calico_policy {
     done
     echo
     echo "K8S: Calico Policy"
+    uuid_file_save="/var/run/coreos/rkt-kubectl-${RANDOM}.uuid"
     sudo rkt run \
          --net=host \
          --uuid-file-save="$uuid_file_save" \
@@ -842,6 +843,8 @@ function enable_calico_policy {
          --mount volume=manifests,target=/srv/kubernetes \
          "${HYPERKUBE_IMAGE_REPO}":"${K8S_VER}" \
          --exec /hyperkube -- kubectl create -f /srv/kubernetes/addons/calico-system.yaml
+    sudo rkt rm --uuid-file="$uuid_file_save"
+    sudo rm "$uuid_file_save"
 }
 
 init_config

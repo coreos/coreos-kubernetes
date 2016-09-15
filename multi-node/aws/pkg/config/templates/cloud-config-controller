@@ -398,7 +398,7 @@ write_files:
             timeoutSeconds: 15
 
 {{ if .UseCalico }}
-  - path: /srv/kubernetes/addons/calico-policy-controller.yaml
+  - path: /etc/kubernetes/addons/calico-policy-controller.yaml
     content: |
       apiVersion: v1
       kind: Pod

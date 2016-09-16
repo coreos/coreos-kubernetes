@@ -812,13 +812,14 @@ EOF
     fi
 }
 
-function kubectl-create {
-  if [[ ! $# -eq 1 ]];then
-    echo "usage: kubectl-create <path-to-addon-manifest>"
-    exit 1
-  fi
+uuid_file_save="/var/run/coreos/rkt-kubectl-${RANDOM}.uuid"
+function cleanup {
+  sudo rkt rm --uuid-file="$uuid_file_save"
+  sudo rm "$uuid_file_save"
+}
 
-  local -r uuid_file_save="/var/run/coreos/rkt-kubectl-${RANDOM}.uuid"
+function rkt-kubectl {
+  trap cleanup RETURN
   sudo rkt run \
        --net=host \
        --uuid-file-save="$uuid_file_save" \
@@ -826,9 +827,22 @@ function kubectl-create {
        --volume manifests,kind=host,source=/srv/kubernetes \
        --mount volume=manifests,target=/srv/kubernetes \
        "${HYPERKUBE_IMAGE_REPO}":"${K8S_VER}" \
-       --exec /hyperkube -- kubectl create -f "${1}"
-  sudo rkt rm --uuid-file="$uuid_file_save"
-  sudo rm "$uuid_file_save"
+       --exec /hyperkube -- kubectl "$@"
+}
+
+function create-if-not-exist {
+  local -r resPath="${1}"
+  trap "set -e" RETURN
+  set +e
+
+  rkt-kubectl get -f "$resPath"
+  if [[ $? -eq 0 ]];then
+    echo "$resPath is already created. Skipping."
+    return 0
+  fi
+
+  rkt-kubectl create -f "$resPath"
+  return $?
 }
 
 function start_addons {
@@ -838,12 +852,12 @@ function start_addons {
         sleep 5
     done
 
-    kubectl-create /srv/kubernetes/addons/kube-dns-rc.yaml
-    kubectl-create /srv/kubernetes/addons/kube-dns-svc.yaml
-    kubectl-create /srv/kubernetes/addons/kube-dashboard-rc.yaml
-    kubectl-create /srv/kubernetes/addons/kube-dashboard-svc.yaml
-    kubectl-create /srv/kubernetes/addons/heapster-de.yaml
-    kubectl-create /srv/kubernetes/addons/heapster-svc.yaml
+    create-if-not-exist /srv/kubernetes/addons/kube-dns-rc.yaml
+    create-if-not-exist /srv/kubernetes/addons/kube-dns-svc.yaml
+    create-if-not-exist /srv/kubernetes/addons/kube-dashboard-rc.yaml
+    create-if-not-exist /srv/kubernetes/addons/kube-dashboard-svc.yaml
+    create-if-not-exist /srv/kubernetes/addons/heapster-de.yaml
+    create-if-not-exist /srv/kubernetes/addons/heapster-svc.yaml
 }
 
 function enable_calico_policy {
@@ -854,7 +868,7 @@ function enable_calico_policy {
     done
     echo
     echo "K8S: Calico Policy"
-    kubectl-create /srv/kubernetes/addons/calico-system.yaml
+    create-if-not-exist /srv/kubernetes/addons/calico-system.yaml
 }
 
 init_config

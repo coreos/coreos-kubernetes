@@ -174,16 +174,37 @@ write_files:
         sudo rm "$uuid_file_save"
       }
 
-      trap cleanup EXIT
+      function rkt-kubectl {
+         trap cleanup RETURN
+         sudo rkt run \
+           --net=host \
+           --uuid-file-save="$uuid_file_save" \
+           --trust-keys-from-https \
+           --volume manifests,kind=host,source=/srv/kubernetes \
+           --mount volume=manifests,target=/srv/kubernetes \
+           {{.HyperkubeImageRepo}}:{{.K8sVer}} \
+           --exec /hyperkube -- kubectl "$@"
+      }
 
-      sudo rkt run \
-        --net=host \
-        --uuid-file-save="$uuid_file_save" \
-        --trust-keys-from-https \
-        --volume manifests,kind=host,source=/srv/kubernetes \
-        --mount volume=manifests,target=/srv/kubernetes \
-        {{.HyperkubeImageRepo}}:{{.K8sVer}} \
-        --exec /hyperkube -- kubectl create -f /srv/kubernetes/addons
+      function create-if-not-exist {
+         local -r resPath="${1}"
+         trap "set -e" RETURN
+         set +e
+
+         rkt-kubectl get -f "$resPath"
+         if [[ $? -eq 0 ]];then
+           echo "$resPath is already created. Skipping."
+           return 0
+         fi
+
+         rkt-kubectl create -f "$resPath"
+         return $?
+      }
+
+      for f in $(find /srv/kubernetes/addons -type f -name "*.yaml");do
+        echo " -> create if not exist: $f"
+        create-if-not-exist "$f"
+      done
 
   - path: /etc/kubernetes/cni/docker_opts_cni.env
     content: |

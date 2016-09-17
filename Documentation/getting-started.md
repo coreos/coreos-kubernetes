@@ -95,7 +95,7 @@ Created symlink from /etc/systemd/system/multi-user.target.wants/etcd2.service t
 
 It is highly recommended that etcd is run as a dedicated cluster separately from Kubernetes components.
 
-Use the [official etcd clustering guide](https://coreos.com/etcd/docs/latest/clustering.html) to decide how best to deploy etcd into your environment.
+Use the [official etcd clustering guide](https://coreos.com/etcd/docs/latest/clustering.html) to decide how best to deploy etcd into your environment. Please note in above clustering guideline you should replace etcd with etcd2 when executing.
 
 ## Generate Kubernetes TLS Assets
 

@@ -524,7 +524,7 @@ func (c Cluster) valid() error {
 
 		var instanceCIDRs = make([]*net.IPNet, 0)
 		for i, subnet := range c.Subnets {
-			if subnet.Id == "" && subnet.AvailabilityZone == "" {
+			if subnet.AvailabilityZone == "" {
 				return fmt.Errorf("id or availabilityZone must be set for subnet #%d", i)
 			}
 			_, instanceCIDR, err := net.ParseCIDR(subnet.InstanceCIDR)
@@ -683,22 +683,24 @@ func (c *Cluster) ValidateExistingVPC(existingVPCCIDR string, existingSubnetCIDR
 		)
 	}
 
-	// Loop through all subnets
+	// Loop through all subnets that we are going to create, i.e. not ones with IDs set
 	// Note: legacy instanceCIDR/availabilityZone stuff has already been marshalled into this format
 	for _, subnet := range c.Subnets {
-		_, instanceNet, err := net.ParseCIDR(subnet.InstanceCIDR)
-		if err != nil {
-			return fmt.Errorf("error parsing instances cidr %s : %v", c.InstanceCIDR, err)
-		}
+		if subnet.Id == "" {
+			_, instanceNet, err := net.ParseCIDR(subnet.InstanceCIDR)
+			if err != nil {
+				return fmt.Errorf("error parsing instances cidr %s : %v", c.InstanceCIDR, err)
+			}
 
-		//Loop through all existing subnets in the VPC and look for conflicting CIDRS
-		for _, existingSubnet := range existingSubnets {
-			if cidrOverlap(instanceNet, existingSubnet) {
-				return fmt.Errorf(
-					"instance cidr (%s) conflicts with existing subnet cidr=%s",
-					instanceNet,
-					existingSubnet,
-				)
+			//Loop through all existing subnets in the VPC and look for conflicting CIDRS
+			for _, existingSubnet := range existingSubnets {
+				if cidrOverlap(instanceNet, existingSubnet) {
+					return fmt.Errorf(
+						"instance cidr (%s) conflicts with existing subnet cidr=%s",
+						instanceNet,
+						existingSubnet,
+					)
+				}
 			}
 		}
 	}

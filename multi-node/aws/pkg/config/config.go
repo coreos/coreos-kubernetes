@@ -524,8 +524,8 @@ func (c Cluster) valid() error {
 
 		var instanceCIDRs = make([]*net.IPNet, 0)
 		for i, subnet := range c.Subnets {
-			if subnet.AvailabilityZone == "" {
-				return fmt.Errorf("availabilityZone must be set for subnet #%d", i)
+			if subnet.Id == "" && subnet.AvailabilityZone == "" {
+				return fmt.Errorf("id or availabilityZone must be set for subnet #%d", i)
 			}
 			_, instanceCIDR, err := net.ParseCIDR(subnet.InstanceCIDR)
 			if err != nil {

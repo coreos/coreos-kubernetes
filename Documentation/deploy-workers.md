@@ -260,6 +260,8 @@ Environment=ETCD_ENDPOINTS=${ETCD_ENDPOINTS}
 ExecStart=/usr/bin/rkt run --inherit-env --stage1-from-dir=stage1-fly.aci \
 --volume=modules,kind=host,source=/lib/modules,readOnly=false \
 --mount=volume=modules,target=/lib/modules \
+--volume=dns,kind=host,source=/etc/resolv.conf,readOnly=true \
+--mount=volume=dns,target=/etc/resolv.conf \
 --trust-keys-from-https quay.io/calico/node:v0.19.0
 KillMode=mixed
 Restart=always

@@ -10,7 +10,7 @@ This guide will walk you through a deployment of a single-master/multi-worker Ku
 - deploy the DNS add-on
 - deploy the network policy add-on
 
-Working through this guide may take you a few hours, but it will give you good understanding of the moving pieces of your cluster and set you up for success in the long run. Let's get started.
+Working through this guide may take you a few hours, but it will give you good understanding of the moving pieces of your cluster and set you up for success in the long run. For a shortcut, you can utilize [these generic user-data scripts][generic-userdata]. Let's get started.
 
 ## Deployment Options
 
@@ -140,3 +140,5 @@ admin-key.pem
   <p><strong>Did you generate all of the certificates?</strong> You will place these on disk next.</p>
   <a href="deploy-master.md" class="btn btn-primary btn-icon-right"  data-category="Docs Next" data-event="Kubernetes: Master">Yes, ready to deploy the master node</a>
 </div>
+
+[generic-userdata]: kubernetes-on-generic-platforms.md

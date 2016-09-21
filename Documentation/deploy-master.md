@@ -103,7 +103,6 @@ Note that the kubelet running on a master node may log repeated attempts to post
   - [mounting ephemeral disks][mount-disks]
   - [allow pods to mount RDB][rdb] or [iSCSI volumes][iscsi]
   - [allowing access to insecure container registries][insecure-registry]
-  - [use host DNS configuration instead of a public DNS server][host-dns]
   - [changing your CoreOS auto-update settings][update]
 
 **/etc/systemd/system/kubelet.service**
@@ -115,7 +114,9 @@ ExecStartPre=/usr/bin/mkdir -p /var/log/containers
 
 Environment=KUBELET_VERSION=${K8S_VER}
 Environment="RKT_OPTS=--volume var-log,kind=host,source=/var/log \
-  --mount volume=var-log,target=/var/log"
+  --mount volume=var-log,target=/var/log \
+  --volume dns,kind=host,source=/etc/resolv.conf \
+  --mount volume=dns,target=/etc/resolv.conf"
 
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \

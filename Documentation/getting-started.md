@@ -141,4 +141,4 @@ admin-key.pem
   <a href="deploy-master.md" class="btn btn-primary btn-icon-right"  data-category="Docs Next" data-event="Kubernetes: Master">Yes, ready to deploy the master node</a>
 </div>
 
-[generic-userdata]: https://github.com/coreos/coreos-kubernetes/tree/master/multi-node/generic
+[generic-userdata]: kubernetes-on-generic-platforms.md

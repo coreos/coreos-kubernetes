@@ -255,7 +255,12 @@
     },
     "InstanceController": {
       "Properties": {
-        "AvailabilityZone": "{{(index .Subnets .ControllerSubnetIndex).AvailabilityZone}}",
+        "AvailabilityZone":
+        {{if .ControllerAvailabilityZone}}
+        "{{.ControllerAvailabilityZone}}"
+        {{else}}
+        "{{(index .Subnets .ControllerSubnetIndex).AvailabilityZone}}"
+        {{end}},
         "BlockDeviceMappings": [
           {
             "DeviceName": "/dev/xvda",
@@ -286,12 +291,16 @@
             ],
             "PrivateIpAddress": "{{.ControllerIP}}",
             "SubnetId":
+            {{if .ControllerSubnetId}}
+            "{{.ControllerSubnetId}}"
+            {{else}}
             {{if (index .Subnets .ControllerSubnetIndex).Id}}
             "{{(index .Subnets .ControllerSubnetIndex).Id}}"
             {{else}}
             {
               "Ref": "Subnet{{.ControllerSubnetIndex}}"
             }
+            {{end}}
             {{end}}
           }
         ],

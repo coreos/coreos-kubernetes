@@ -108,43 +108,45 @@ func ClusterFromBytes(data []byte) (*Cluster, error) {
 }
 
 type Cluster struct {
-	ClusterName              string            `yaml:"clusterName,omitempty"`
-	ExternalDNSName          string            `yaml:"externalDNSName,omitempty"`
-	KeyName                  string            `yaml:"keyName,omitempty"`
-	Region                   string            `yaml:"region,omitempty"`
-	AvailabilityZone         string            `yaml:"availabilityZone,omitempty"`
-	ReleaseChannel           string            `yaml:"releaseChannel,omitempty"`
-	ControllerInstanceType   string            `yaml:"controllerInstanceType,omitempty"`
-	ControllerRootVolumeType string            `yaml:"controllerRootVolumeType,omitempty"`
-	ControllerRootVolumeIOPS int               `yaml:"controllerRootVolumeIOPS,omitempty"`
-	ControllerRootVolumeSize int               `yaml:"controllerRootVolumeSize,omitempty"`
-	WorkerCount              int               `yaml:"workerCount,omitempty"`
-	WorkerInstanceType       string            `yaml:"workerInstanceType,omitempty"`
-	WorkerRootVolumeType     string            `yaml:"workerRootVolumeType,omitempty"`
-	WorkerRootVolumeIOPS     int               `yaml:"workerRootVolumeIOPS,omitempty"`
-	WorkerRootVolumeSize     int               `yaml:"workerRootVolumeSize,omitempty"`
-	WorkerSpotPrice          string            `yaml:"workerSpotPrice,omitempty"`
-	VPCID                    string            `yaml:"vpcId,omitempty"`
-	RouteTableID             string            `yaml:"routeTableId,omitempty"`
-	VPCCIDR                  string            `yaml:"vpcCIDR,omitempty"`
-	InstanceCIDR             string            `yaml:"instanceCIDR,omitempty"`
-	ControllerIP             string            `yaml:"controllerIP,omitempty"`
-	PodCIDR                  string            `yaml:"podCIDR,omitempty"`
-	ServiceCIDR              string            `yaml:"serviceCIDR,omitempty"`
-	DNSServiceIP             string            `yaml:"dnsServiceIP,omitempty"`
-	K8sVer                   string            `yaml:"kubernetesVersion,omitempty"`
-	HyperkubeImageRepo       string            `yaml:"hyperkubeImageRepo,omitempty"`
-	ContainerRuntime         string            `yaml:"containerRuntime,omitempty"`
-	KMSKeyARN                string            `yaml:"kmsKeyArn,omitempty"`
-	CreateRecordSet          bool              `yaml:"createRecordSet,omitempty"`
-	RecordSetTTL             int               `yaml:"recordSetTTL,omitempty"`
-	TLSCADurationDays        int               `yaml:"tlsCADurationDays,omitempty"`
-	TLSCertDurationDays      int               `yaml:"tlsCertDurationDays,omitempty"`
-	HostedZone               string            `yaml:"hostedZone,omitempty"`
-	HostedZoneID             string            `yaml:"hostedZoneId,omitempty"`
-	StackTags                map[string]string `yaml:"stackTags,omitempty"`
-	UseCalico                bool              `yaml:"useCalico,omitempty"`
-	Subnets                  []Subnet          `yaml:"subnets,omitempty"`
+	ClusterName                string            `yaml:"clusterName,omitempty"`
+	ExternalDNSName            string            `yaml:"externalDNSName,omitempty"`
+	KeyName                    string            `yaml:"keyName,omitempty"`
+	Region                     string            `yaml:"region,omitempty"`
+	AvailabilityZone           string            `yaml:"availabilityZone,omitempty"`
+	ReleaseChannel             string            `yaml:"releaseChannel,omitempty"`
+	ControllerInstanceType     string            `yaml:"controllerInstanceType,omitempty"`
+	ControllerRootVolumeType   string            `yaml:"controllerRootVolumeType,omitempty"`
+	ControllerRootVolumeIOPS   int               `yaml:"controllerRootVolumeIOPS,omitempty"`
+	ControllerRootVolumeSize   int               `yaml:"controllerRootVolumeSize,omitempty"`
+	WorkerCount                int               `yaml:"workerCount,omitempty"`
+	WorkerInstanceType         string            `yaml:"workerInstanceType,omitempty"`
+	WorkerRootVolumeType       string            `yaml:"workerRootVolumeType,omitempty"`
+	WorkerRootVolumeIOPS       int               `yaml:"workerRootVolumeIOPS,omitempty"`
+	WorkerRootVolumeSize       int               `yaml:"workerRootVolumeSize,omitempty"`
+	WorkerSpotPrice            string            `yaml:"workerSpotPrice,omitempty"`
+	VPCID                      string            `yaml:"vpcId,omitempty"`
+	RouteTableID               string            `yaml:"routeTableId,omitempty"`
+	VPCCIDR                    string            `yaml:"vpcCIDR,omitempty"`
+	InstanceCIDR               string            `yaml:"instanceCIDR,omitempty"`
+	ControllerIP               string            `yaml:"controllerIP,omitempty"`
+	ControllerSubnetId         string            `yaml:"controllerSubnetId,omitempty"`
+	ControllerAvailabilityZone string            `yaml:"controllerAvailabilityZone,omitempty"`
+	PodCIDR                    string            `yaml:"podCIDR,omitempty"`
+	ServiceCIDR                string            `yaml:"serviceCIDR,omitempty"`
+	DNSServiceIP               string            `yaml:"dnsServiceIP,omitempty"`
+	K8sVer                     string            `yaml:"kubernetesVersion,omitempty"`
+	HyperkubeImageRepo         string            `yaml:"hyperkubeImageRepo,omitempty"`
+	ContainerRuntime           string            `yaml:"containerRuntime,omitempty"`
+	KMSKeyARN                  string            `yaml:"kmsKeyArn,omitempty"`
+	CreateRecordSet            bool              `yaml:"createRecordSet,omitempty"`
+	RecordSetTTL               int               `yaml:"recordSetTTL,omitempty"`
+	TLSCADurationDays          int               `yaml:"tlsCADurationDays,omitempty"`
+	TLSCertDurationDays        int               `yaml:"tlsCertDurationDays,omitempty"`
+	HostedZone                 string            `yaml:"hostedZone,omitempty"`
+	HostedZoneID               string            `yaml:"hostedZoneId,omitempty"`
+	StackTags                  map[string]string `yaml:"stackTags,omitempty"`
+	UseCalico                  bool              `yaml:"useCalico,omitempty"`
+	Subnets                    []Subnet          `yaml:"subnets,omitempty"`
 }
 
 type Subnet struct {
@@ -294,19 +296,22 @@ func (c Cluster) stackConfig(opts StackTemplateOptions, compressUserData bool) (
 	if controllerIPAddr == nil {
 		return nil, fmt.Errorf("invalid controllerIP: %s", stackConfig.ControllerIP)
 	}
-	controllerSubnetFound := false
-	for i, subnet := range stackConfig.Subnets {
-		_, instanceCIDR, err := net.ParseCIDR(subnet.InstanceCIDR)
-		if err != nil {
-			return nil, fmt.Errorf("invalid instanceCIDR: %v", err)
+
+	if stackConfig.ControllerSubnetId == "" {
+		controllerSubnetFound := false
+		for i, subnet := range stackConfig.Subnets {
+			_, instanceCIDR, err := net.ParseCIDR(subnet.InstanceCIDR)
+			if err != nil {
+				return nil, fmt.Errorf("invalid instanceCIDR: %v", err)
+			}
+			if instanceCIDR.Contains(controllerIPAddr) {
+				stackConfig.ControllerSubnetIndex = i
+				controllerSubnetFound = true
+			}
 		}
-		if instanceCIDR.Contains(controllerIPAddr) {
-			stackConfig.ControllerSubnetIndex = i
-			controllerSubnetFound = true
+		if !controllerSubnetFound {
+			return nil, fmt.Errorf("Fail-fast occurred possibly because of a bug: ControllerSubnetIndex couldn't be determined for subnets (%v) and controllerIP (%v)", stackConfig.Subnets, stackConfig.ControllerIP)
 		}
-	}
-	if !controllerSubnetFound {
-		return nil, fmt.Errorf("Fail-fast occurred possibly because of a bug: ControllerSubnetIndex couldn't be determined for subnets (%v) and controllerIP (%v)", stackConfig.Subnets, stackConfig.ControllerIP)
 	}
 
 	if stackConfig.UserDataWorker, err = execute(opts.WorkerTmplFile, stackConfig.Config, compressUserData); err != nil {
@@ -545,17 +550,19 @@ func (c Cluster) valid() error {
 			}
 		}
 
-		controllerInstanceCidrExists := false
-		for _, a := range instanceCIDRs {
-			if a.Contains(controllerIPAddr) {
-				controllerInstanceCidrExists = true
+		if c.ControllerSubnetId == "" {
+			controllerInstanceCidrExists := false
+			for _, a := range instanceCIDRs {
+				if a.Contains(controllerIPAddr) {
+					controllerInstanceCidrExists = true
+				}
 			}
-		}
-		if !controllerInstanceCidrExists {
-			return fmt.Errorf("No instanceCIDRs in Subnets (%v) contain controllerIP (%s)",
-				instanceCIDRs,
-				c.ControllerIP,
-			)
+			if !controllerInstanceCidrExists {
+				return fmt.Errorf("No instanceCIDRs in Subnets (%v) contain controllerIP (%s)",
+					instanceCIDRs,
+					c.ControllerIP,
+				)
+			}
 		}
 
 		for i, a := range instanceCIDRs {

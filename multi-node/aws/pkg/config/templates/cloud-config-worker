@@ -17,8 +17,8 @@ coreos:
             EnvironmentFile=/etc/kubernetes/cni/docker_opts_cni.env
 
     - name: kubelet.service
-      enable: true
       command: start
+      runtime: true
       content: |
         [Service]
         Environment=KUBELET_VERSION={{.K8sVer}}
@@ -88,6 +88,7 @@ coreos:
 {{ if .UseCalico }}
     - name: calico-node.service
       command: start
+      runtime: true
       content: |
         [Unit]
         Description=Calico per-host agent
@@ -106,6 +107,8 @@ coreos:
         ExecStart=/usr/bin/rkt run --inherit-env --stage1-from-dir=stage1-fly.aci \
         --volume=modules,kind=host,source=/lib/modules,readOnly=false \
         --mount=volume=modules,target=/lib/modules \
+        --volume=dns,kind=host,source=/etc/resolv.conf,readOnly=true \
+        --mount=volume=dns,target=/etc/resolv.conf \
         --trust-keys-from-https quay.io/calico/node:v0.19.0
         KillMode=mixed
         Restart=always

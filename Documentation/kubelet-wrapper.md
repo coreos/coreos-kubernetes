@@ -37,7 +37,7 @@ Mount the host's `/etc/resolv.conf` file directly into the container in order to
 
 ```ini
 [Service]
-Environment="RKT_OPTS=--volume=resolv,kind=host,source=/etc/resolv.conf --mount volume=resolv,target=/etc/resolv.conf"
+Environment="RKT_OPTS=--volume resolv,kind=host,source=/etc/resolv.conf --mount volume=resolv,target=/etc/resolv.conf"
 Environment=KUBELET_VERSION=v1.3.6_coreos.0
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \

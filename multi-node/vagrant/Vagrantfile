@@ -130,12 +130,12 @@ Vagrant.configure("2") do |config|
     end
   end
 
-
   (1..$controller_count).each do |i|
     config.vm.define vm_name = "c%d" % i do |controller|
 
       env_file = Tempfile.new('env_file', :binmode => true)
       env_file.write("ETCD_ENDPOINTS=#{etcd_endpoints}\n")
+      env_file.write("K8S_VER=" + ENV['K8S_VER'].to_s + "\n")
       env_file.close
 
       controller.vm.hostname = vm_name
@@ -170,6 +170,7 @@ Vagrant.configure("2") do |config|
 
       env_file = Tempfile.new('env_file', :binmode => true)
       env_file.write("ETCD_ENDPOINTS=#{etcd_endpoints}\n")
+      env_file.write("K8S_VER=" + ENV['K8S_VER'].to_s + "\n")
       env_file.write("CONTROLLER_ENDPOINT=https://#{controllerIPs[0]}\n") #TODO(aaron): LB or DNS across control nodes
       env_file.close
 

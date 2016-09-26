@@ -2,8 +2,10 @@ package cluster
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -13,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/elb"
 	"github.com/aws/aws-sdk-go/service/route53"
 
 	"github.com/coreos/coreos-kubernetes/multi-node/aws/pkg/config"
@@ -22,8 +25,8 @@ import (
 var VERSION = "UNKNOWN"
 
 type Info struct {
-	Name         string
-	ControllerIP string
+	Name           string
+	ControllerHost string
 }
 
 func (c *Info) String() string {
@@ -32,7 +35,7 @@ func (c *Info) String() string {
 	w.Init(buf, 0, 8, 0, '\t', 0)
 
 	fmt.Fprintf(w, "Cluster Name:\t%s\n", c.Name)
-	fmt.Fprintf(w, "Controller IP:\t%s\n", c.ControllerIP)
+	fmt.Fprintf(w, "Controller DNS Name:\t%s\n", c.ControllerHost)
 
 	w.Flush()
 	return buf.String()
@@ -221,23 +224,120 @@ func (c *Cluster) createStack(cfSvc cloudformationService, stackBody string) (*c
 		tags = append(tags, &cloudformation.Tag{Key: &key, Value: &value})
 	}
 
-	creq := &cloudformation.CreateStackInput{
-		StackName:    aws.String(c.ClusterName),
-		OnFailure:    aws.String(cloudformation.OnFailureDoNothing),
-		Capabilities: []*string{aws.String(cloudformation.CapabilityCapabilityIam)},
-		TemplateBody: &stackBody,
-		Tags:         tags,
+	var creq *cloudformation.CreateStackInput
+	if(c.EtcdLoadBalancer != "") {
+		creq = &cloudformation.CreateStackInput{
+			StackName:    aws.String(c.ClusterName),
+			OnFailure:    aws.String(cloudformation.OnFailureDoNothing),
+			Capabilities: []*string{aws.String(cloudformation.CapabilityCapabilityIam)},
+			TemplateBody: &stackBody,
+			Tags:         tags,
+			StackPolicyBody: aws.String(`{
+		"Statement" : [
+			{
+					"Effect" : "Deny",
+				"Action" : "Update:*",
+				"Principal" : "*",
+				"Resource" : "LogicalResourceId/InstanceEtcd*"
+			}
+		]
+	}
+	`),
+		}
+	} else {
+		creq = &cloudformation.CreateStackInput{
+			StackName:    aws.String(c.ClusterName),
+			OnFailure:    aws.String(cloudformation.OnFailureDoNothing),
+			Capabilities: []*string{aws.String(cloudformation.CapabilityCapabilityIam)},
+			TemplateBody: &stackBody,
+			Tags:         tags,
+		}
 	}
 
 	return cfSvc.CreateStack(creq)
 }
 
+/*
+Makes sure that etcd resource definitions are not upgrades by cloudformation stack update.
+Fetches resource defintions from existing stack and splices them into the updated resource defintions.
+
+TODO(chom): etcd controller + dynamic cluster management will obviate need for this function
+*/
+type cfStackResources struct {
+	Resources map[string]map[string]interface{} `json:"Resources"`
+	Mappings  map[string]interface{}            `json:"Mappings"`
+}
+
+func (c *Cluster) lockEtcdResources(cfSvc *cloudformation.CloudFormation, stackBody string) (string, error) {
+
+	//Unmarshal incoming stack resource defintions
+	var newStack cfStackResources
+	if err := json.Unmarshal([]byte(stackBody), &newStack); err != nil {
+		return "", fmt.Errorf("error unmarshaling new stack json: %v", err)
+	}
+
+	instanceEtcdExpr := regexp.MustCompile("^InstanceEtcd[0-9]+$")
+	//Remove all etcdInstance resource defintions from incoming stack
+	for name, _ := range newStack.Resources {
+		if instanceEtcdExpr.Match([]byte(name)) {
+			delete(newStack.Resources, name)
+		}
+	}
+
+	//Fetch and unmarshal existing stack resource defintions
+	res, err := cfSvc.GetTemplate(&cloudformation.GetTemplateInput{
+		StackName: aws.String(c.ClusterName),
+	})
+	if err != nil {
+		return "", fmt.Errorf("error getting stack template: %v", err)
+	}
+	var existingStack cfStackResources
+	if err := json.Unmarshal([]byte(*res.TemplateBody), &existingStack); err != nil {
+		return "", fmt.Errorf("error unmarshaling existing stack json: %v", err)
+	}
+
+	//splice in existing resource defintions for etcd into new stack
+	for name, definition := range existingStack.Resources {
+		if instanceEtcdExpr.Match([]byte(name)) {
+			newStack.Resources[name] = definition
+		}
+	}
+	newStack.Mappings["EtcdInstanceParams"] = existingStack.Mappings["EtcdInstanceParams"]
+
+	var outgoingStack map[string]interface{}
+	if err := json.Unmarshal([]byte(stackBody), &outgoingStack); err != nil {
+		return "", fmt.Errorf("error unmarshaling outgoing stack json: %v", err)
+	}
+	outgoingStack["Resources"] = newStack.Resources
+	outgoingStack["Mappings"] = newStack.Mappings
+
+	// ship off new stack to cloudformation api for an update
+	out, err := json.Marshal(&outgoingStack)
+	if err != nil {
+		return "", fmt.Errorf("error marshaling stack json: %v", err)
+	}
+
+	var buf bytes.Buffer
+	if err := json.Compact(&buf, out); err != nil {
+		return "", fmt.Errorf("error compacting stack json: %v", err)
+	}
+
+	return buf.String(), nil
+}
+
 func (c *Cluster) Update(stackBody string) (string, error) {
+
 	cfSvc := cloudformation.New(c.session)
+	if(c.EtcdLoadBalancer != "") {
+		var err error
+		if stackBody, err = c.lockEtcdResources(cfSvc, stackBody); err != nil {
+			return "", err
+		}
+	}
 	input := &cloudformation.UpdateStackInput{
 		Capabilities: []*string{aws.String(cloudformation.CapabilityCapabilityIam)},
 		StackName:    aws.String(c.ClusterName),
-		TemplateBody: &stackBody,
+		TemplateBody: aws.String(stackBody),
 	}
 
 	updateOutput, err := cfSvc.UpdateStack(input)
@@ -262,7 +362,7 @@ func (c *Cluster) Update(stackBody string) (string, error) {
 		case cloudformation.ResourceStatusUpdateFailed, cloudformation.StackStatusUpdateRollbackComplete, cloudformation.StackStatusUpdateRollbackFailed:
 			errMsg := fmt.Sprintf("Stack status: %s : %s", statusString, aws.StringValue(resp.Stacks[0].StackStatusReason))
 			return "", errors.New(errMsg)
-		case cloudformation.ResourceStatusUpdateInProgress:
+		case cloudformation.ResourceStatusUpdateInProgress, cloudformation.StackStatusUpdateCompleteCleanupInProgress:
 			time.Sleep(3 * time.Second)
 			continue
 		default:
@@ -272,21 +372,45 @@ func (c *Cluster) Update(stackBody string) (string, error) {
 }
 
 func (c *Cluster) Info() (*Info, error) {
-	cfSvc := cloudformation.New(c.session)
-	resp, err := cfSvc.DescribeStackResource(
-		&cloudformation.DescribeStackResourceInput{
-			LogicalResourceId: aws.String("EIPController"),
-			StackName:         aws.String(c.ClusterName),
-		},
-	)
-	if err != nil {
-		errmsg := "unable to get public IP of controller instance:\n" + err.Error()
-		return nil, fmt.Errorf(errmsg)
+	var elbName string
+	{
+		cfSvc := cloudformation.New(c.session)
+		resp, err := cfSvc.DescribeStackResource(
+			&cloudformation.DescribeStackResourceInput{
+				LogicalResourceId: aws.String("ElbAPIServer"),
+				StackName:         aws.String(c.ClusterName),
+			},
+		)
+		if err != nil {
+			errmsg := "unable to get public IP of controller instance:\n" + err.Error()
+			return nil, fmt.Errorf(errmsg)
+		}
+		elbName = *resp.StackResourceDetail.PhysicalResourceId
 	}
 
+	elbSvc := elb.New(c.session)
+
 	var info Info
-	info.ControllerIP = *resp.StackResourceDetail.PhysicalResourceId
-	info.Name = c.ClusterName
+	{
+		resp, err := elbSvc.DescribeLoadBalancers(&elb.DescribeLoadBalancersInput{
+			LoadBalancerNames: []*string{
+				aws.String(elbName),
+			},
+			PageSize: aws.Int64(2),
+		})
+		if err != nil {
+			return nil, fmt.Errorf("error describing load balancer %s: %v", elbName, err)
+		}
+		if len(resp.LoadBalancerDescriptions) == 0 {
+			return nil, fmt.Errorf("could not find a load balancer with name %s", elbName)
+		}
+		if len(resp.LoadBalancerDescriptions) > 1 {
+			return nil, fmt.Errorf("found multiple load balancers with name %s: %v", elbName, resp)
+		}
+
+		info.Name = c.ClusterName
+		info.ControllerHost = *resp.LoadBalancerDescriptions[0].DNSName
+	}
 	return &info, nil
 }
 

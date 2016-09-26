@@ -5,17 +5,20 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"errors"
 	"math"
 	"math/big"
 	"net"
 	"time"
 )
 
+var (
+	Duration90d  = time.Hour * 24 * 90
+	Duration365d = time.Hour * 24 * 365
+)
+
 type CACertConfig struct {
 	CommonName   string
 	Organization string
-	Duration     time.Duration
 }
 
 type ServerCertConfig struct {
@@ -29,22 +32,18 @@ type ClientCertConfig struct {
 	CommonName  string
 	DNSNames    []string
 	IPAddresses []string
-	Duration    time.Duration
 }
 
 func NewSelfSignedCACertificate(cfg CACertConfig, key *rsa.PrivateKey) (*x509.Certificate, error) {
-	if cfg.Duration <= 0 {
-		return nil, errors.New("Cert duration must not be negative or zero.")
-	}
-
+	now := time.Now()
 	tmpl := x509.Certificate{
 		SerialNumber: new(big.Int).SetInt64(0),
 		Subject: pkix.Name{
 			CommonName:   cfg.CommonName,
 			Organization: []string{cfg.Organization},
 		},
-		NotBefore:             time.Now().UTC(),
-		NotAfter:              time.Now().Add(cfg.Duration).UTC(),
+		NotBefore:             now.UTC(),
+		NotAfter:              now.Add(Duration365d).UTC(),
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
 		BasicConstraintsValid: true,
 		IsCA: true,
@@ -68,10 +67,9 @@ func NewSignedServerCertificate(cfg ServerCertConfig, key *rsa.PrivateKey, caCer
 		return nil, err
 	}
 
-	if cfg.Duration <= 0 {
-		return nil, errors.New("Cert duration must not be negative or zero.")
+	if cfg.Duration == time.Hour*0 {
+		cfg.Duration = Duration90d
 	}
-
 	certTmpl := x509.Certificate{
 		Subject: pkix.Name{
 			CommonName:   cfg.CommonName,
@@ -103,10 +101,6 @@ func NewSignedClientCertificate(cfg ClientCertConfig, key *rsa.PrivateKey, caCer
 		return nil, err
 	}
 
-	if cfg.Duration <= 0 {
-		return nil, errors.New("Cert duration must not be negative or zero.")
-	}
-
 	certTmpl := x509.Certificate{
 		Subject: pkix.Name{
 			CommonName:   cfg.CommonName,
@@ -116,7 +110,7 @@ func NewSignedClientCertificate(cfg ClientCertConfig, key *rsa.PrivateKey, caCer
 		IPAddresses:  ips,
 		SerialNumber: serial,
 		NotBefore:    caCert.NotBefore,
-		NotAfter:     time.Now().Add(cfg.Duration).UTC(),
+		NotAfter:     time.Now().Add(Duration90d).UTC(),
 		KeyUsage:     x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 	}

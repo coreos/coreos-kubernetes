@@ -18,13 +18,13 @@ Navigate to the [Vagrant downloads page][vagrant-downloads] and grab the appropr
 The linux `kubectl` binary can be fetched with a command like:
 
 ```sh
-$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.3.6/bin/linux/amd64/kubectl
+$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.4.0/bin/linux/amd64/kubectl
 ```
 
 On an OS X workstation, replace `linux` in the URL above with `darwin`:
 
 ```sh
-$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.3.6/bin/darwin/amd64/kubectl
+$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.4.0/bin/darwin/amd64/kubectl
 ```
 
 After downloading the binary, ensure it is executable and move it into your PATH:
@@ -105,6 +105,6 @@ NAME          LABELS                               STATUS
 <div class="co-m-docs-next-step">
   <p><strong>Is kubectl working correctly?</strong></p>
   <p>Now that you've got a working Kubernetes cluster with a functional CLI tool, you are free to deploy Kubernetes-ready applications.
-Start with a <a href="https://github.com/kubernetes/kubernetes/blob/release-1.3/examples/guestbook/README.md" data-category="Docs Next" data-event="kubernetes.io: Guestbook">multi-tier web application</a> from the official Kubernetes documentation to visualize how the various Kubernetes components fit together.</p>
-  <a href="https://github.com/kubernetes/kubernetes/blob/release-1.3/examples/guestbook/README.md" class="btn btn-default btn-icon-right" data-category="Docs Next" data-event="kubernetes.io: Guestbook">View the Guestbook example app</a>
+Start with a <a href="https://github.com/kubernetes/kubernetes/blob/release-1.4/examples/guestbook/README.md" data-category="Docs Next" data-event="kubernetes.io: Guestbook">multi-tier web application</a> from the official Kubernetes documentation to visualize how the various Kubernetes components fit together.</p>
+  <a href="https://github.com/kubernetes/kubernetes/blob/release-1.4/examples/guestbook/README.md" class="btn btn-default btn-icon-right" data-category="Docs Next" data-event="kubernetes.io: Guestbook">View the Guestbook example app</a>
 </div>

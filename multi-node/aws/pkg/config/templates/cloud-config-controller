@@ -2,21 +2,15 @@
 coreos:
   update:
     reboot-strategy: "off"
+
   flannel:
     interface: $private_ipv4
-    etcd_endpoints: {{ .ETCDEndpoints }}
-  etcd2:
-    name: controller
-    advertise-client-urls: http://$private_ipv4:2379
-    initial-advertise-peer-urls: http://$private_ipv4:2380
-    listen-client-urls: http://0.0.0.0:2379
-    listen-peer-urls: http://0.0.0.0:2380
-    initial-cluster: controller=http://$private_ipv4:2380
-  units:
-    - name: etcd2.service
-      command: start
-      runtime: true
+    etcd_endpoints: {{ .EtcdEndpoints }}
+    etcd_cafile: /etc/kubernetes/ssl/ca.pem
+    etcd_certfile: /etc/kubernetes/ssl/etcd-client.pem
+    etcd_keyfile: /etc/kubernetes/ssl/etcd-client-key.pem
 
+  units:
     - name: docker.service
       drop-ins:
         - name: 40-flannel.conf
@@ -24,42 +18,34 @@ coreos:
             [Unit]
             Requires=flanneld.service
             After=flanneld.service
-            [Service]
-            EnvironmentFile=/etc/kubernetes/cni/docker_opts_cni.env
 
     - name: flanneld.service
       drop-ins:
         - name: 10-etcd.conf
           content: |
+            [Unit]
+            Requires=decrypt-tls-assets.service
+            After=decrypt-tls-assets.service
             [Service]
-            ExecStartPre=/usr/bin/curl --silent -X PUT -d \
-            "value={\"Network\" : \"{{.PodCIDR}}\", \"Backend\" : {\"Type\" : \"vxlan\"}}" \
-            http://localhost:2379/v2/keys/coreos.com/network/config?prevExist=false
+            Environment="ETCD_SSL_DIR=/etc/kubernetes/ssl"
+            ExecStartPre=/usr/bin/etcdctl \
+            --ca-file=/etc/kubernetes/ssl/ca.pem \
+            --cert-file=/etc/kubernetes/ssl/etcd-client.pem \
+            --key-file=/etc/kubernetes/ssl/etcd-client-key.pem \
+            --endpoints="{{.EtcdEndpoints}}" \
+            set /coreos.com/network/config '{"Network" : "{{.PodCIDR}}", "Backend" : {"Type" : "vxlan"}}'
     - name: kubelet.service
       command: start
-      runtime: true
+      enable: true
       content: |
         [Service]
         Environment=KUBELET_VERSION={{.K8sVer}}
         Environment=KUBELET_ACI={{.HyperkubeImageRepo}}
-        Environment="RKT_OPTS=--volume dns,kind=host,source=/etc/resolv.conf \
-        --mount volume=dns,target=/etc/resolv.conf \
-        --volume rkt,kind=host,source=/opt/bin/host-rkt \
-        --mount volume=rkt,target=/usr/bin/rkt \
-        --volume var-lib-rkt,kind=host,source=/var/lib/rkt \
-        --mount volume=var-lib-rkt,target=/var/lib/rkt \
-        --volume stage,kind=host,source=/tmp \
-        --mount volume=stage,target=/tmp \
-        --volume var-log,kind=host,source=/var/log \
-        --mount volume=var-log,target=/var/log"
-        ExecStartPre=/usr/bin/mkdir -p /var/log/containers
+        Environment="RKT_OPTS=--volume dns,kind=host,source=/etc/resolv.conf --mount volume=dns,target=/etc/resolv.conf"
         ExecStart=/usr/lib/coreos/kubelet-wrapper \
         --api-servers=http://localhost:8080 \
         --network-plugin-dir=/etc/kubernetes/cni/net.d \
         --network-plugin={{.K8sNetworkPlugin}} \
-        --container-runtime={{.ContainerRuntime}} \
-        --rkt-path=/usr/bin/rkt \
-        --rkt-stage1-image=coreos.com/rkt/stage1-coreos \
         --register-schedulable=false \
         --allow-privileged=true \
         --config=/etc/kubernetes/manifests \
@@ -72,40 +58,9 @@ coreos:
         [Install]
         WantedBy=multi-user.target
 
-{{ if eq .ContainerRuntime "rkt" }}
-    - name: rkt-api.service
-      enable: true
-      content: |
-        [Unit]
-        Before=kubelet.service
-        [Service]
-        ExecStart=/usr/bin/rkt api-service
-        Restart=always
-        RestartSec=10
-        [Install]
-        RequiredBy=kubelet.service
-
-    - name: load-rkt-stage1.service
-      enable: true
-      content: |
-        [Unit]
-        Description=Load rkt stage1 images
-        Documentation=http://github.com/coreos/rkt
-        Requires=network-online.target
-        After=network-online.target
-        Before=rkt-api.service
-        [Service]
-        Type=oneshot
-        RemainAfterExit=yes
-        ExecStart=/usr/bin/rkt fetch /usr/lib/rkt/stage1-images/stage1-coreos.aci /usr/lib/rkt/stage1-images/stage1-fly.aci  --insecure-options=image
-        [Install]
-        RequiredBy=rkt-api.service
-{{ end }}
-
 {{ if .UseCalico }}
     - name: calico-node.service
       command: start
-      runtime: true
       content: |
         [Unit]
         Description=Calico per-host agent
@@ -120,12 +75,10 @@ coreos:
         Environment=FELIX_FELIXHOSTNAME=$private_ipv4
         Environment=CALICO_NETWORKING=false
         Environment=NO_DEFAULT_POOLS=true
-        Environment=ETCD_ENDPOINTS={{ .ETCDEndpoints }}
+        Environment=ETCD_ENDPOINTS={{ .EtcdEndpoints }}
         ExecStart=/usr/bin/rkt run --inherit-env --stage1-from-dir=stage1-fly.aci \
         --volume=modules,kind=host,source=/lib/modules,readOnly=false \
         --mount=volume=modules,target=/lib/modules \
-        --volume=dns,kind=host,source=/etc/resolv.conf,readOnly=true \
-        --mount=volume=dns,target=/etc/resolv.conf \
         --trust-keys-from-https quay.io/calico/node:v0.19.0
         KillMode=mixed
         Restart=always
@@ -140,19 +93,21 @@ coreos:
       content: |
         [Unit]
         Description=decrypt kubelet tls assets using amazon kms
-        Before=kubelet.service
+        Before=kubelet.service flanneld.service
+        After=early-docker.service
+        Requires=early-docker.service
 
         [Service]
         Type=oneshot
         RemainAfterExit=yes
+        Environment="DOCKER_HOST=unix:///var/run/early-docker.sock"
         ExecStart=/opt/bin/decrypt-tls-assets
 
         [Install]
-        RequiredBy=kubelet.service
+        RequiredBy=kubelet.service flanneld.service
 
     - name: install-kube-system.service
       command: start
-      runtime: true
       content: |
         [Unit]
         Requires=kubelet.service docker.service
@@ -168,7 +123,6 @@ coreos:
 {{ if .UseCalico }}
     - name: install-calico-system.service
       command: start
-      runtime: true
       content: |
         [Unit]
         Requires=kubelet.service docker.service
@@ -206,26 +160,6 @@ write_files:
           "http://127.0.0.1:8080/api/v1/namespaces/kube-system/services"
       done
 
-  - path: /etc/kubernetes/cni/docker_opts_cni.env
-    content: |
-      DOCKER_OPT_BIP=""
-      DOCKER_OPT_IPMASQ=""
-
-  - path: /opt/bin/host-rkt
-    permissions: 0755
-    owner: root:root
-    content: |
-      #!/bin/sh
-      # This is bind mounted into the kubelet rootfs and all rkt shell-outs go
-      # through this rkt wrapper. It essentially enters the host mount namespace
-      # (which it is already in) only for the purpose of breaking out of the chroot
-      # before calling rkt. It makes things like rkt gc work and avoids bind mounting
-      # in certain rkt filesystem dependancies into the kubelet rootfs. This can
-      # eventually be obviated when the write-api stuff gets upstream and rkt gc is
-      # through the api-server. Related issue:
-      # https://github.com/coreos/rkt/issues/2878
-      exec nsenter -m -u -i -n -p -t 1 -- /usr/bin/rkt "$@"
-
 {{ if .UseCalico }}
   - path: /opt/bin/install-calico-system
     permissions: 0700
@@ -244,24 +178,9 @@ write_files:
       #!/bin/bash -e
 
       for encKey in $(find /etc/kubernetes/ssl/*.pem.enc);do
-        sudo rkt run \
-        --volume=ssl,kind=host,source=/etc/kubernetes/ssl,readOnly=false \
-        --mount=volume=ssl,target=/etc/kubernetes/ssl \
-        --uuid-file-save=/var/run/coreos/decrypt-tls-assets.uuid \
-        --dns=8.8.8.8 --dns=8.8.4.4 \
-        --net=host \
-        --trust-keys-from-https \
-        quay.io/coreos/awscli --exec=/bin/bash -- \
-          -c \
-          "/usr/bin/aws \
-            --region {{.Region}} kms decrypt \
-            --ciphertext-blob fileb://$encKey \
-            --output text \
-            --query Plaintext \
-            > $encKey.b64"
-
-        base64 --decode < $encKey.b64 > ${encKey%.enc}
-        sudo rkt rm --uuid-file=/var/run/coreos/decrypt-tls-assets.uuid
+        tmpPath="/tmp/$(basename $encKey).tmp"
+        docker run --net host --rm -v /etc/kubernetes/ssl:/etc/kubernetes/ssl quay.io/coreos/awscli aws --region {{.Region}} kms decrypt --ciphertext-blob fileb://$encKey --output text --query Plaintext | base64 --decode > $tmpPath
+        mv  $tmpPath /etc/kubernetes/ssl/$(basename $encKey .enc)
       done
 
   - path: /etc/kubernetes/manifests/kube-proxy.yaml
@@ -271,8 +190,6 @@ write_files:
         metadata:
           name: kube-proxy
           namespace: kube-system
-          annotations:
-            rkt.alpha.kubernetes.io/stage1-name-override: coreos.com/rkt/stage1-fly
         spec:
           hostNetwork: true
           containers:
@@ -288,16 +205,10 @@ write_files:
             - mountPath: /etc/ssl/certs
               name: ssl-certs-host
               readOnly: true
-            - mountPath: /var/run/dbus
-              name: dbus
-              readOnly: false
           volumes:
           - hostPath:
               path: /usr/share/ca-certificates
             name: ssl-certs-host
-          - hostPath:
-              path: /var/run/dbus
-            name: dbus
 
   - path: /etc/kubernetes/manifests/kube-apiserver.yaml
     content: |
@@ -315,7 +226,10 @@ write_files:
           - /hyperkube
           - apiserver
           - --bind-address=0.0.0.0
-          - --etcd-servers=http://localhost:2379
+          - --etcd-servers={{.EtcdEndpoints}}
+          - --etcd-cafile=/etc/kubernetes/ssl/ca.pem
+          - --etcd-certfile=/etc/kubernetes/ssl/etcd-client.pem
+          - --etcd-keyfile=/etc/kubernetes/ssl/etcd-client-key.pem
           - --allow-privileged=true
           - --service-cluster-ip-range={{.ServiceCIDR}}
           - --secure-port=443
@@ -445,7 +359,7 @@ write_files:
             image: calico/kube-policy-controller:v0.2.0
             env:
               - name: ETCD_ENDPOINTS
-                value: "{{ .ETCDEndpoints }}"
+                value: "{{ .EtcdEndpoints }}"
               - name: K8S_API
                 value: "http://127.0.0.1:8080"
               - name: LEADER_ELECTION
@@ -481,23 +395,23 @@ write_files:
             "labels": {
               "k8s-app": "kube-dns",
               "kubernetes.io/cluster-service": "true",
-              "version": "v17.1"
+              "version": "v15"
             },
-            "name": "kube-dns-v17.1",
+            "name": "kube-dns-v15",
             "namespace": "kube-system"
           },
           "spec": {
             "replicas": 1,
             "selector": {
               "k8s-app": "kube-dns",
-              "version": "v17.1"
+              "version": "v15"
             },
             "template": {
               "metadata": {
                 "labels": {
                   "k8s-app": "kube-dns",
                   "kubernetes.io/cluster-service": "true",
-                  "version": "v17.1"
+                  "version": "v15"
                 }
               },
               "spec": {
@@ -507,7 +421,7 @@ write_files:
                       "--domain=cluster.local.",
                       "--dns-port=10053"
                     ],
-                    "image": "gcr.io/google_containers/kubedns-amd64:1.5",
+                    "image": "gcr.io/google_containers/kubedns-amd64:1.3",
                     "livenessProbe": {
                       "failureThreshold": 5,
                       "httpGet": {
@@ -544,11 +458,11 @@ write_files:
                     "resources": {
                       "limits": {
                         "cpu": "100m",
-                        "memory": "170Mi"
+                        "memory": "200Mi"
                       },
                       "requests": {
                         "cpu": "100m",
-                        "memory": "70Mi"
+                        "memory": "50Mi"
                       }
                     }
                   },
@@ -575,11 +489,11 @@ write_files:
                   },
                   {
                     "args": [
-                      "-cmd=nslookup kubernetes.default.svc.cluster.local 127.0.0.1 >/dev/null && nslookup kubernetes.default.svc.cluster.local 127.0.0.1:10053 >/dev/null",
+                      "-cmd=nslookup kubernetes.default.svc.cluster.local 127.0.0.1 >/dev/null",
                       "-port=8080",
                       "-quiet"
                     ],
-                    "image": "gcr.io/google_containers/exechealthz-amd64:1.1",
+                    "image": "gcr.io/google_containers/exechealthz-amd64:1.0",
                     "name": "healthz",
                     "ports": [
                       {
@@ -590,11 +504,11 @@ write_files:
                     "resources": {
                       "limits": {
                         "cpu": "10m",
-                        "memory": "50Mi"
+                        "memory": "20Mi"
                       },
                       "requests": {
                         "cpu": "10m",
-                        "memory": "50Mi"
+                        "memory": "20Mi"
                       }
                     }
                   }
@@ -773,9 +687,9 @@ write_files:
             "labels": {
               "k8s-app": "kubernetes-dashboard",
               "kubernetes.io/cluster-service": "true",
-              "version": "v1.1.1"
+              "version": "v1.1.0"
             },
-            "name": "kubernetes-dashboard-v1.1.1",
+            "name": "kubernetes-dashboard-v1.1.0",
             "namespace": "kube-system"
           },
           "spec": {
@@ -788,13 +702,13 @@ write_files:
                 "labels": {
                   "k8s-app": "kubernetes-dashboard",
                   "kubernetes.io/cluster-service": "true",
-                  "version": "v1.1.1"
+                  "version": "v1.1.0"
                 }
               },
               "spec": {
                 "containers": [
                   {
-                    "image": "gcr.io/google_containers/kubernetes-dashboard-amd64:v1.1.1",
+                    "image": "gcr.io/google_containers/kubernetes-dashboard-amd64:v1.1.0",
                     "livenessProbe": {
                       "httpGet": {
                         "path": "/",
@@ -864,6 +778,15 @@ write_files:
     encoding: gzip+base64
     content: {{.TLSConfig.APIServerKey}}
 
+  - path: /etc/kubernetes/ssl/etcd-client.pem.enc
+    encoding: gzip+base64
+    content: {{.TLSConfig.EtcdClientCert}}
+
+  - path: /etc/kubernetes/ssl/etcd-client-key.pem.enc
+    encoding: gzip+base64
+    content: {{.TLSConfig.EtcdClientKey}}
+
+
 {{ if .UseCalico }}
   - path: /etc/kubernetes/cni/net.d/10-calico.conf
     content: |
@@ -872,7 +795,7 @@ write_files:
             "type": "flannel",
             "delegate": {
                 "type": "calico",
-                "etcd_endpoints": "{{ .ETCDEndpoints }}",
+                "etcd_endpoints": "{{ .EtcdEndpoints }}",
                 "log_level": "none",
                 "log_level_stderr": "info",
                 "hostname": "$private_ipv4",
@@ -880,16 +803,6 @@ write_files:
                     "type": "k8s",
                     "k8s_api_root": "http://127.0.0.1:8080/api/v1/"
                 }
-            }
-        }
-{{ else }}
-  - path: /etc/kubernetes/cni/net.d/10-flannel.conf
-    content: |
-        {
-            "name": "podnet",
-            "type": "flannel",
-            "delegate": {
-                "isDefaultGateway": true
             }
         }
 {{ end }}

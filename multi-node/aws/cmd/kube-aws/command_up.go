@@ -26,7 +26,7 @@ var (
 func init() {
 	cmdRoot.AddCommand(cmdUp)
 	cmdUp.Flags().BoolVar(&upOpts.export, "export", false, "Don't create cluster, instead export cloudformation stack file")
-	//	cmdUp.Flags().BoolVar(&upOpts.update, "update", false, "update existing cluster with new cloudformation stack")
+	cmdUp.Flags().BoolVar(&upOpts.update, "update", false, "update existing cluster with new cloudformation stack")
 	cmdUp.Flags().BoolVar(&upOpts.awsDebug, "aws-debug", false, "Log debug information from aws-sdk-go library")
 }
 
@@ -81,7 +81,7 @@ func runCmdUp(cmd *cobra.Command, args []string) error {
 	successMsg :=
 		`Success! Your AWS resources have been created:
 %s
-The containers that power your cluster are now being downloaded.
+The containers that power your cluster are now being dowloaded.
 
 You should be able to access the Kubernetes API once the containers finish downloading.
 `

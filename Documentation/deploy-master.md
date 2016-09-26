@@ -97,7 +97,7 @@ Note that the kubelet running on a master node may log repeated attempts to post
 
 * Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
 * Replace `${DNS_SERVICE_IP}`
-* Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release, e.g. `v1.3.6_coreos.0`.
+* Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release, e.g. `v1.4.0_coreos.0`.
 * Replace `${NETWORK_PLUGIN}` with `cni` if using Calico. Otherwise just leave it blank.
 * Decide if you will use [additional features][rkt-opts-examples] such as:
   - [mounting ephemeral disks][mount-disks]
@@ -157,7 +157,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-apiserver
-    image: quay.io/coreos/hyperkube:v1.3.6_coreos.0
+    image: quay.io/coreos/hyperkube:v1.4.0_coreos.0
     command:
     - /hyperkube
     - apiserver
@@ -216,7 +216,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-proxy
-    image: quay.io/coreos/hyperkube:v1.3.6_coreos.0
+    image: quay.io/coreos/hyperkube:v1.4.0_coreos.0
     command:
     - /hyperkube
     - proxy
@@ -256,7 +256,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-controller-manager
-    image: quay.io/coreos/hyperkube:v1.3.6_coreos.0
+    image: quay.io/coreos/hyperkube:v1.4.0_coreos.0
     command:
     - /hyperkube
     - controller-manager
@@ -305,7 +305,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-scheduler
-    image: quay.io/coreos/hyperkube:v1.3.6_coreos.0
+    image: quay.io/coreos/hyperkube:v1.4.0_coreos.0
     command:
     - /hyperkube
     - scheduler

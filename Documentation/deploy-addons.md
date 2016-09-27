@@ -233,7 +233,7 @@ Access the dashboard by port forwarding with `kubectl`.
 
 
 ```sh
-$ kubectl get pods
+$ kubectl get pods --namespace=kube-system
 $ kubectl port-forward kubernetes-dashboard-v1.4.0-SOME-ID 9090 --namespace=kube-system
 ```
 

@@ -49,6 +49,12 @@ You may modify the kubelet's unit file to use [additional features][rkt-opts-exa
 - [enable the cluster logging add-on][cluster-logging]
 - [changing your CoreOS auto-update settings][update]
 
+## Boot etcd Cluster
+
+It is highly recommended that etcd is run as a dedicated cluster separately from Kubernetes components.
+
+Use the [official etcd clustering guide](https://coreos.com/etcd/docs/latest/docker_guide.html) to decide how best to deploy etcd into your environment.
+
 ## Boot Controllers
 
 Follow these instructions for each controller you wish to boot:

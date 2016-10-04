@@ -44,8 +44,8 @@ coreos:
         --register-node=true \
         --allow-privileged=true \
         --config=/etc/kubernetes/manifests \
-        --cluster_dns={{.DNSServiceIP}} \
-        --cluster_domain=cluster.local \
+        --cluster-dns={{.DNSServiceIP}} \
+        --cluster-domain=cluster.local \
         --cloud-provider=aws \
         --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml \
         --tls-cert-file=/etc/kubernetes/ssl/worker.pem \

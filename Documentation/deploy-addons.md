@@ -41,30 +41,32 @@ spec:
 apiVersion: v1
 kind: ReplicationController
 metadata:
-  name: kube-dns-v17.1
+  name: kube-dns-v19
   namespace: kube-system
   labels:
     k8s-app: kube-dns
-    version: v17.1
+    version: v19
     kubernetes.io/cluster-service: "true"
 spec:
   replicas: 1
   selector:
     k8s-app: kube-dns
-    version: v17.1
+    version: v19
   template:
     metadata:
       labels:
         k8s-app: kube-dns
-        version: v17.1
+        version: v19
         kubernetes.io/cluster-service: "true"
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ''
+        scheduler.alpha.kubernetes.io/tolerations: '[{"key":"CriticalAddonsOnly", "operator":"Exists"}]'
     spec:
       containers:
       - name: kubedns
-        image: gcr.io/google_containers/kubedns-amd64:1.5
+        image: gcr.io/google_containers/kubedns-amd64:1.7
         resources:
           limits:
-            cpu: 100m
             memory: 170Mi
           requests:
             cpu: 100m
@@ -83,12 +85,9 @@ spec:
             path: /readiness
             port: 8081
             scheme: HTTP
-          # we poll on pod startup for the Kubernetes master service and
-          # only setup the /readiness HTTP server once that's available.
           initialDelaySeconds: 30
           timeoutSeconds: 5
         args:
-        # command = "/kube-dns"
         - --domain=cluster.local.
         - --dns-port=10053
         ports:
@@ -104,6 +103,7 @@ spec:
         - --cache-size=1000
         - --no-resolv
         - --server=127.0.0.1#10053
+        - --log-facility=-
         ports:
         - containerPort: 53
           name: dns
@@ -114,9 +114,7 @@ spec:
       - name: healthz
         image: gcr.io/google_containers/exechealthz-amd64:1.1
         resources:
-          # keep request = limit to keep this container in guaranteed class
           limits:
-            cpu: 10m
             memory: 50Mi
           requests:
             cpu: 10m
@@ -128,12 +126,12 @@ spec:
         ports:
         - containerPort: 8080
           protocol: TCP
-      dnsPolicy: Default  # Don't use cluster DNS.
+      dnsPolicy: Default 
 ```
 
 *Note:* The above YAML definition is based on the upstream DNS addon in the [Kubernetes addon folder][k8s-dns-addon].
 
-[k8s-dns-addon]: https://github.com/kubernetes/kubernetes/tree/v1.3.6/cluster/saltbase/salt/kube-dns
+[k8s-dns-addon]: https://github.com/kubernetes/kubernetes/tree/v1.4.0/cluster/addons/dns
 
 This single YAML file is actually creating 2 different Kubernetes objects, separated by `---`.
 
@@ -147,123 +145,96 @@ Next, start the DNS add-on:
 $ kubectl create -f dns-addon.yml
 ```
 
-And check for `kube-dns-v17.1-*` pod up and running:
+And check for `kube-dns-v19-*` pod up and running:
 
 ```sh
-$ kubectl get pods --namespace=kube-system | grep kube-dns-v17.1
+$ kubectl get pods --namespace=kube-system | grep kube-dns-v19
 ```
 
 ## Deploy the kube Dashboard Add-on
 
-Create `kube-dashboard-rc.json` and `kube-dashboard-svc.json` on your local machine.
+Create `kube-dashboard-rc.yaml` and `kube-dashboard-svc.yaml` on your local machine.
 
-**kube-dashboard-rc.json**
+**kube-dashboard-rc.yaml**
 
 
-```json
-{
-  "apiVersion": "v1",
-  "kind": "ReplicationController",
-  "metadata": {
-    "labels": {
-      "k8s-app": "kubernetes-dashboard",
-      "kubernetes.io/cluster-service": "true",
-      "version": "v1.1.1"
-    },
-    "name": "kubernetes-dashboard-v1.1.1",
-    "namespace": "kube-system"
-  },
-  "spec": {
-    "replicas": 1,
-    "selector": {
-      "k8s-app": "kubernetes-dashboard"
-    },
-    "template": {
-      "metadata": {
-        "labels": {
-          "k8s-app": "kubernetes-dashboard",
-          "kubernetes.io/cluster-service": "true",
-          "version": "v1.1.1"
-        }
-      },
-      "spec": {
-        "containers": [
-          {
-            "image": "gcr.io/google_containers/kubernetes-dashboard-amd64:v1.1.1",
-            "livenessProbe": {
-              "httpGet": {
-                "path": "/",
-                "port": 9090
-              },
-              "initialDelaySeconds": 30,
-              "timeoutSeconds": 30
-            },
-            "name": "kubernetes-dashboard",
-            "ports": [
-              {
-                "containerPort": 9090
-              }
-            ],
-            "resources": {
-              "limits": {
-                "cpu": "100m",
-                "memory": "50Mi"
-              },
-              "requests": {
-                "cpu": "100m",
-                "memory": "50Mi"
-              }
-            }
-          }
-        ]
-      }
-    }
-  }
-}
+```yaml
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: kubernetes-dashboard-v1.4.0
+  namespace: kube-system
+  labels:
+    k8s-app: kubernetes-dashboard
+    version: v1.4.0
+    kubernetes.io/cluster-service: "true"
+spec:
+  replicas: 1
+  selector:
+    k8s-app: kubernetes-dashboard
+  template:
+    metadata:
+      labels:
+        k8s-app: kubernetes-dashboard
+        version: v1.4.0
+        kubernetes.io/cluster-service: "true"
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ''
+        scheduler.alpha.kubernetes.io/tolerations: '[{"key":"CriticalAddonsOnly", "operator":"Exists"}]'
+    spec:
+      containers:
+      - name: kubernetes-dashboard
+        image: gcr.io/google_containers/kubernetes-dashboard-amd64:v1.4.0
+        resources:
+          limits:
+            cpu: 100m
+            memory: 50Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+        ports:
+        - containerPort: 9090
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 9090
+          initialDelaySeconds: 30
+          timeoutSeconds: 30
 ```
 
-**kube-dashboard-svc.json**
+**kube-dashboard-svc.yaml**
 
 
-```json
-{
-  "apiVersion": "v1",
-  "kind": "Service",
-  "metadata": {
-    "labels": {
-      "k8s-app": "kubernetes-dashboard",
-      "kubernetes.io/cluster-service": "true"
-    },
-    "name": "kubernetes-dashboard",
-    "namespace": "kube-system"
-  },
-  "spec": {
-    "ports": [
-      {
-        "port": 80,
-        "targetPort": 9090
-      }
-    ],
-    "selector": {
-      "k8s-app": "kubernetes-dashboard"
-    }
-  }
-}
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubernetes-dashboard
+  namespace: kube-system
+  labels:
+    k8s-app: kubernetes-dashboard
+    kubernetes.io/cluster-service: "true"
+spec:
+  selector:
+    k8s-app: kubernetes-dashboard
+  ports:
+  - port: 80
+    targetPort: 9090
 ```
 
 Create the Replication Controller and Service.
 
 ```sh
-$ kubectl create -f kube-dashboard-rc.json
-$ kubectl create -f kube-dashboard-svc.json
+$ kubectl create -f kube-dashboard-rc.yaml
+$ kubectl create -f kube-dashboard-svc.yaml
 ```
 
 Access the dashboard by port forwarding with `kubectl`.
 
 
 ```sh
-$ kubectl get pods
-$ kubectl port-forward kubernetes-dashboard-v1.1.1-SOME-ID 9090 --namespace=kube-system
+$ kubectl get pods --namespace=kube-system
+$ kubectl port-forward kubernetes-dashboard-v1.4.0-SOME-ID 9090 --namespace=kube-system
 ```
 
 Then visit [http://127.0.0.1:9090](http://127.0.0.1:9090/) in your browser.
@@ -271,5 +242,5 @@ Then visit [http://127.0.0.1:9090](http://127.0.0.1:9090/) in your browser.
 <div class="co-m-docs-next-step">
   <p>Now that you have a working Kubernetes cluster with a functional CLI tool, you are free to deploy Kubernetes-ready applications.</p>
   <p>Start with a multi-tier web application (Guestbook) from the official Kubernetes documentation to visualize how the various Kubernetes components fit together.</p>
-  <a href="https://github.com/kubernetes/kubernetes/blob/release-1.3/examples/guestbook/README.md" class="btn btn-default btn-icon-right" data-category="Docs Next" data-event="kubernetes.io: Guestbook">Deploy the Guestbook Sample app</a>
+  <a href="https://github.com/kubernetes/kubernetes/blob/release-1.4/examples/guestbook/README.md" class="btn btn-default btn-icon-right" data-category="Docs Next" data-event="kubernetes.io: Guestbook">Deploy the Guestbook Sample app</a>
 </div>

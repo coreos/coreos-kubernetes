@@ -251,7 +251,12 @@
     },
     "InstanceController": {
       "Properties": {
-        "AvailabilityZone": "{{(index .Subnets .ControllerSubnetIndex).AvailabilityZone}}",
+        "AvailabilityZone":
+        {{if .ControllerSubnet}}
+        "{{.ControllerSubnet.AvailabilityZone}}"
+        {{else}}
+        "{{(index .Subnets .ControllerSubnetIndex).AvailabilityZone}}"
+        {{end}},
         "BlockDeviceMappings": [
           {
             "DeviceName": "/dev/xvda",
@@ -282,7 +287,12 @@
             ],
             "PrivateIpAddress": "{{.ControllerIP}}",
             "SubnetId": {
-              "Ref": "Subnet{{.ControllerSubnetIndex}}"
+              "Ref": 
+              {{if .ControllerSubnet}}
+              "ControllerSubnet"
+              {{else}}
+              "Subnet{{.ControllerSubnetIndex}}"
+              {{end}}
             }
           }
         ],
@@ -568,6 +578,42 @@
     }
     {{end}}
     {{end}}
+
+    {{if .ControllerSubnet}}
+    ,
+    "ControllerSubnet": {
+      "Properties": {
+        "AvailabilityZone": "{{.ControllerSubnet.AvailabilityZone}}",
+        "CidrBlock": "{{.ControllerSubnet.InstanceCIDR}}",
+        "MapPublicIpOnLaunch": true,
+        "Tags": [
+          {
+              "Key": "Name",
+              "Value": "kubernetes-{{$.ClusterName}}-controller-subnet"
+            },
+            {
+            "Key": "KubernetesCluster",
+            "Value": "{{$.ClusterName}}"
+          }
+        ],
+        "VpcId": {{$.VPCRef}}
+      },
+      "Type": "AWS::EC2::Subnet"
+    }
+      {{if .ControllerSubnet.RouteTableID}}
+        ,
+        "ControllerSubnetRouteTableAssociation": {
+          "Properties": {
+            "RouteTableId": "{{.ControllerSubnet.RouteTableID}}",
+            "SubnetId": {
+              "Ref": "ControllerSubnet"
+            }
+          },
+          "Type": "AWS::EC2::SubnetRouteTableAssociation"
+        }
+      {{end}}
+    {{end}}
+
     {{if not .VPCID}}
     ,
     "{{.VPCLogicalName}}": {
@@ -645,10 +691,22 @@
     }
     {{end}}
     {{end}}
-    {{else}}
-    {{if .RouteTableID}}
+
+    {{else}} {{/* else VPC ID set */}}
     {{range $index, $subnet := .Subnets}}
     {{with $subnetLogicalName := printf "Subnet%d" $index}}
+    {{if $subnet.RouteTableID}} {{/* subnet specific route table set */}}
+    ,
+    "{{$subnetLogicalName}}RouteTableAssociation": {
+      "Properties": {
+        "RouteTableId": "{{$subnet.RouteTableID}}",
+        "SubnetId": {
+          "Ref": "{{$subnetLogicalName}}"
+        }
+      },
+      "Type": "AWS::EC2::SubnetRouteTableAssociation"
+    }
+    {{else if $.RouteTableID}} {{/* default route table set */}}
     ,
     "{{$subnetLogicalName}}RouteTableAssociation": {
       "Properties": {

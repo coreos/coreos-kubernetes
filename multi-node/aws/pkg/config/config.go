@@ -129,6 +129,7 @@ type Cluster struct {
 	VPCCIDR                  string            `yaml:"vpcCIDR,omitempty"`
 	InstanceCIDR             string            `yaml:"instanceCIDR,omitempty"`
 	ControllerIP             string            `yaml:"controllerIP,omitempty"`
+	ControllerSubnet         Subnet            `yaml:"controllerSubnet,omitempty"`
 	PodCIDR                  string            `yaml:"podCIDR,omitempty"`
 	ServiceCIDR              string            `yaml:"serviceCIDR,omitempty"`
 	DNSServiceIP             string            `yaml:"dnsServiceIP,omitempty"`
@@ -150,6 +151,7 @@ type Cluster struct {
 type Subnet struct {
 	AvailabilityZone string `yaml:"availabilityZone,omitempty"`
 	InstanceCIDR     string `yaml:"instanceCIDR,omitempty"`
+	RouteTableID     string `yaml:"routeTableId,omitempty"`
 }
 
 const (
@@ -293,19 +295,31 @@ func (c Cluster) stackConfig(opts StackTemplateOptions, compressUserData bool) (
 	if controllerIPAddr == nil {
 		return nil, fmt.Errorf("invalid controllerIP: %s", stackConfig.ControllerIP)
 	}
-	controllerSubnetFound := false
-	for i, subnet := range stackConfig.Subnets {
-		_, instanceCIDR, err := net.ParseCIDR(subnet.InstanceCIDR)
+	if &stackConfig.ControllerSubnet == nil {
+		// if no controller subnet specified, the controller IP should match one of the worker subnet CIDRs
+		controllerSubnetFound := false
+		for i, subnet := range stackConfig.Subnets {
+			_, instanceCIDR, err := net.ParseCIDR(subnet.InstanceCIDR)
+			if err != nil {
+				return nil, fmt.Errorf("invalid instanceCIDR: %v", err)
+			}
+			if instanceCIDR.Contains(controllerIPAddr) {
+				stackConfig.ControllerSubnetIndex = i
+				controllerSubnetFound = true
+			}
+		}
+		if !controllerSubnetFound {
+			return nil, fmt.Errorf("Fail-fast occurred possibly because of a bug: ControllerSubnetIndex couldn't be determined for subnets (%v) and controllerIP (%v)", stackConfig.Subnets, stackConfig.ControllerIP)
+		}
+	} else {
+		// else there is a controller subnet specified, the controller IP should match the CIDR here
+		_, instanceCIDR, err := net.ParseCIDR(stackConfig.ControllerSubnet.InstanceCIDR)
 		if err != nil {
 			return nil, fmt.Errorf("invalid instanceCIDR: %v", err)
 		}
-		if instanceCIDR.Contains(controllerIPAddr) {
-			stackConfig.ControllerSubnetIndex = i
-			controllerSubnetFound = true
+		if !instanceCIDR.Contains(controllerIPAddr) {
+			return nil, fmt.Errorf("Fail-fast occurred possibly because of a bug: controller IP (%v) is not part of controller subnet (%v)", stackConfig.ControllerIP, stackConfig.ControllerSubnet)
 		}
-	}
-	if !controllerSubnetFound {
-		return nil, fmt.Errorf("Fail-fast occurred possibly because of a bug: ControllerSubnetIndex couldn't be determined for subnets (%v) and controllerIP (%v)", stackConfig.Subnets, stackConfig.ControllerIP)
 	}
 
 	if stackConfig.UserDataWorker, err = execute(opts.WorkerTmplFile, stackConfig.Config, compressUserData); err != nil {
@@ -526,6 +540,12 @@ func (c Cluster) valid() error {
 		}
 
 		var instanceCIDRs = make([]*net.IPNet, 0)
+		var subnets = c.Subnets;
+		if &c.ControllerSubnet != nil {
+			// controller subnet is defined, add to the list
+			subnets = append(subnets, c.ControllerSubnet)
+		 }
+
 		for i, subnet := range c.Subnets {
 			if subnet.AvailabilityZone == "" {
 				return fmt.Errorf("availabilityZone must be set for subnet #%d", i)
@@ -544,17 +564,19 @@ func (c Cluster) valid() error {
 			}
 		}
 
-		controllerInstanceCidrExists := false
-		for _, a := range instanceCIDRs {
-			if a.Contains(controllerIPAddr) {
-				controllerInstanceCidrExists = true
+		if &c.ControllerSubnet == nil {
+			controllerInstanceCidrExists := false
+			for _, a := range instanceCIDRs {
+				if a.Contains(controllerIPAddr) {
+					controllerInstanceCidrExists = true
+				}
 			}
-		}
-		if !controllerInstanceCidrExists {
-			return fmt.Errorf("No instanceCIDRs in Subnets (%v) contain controllerIP (%s)",
-				instanceCIDRs,
-				c.ControllerIP,
-			)
+			if !controllerInstanceCidrExists {
+				return fmt.Errorf("No instanceCIDRs in Subnets (%v) contain controllerIP (%s)",
+					instanceCIDRs,
+					c.ControllerIP,
+				)
+			}
 		}
 
 		for i, a := range instanceCIDRs {

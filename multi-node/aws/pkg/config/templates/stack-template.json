@@ -589,7 +589,7 @@
         "Tags": [
           {
               "Key": "Name",
-              "Value": "kubernetes-{{$.ClusterName}}-controller-subnet"
+              "Value": "{{$.ClusterName}}-controller-subnet"
             },
             {
             "Key": "KubernetesCluster",

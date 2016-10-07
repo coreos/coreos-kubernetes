@@ -379,6 +379,10 @@
         ],
         "Tags": [
           {
+            "Key": "Name",
+            "Value": "{{.ClusterName}}-sg-controller"
+          },
+          {
             "Key": "KubernetesCluster",
             "Value": "{{.ClusterName}}"
           }
@@ -441,6 +445,10 @@
           }
         ],
         "Tags": [
+          {
+            "Key": "Name",
+            "Value": "{{.ClusterName}}-sg-worker"
+          },
           {
             "Key": "KubernetesCluster",
             "Value": "{{.ClusterName}}"
@@ -558,6 +566,10 @@
         "MapPublicIpOnLaunch": true,
         "Tags": [
           {
+            "Key": "Name",
+            "Value": "{{.ClusterName}}-{{$subnetLogicalName}}"
+          },
+          {
             "Key": "KubernetesCluster",
             "Value": "{{$.ClusterName}}"
           }
@@ -583,7 +595,7 @@
           },
           {
             "Key": "Name",
-            "Value": "kubernetes-{{.ClusterName}}-vpc"
+            "Value": "{{.ClusterName}}-vpc"
           }
         ]
       },
@@ -592,6 +604,10 @@
     "RouteTable": {
       "Properties": {
         "Tags": [
+          {
+            "Key": "Name",
+            "Value": "{{.ClusterName}}-route-table"
+          },
           {
             "Key": "KubernetesCluster",
             "Value": "{{.ClusterName}}"
@@ -614,6 +630,10 @@
     "InternetGateway": {
       "Properties": {
         "Tags": [
+          {
+            "Key": "Name",
+            "Value": "{{.ClusterName}}-igw"
+          },
           {
             "Key": "KubernetesCluster",
             "Value": "{{.ClusterName}}"

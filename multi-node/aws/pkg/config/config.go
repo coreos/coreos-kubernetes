@@ -540,11 +540,11 @@ func (c Cluster) valid() error {
 		}
 
 		var instanceCIDRs = make([]*net.IPNet, 0)
-		var subnets = c.Subnets;
+		var subnets = c.Subnets
 		if &c.ControllerSubnet != nil {
 			// controller subnet is defined, add to the list
 			subnets = append(subnets, c.ControllerSubnet)
-		 }
+		}
 
 		for i, subnet := range c.Subnets {
 			if subnet.AvailabilityZone == "" {

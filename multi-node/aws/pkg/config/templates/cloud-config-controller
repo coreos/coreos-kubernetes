@@ -232,7 +232,9 @@ write_files:
     owner: root:root
     content: |
       #!/bin/bash -e
-      /usr/bin/curl -H "Content-Type: application/json" -XPOST -d @"/srv/kubernetes/manifests/calico-system.json" "http://127.0.0.1:8080/api/v1/namespaces"
+      /usr/bin/curl -H "Content-Type: application/yaml" -XPOST \
+      -d"$(cat /srv/kubernetes/manifests/calico-system.yaml)" \
+      "http://127.0.0.1:8080/api/v1/namespaces"
 
       /usr/bin/cp /srv/kubernetes/manifests/calico-policy-controller.yaml /etc/kubernetes/manifests
 {{ end }}
@@ -461,15 +463,12 @@ write_files:
 {{ end }}
 
 {{ if .UseCalico }}
-  - path: /srv/kubernetes/manifests/calico-system.json
+  - path: /srv/kubernetes/manifests/calico-system.yaml
     content: |
-        {
-          "apiVersion": "v1",
-          "kind": "Namespace",
-          "metadata": {
-            "name": "calico-system"
-          }
-        }
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: calico-system
 {{ end }}
 
   - path: /srv/kubernetes/manifests/kube-dns-ds.yaml

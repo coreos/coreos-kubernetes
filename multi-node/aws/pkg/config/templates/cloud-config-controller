@@ -189,8 +189,8 @@ write_files:
     content: |
       #!/bin/bash -e
       /usr/bin/curl  -H "Content-Type: application/yaml" -XPOST \
-      -d"$(cat /srv/kubernetes/manifests/kube-dns-rc.yaml)" \
-      "http://127.0.0.1:8080/api/v1/namespaces/kube-system/replicationcontrollers"
+      -d"$(cat /srv/kubernetes/manifests/kube-dns-ds.yaml)" \
+      "http://127.0.0.1:8080/apis/extensions/v1beta1/namespaces/kube-system/daemonsets"
 
       /usr/bin/curl  -H "Content-Type: application/yaml" -XPOST \
       -d"$(cat /srv/kubernetes/manifests/kube-dashboard-rc.yaml)" \
@@ -472,10 +472,10 @@ write_files:
         }
 {{ end }}
 
-  - path: /srv/kubernetes/manifests/kube-dns-rc.yaml
+  - path: /srv/kubernetes/manifests/kube-dns-ds.yaml
     content: |
-        apiVersion: v1
-        kind: ReplicationController
+        apiVersion: extensions/v1beta1
+        kind: DaemonSet
         metadata:
           name: kube-dns-v19
           namespace: kube-system
@@ -484,7 +484,6 @@ write_files:
             version: v19
             kubernetes.io/cluster-service: "true"
         spec:
-          replicas: 1
           selector:
             k8s-app: kube-dns
             version: v19
@@ -562,7 +561,7 @@ write_files:
                 ports:
                 - containerPort: 8080
                   protocol: TCP
-              dnsPolicy: Default 
+              dnsPolicy: Default
 
   - path: /srv/kubernetes/manifests/kube-dns-svc.yaml
     content: |
@@ -667,17 +666,17 @@ write_files:
     content: |
         kind: Service
         apiVersion: v1
-        metadata: 
+        metadata:
           name: heapster
           namespace: kube-system
-          labels: 
+          labels:
             kubernetes.io/cluster-service: "true"
             kubernetes.io/name: "Heapster"
-        spec: 
-          ports: 
+        spec:
+          ports:
             - port: 80
               targetPort: 8082
-          selector: 
+          selector:
             k8s-app: heapster
 
   - path: /srv/kubernetes/manifests/kube-dashboard-rc.yaml
@@ -740,7 +739,7 @@ write_files:
           ports:
           - port: 80
             targetPort: 9090
-        
+
   - path: /etc/kubernetes/ssl/ca.pem.enc
     encoding: gzip+base64
     content: {{.TLSConfig.CACert}}

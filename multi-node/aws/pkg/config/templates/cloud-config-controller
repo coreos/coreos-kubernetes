@@ -483,9 +483,6 @@ write_files:
           version: v19
           kubernetes.io/cluster-service: "true"
       spec:
-        selector:
-          k8s-app: kube-dns
-          version: v19
         template:
           metadata:
             labels:

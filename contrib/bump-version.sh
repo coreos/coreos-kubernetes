@@ -4,7 +4,7 @@
 # the CURRENT_VERSION to the TARGET_VERSION. This is meant as a helper - but
 # probably should still double-check the changes are correct
 
-if [ $# -ne 1 ] || [ `expr match $1 ".*_.*"` == 0 ]; then
+if [ $# -ne 1 ] || [ `expr $1 : ".*_.*"` == 0 ]; then
     echo "USAGE: $0 <target-version>"
     echo "  example: $0 'v1.4.0_coreos.0'"
     exit 1
@@ -13,8 +13,8 @@ fi
 CURRENT_VERSION=${CURRENT_VERSION:-"v1.4.0_coreos.0"}
 TARGET_VERSION=${1}
 
-CURRENT_VERSION_BASE=${CURRENT_VERSION:0:`expr index $CURRENT_VERSION _` -1}
-TARGET_VERSION_BASE=${TARGET_VERSION:0:`expr index $TARGET_VERSION _` -1}
+CURRENT_VERSION_BASE=${CURRENT_VERSION%%_*}
+TARGET_VERSION_BASE=${TARGET_VERSION%%_*}
 
 CURRENT_VERSION_SEMVER=${CURRENT_VERSION/_/+}
 TARGET_VERSION_SEMVER=${TARGET_VERSION/_/+}

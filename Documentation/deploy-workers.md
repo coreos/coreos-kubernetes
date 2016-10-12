@@ -120,7 +120,7 @@ RestartSec=10
 WantedBy=multi-user.target
 ```
 
-### Set Up the CNI config
+### Set Up the CNI config (optional)
 
 The kubelet reads the CNI configuration on startup and uses that to determine which CNI plugin to call. Create the following file which tells the kubelet to call the flannel plugin but to then delegate control to the Calico plugin. Using the flannel plugin ensures that the Calico plugin is called with the IP range for the node that was selected by flannel.
 
@@ -228,7 +228,7 @@ contexts:
 current-context: kubelet-context
 ```
 
-### Set Up Calico Node Container
+### Set Up Calico Node Container (optional)
 
 The Calico node container runs on all hosts, including the master node. It performs two functions:
 * Connects containers to the flannel overlay network, which enables the "one IP per pod" concept.

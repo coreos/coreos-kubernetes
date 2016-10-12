@@ -9,6 +9,7 @@ First create `dns-addon.yml` on your local machine and replace the variable. The
 [k8s-dns]: http://kubernetes.io/docs/admin/dns.html
 
 * Replace `${DNS_SERVICE_IP}`
+* Replace `${KUBERNETES_SERVICE_HOST}`
 
 **dns-addon.yml**
 
@@ -126,7 +127,33 @@ spec:
         ports:
         - containerPort: 8080
           protocol: TCP
+      volumeMounts:
+      - name: kubernetes-etc
+        mountPath: /etc/kubernetes/ssl
+        readOnly: true
       dnsPolicy: Default 
+
+
+---
+
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority: /etc/kubernetes/ssl/ca.pem
+    server: https://${KUBERNETES_SERVICE_HOST}:443
+  name: default-cluster
+contexts:
+- context:
+    cluster: default-cluster
+    user: default-admin
+  name: default-system
+current-context: default-system
+kind: Config
+users:
+- name: default-admin
+  user:
+    client-certificate: /etc/kubernetes/ssl/admin.pem
+    client-key: /etc/kubernetes/ssl/admin-key.pem
 ```
 
 *Note:* The above YAML definition is based on the upstream DNS addon in the [Kubernetes addon folder][k8s-dns-addon].

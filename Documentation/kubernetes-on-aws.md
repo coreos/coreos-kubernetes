@@ -22,6 +22,14 @@ Each of the steps will cover:
 
 Let's get started.
 
+---
+
+CoreOS is interested in learning more about how people are launching clusters on AWS - fill out [this survey](https://docs.google.com/forms/d/e/1FAIpQLSf7rktZ_1QABIPkzYqxlMuGSE4W82ZFUYmyYk0ER7tqHMPBRg/viewform) to help us out.
+
+This survey is meant for those who are currently running at least some workloads (dev, staging, or prod) on Kubernetes on AWS. Once we have received enough responses, we will share our learnings, anonymized and in aggregate, with the general Kubernetes community.
+
+---
+
 ## Download kube-aws
 
 Import the [CoreOS Application Signing Public Key](https://coreos.com/security/app-signing-key/):

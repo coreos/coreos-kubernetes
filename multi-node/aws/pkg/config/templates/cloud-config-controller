@@ -63,8 +63,8 @@ coreos:
         --register-schedulable=false \
         --allow-privileged=true \
         --config=/etc/kubernetes/manifests \
-        --cluster_dns={{.DNSServiceIP}} \
-        --cluster_domain=cluster.local \
+        --cluster-dns={{.DNSServiceIP}} \
+        --cluster-domain=cluster.local \
         --cloud-provider=aws
         Restart=always
         RestartSec=10

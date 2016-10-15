@@ -36,6 +36,9 @@ export USE_CALICO=false
 # Determines the container runtime for kubernetes to use. Accepts 'docker' or 'rkt'.
 export CONTAINER_RUNTIME=docker
 
+# A number of API server. If deploying multiple master nodes, set this number accordingly.
+export API_SERVER_COUNT=1
+
 # The above settings can optionally be overridden using an environment file:
 ENV_FILE=/run/coreos-kubernetes/options.env
 
@@ -288,6 +291,7 @@ spec:
     - --client-ca-file=/etc/kubernetes/ssl/ca.pem
     - --service-account-key-file=/etc/kubernetes/ssl/apiserver-key.pem
     - --runtime-config=extensions/v1beta1/networkpolicies=true
+    - --apiserver-count=${API_SERVER_COUNT}
     livenessProbe:
       httpGet:
         host: 127.0.0.1

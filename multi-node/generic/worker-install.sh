@@ -67,9 +67,12 @@ Environment="RKT_OPTS=--volume dns,kind=host,source=/etc/resolv.conf \
   --volume stage,kind=host,source=/tmp \
   --mount volume=stage,target=/tmp \
   --volume var-log,kind=host,source=/var/log \
-  --mount volume=var-log,target=/var/log"
+  --mount volume=var-log,target=/var/log \
+  --uuid-file-save=/var/lib/coreos/kubelet.uuid"
 ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
 ExecStartPre=/usr/bin/mkdir -p /var/log/containers
+ExecStartPre=/usr/bin/mkdir -p /var/lib/coreos
+ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/lib/coreos/kubelet.uuid
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=${CONTROLLER_ENDPOINT} \
   --cni-conf-dir=/etc/kubernetes/cni/net.d \
@@ -86,8 +89,10 @@ ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml \
   --tls-cert-file=/etc/kubernetes/ssl/worker.pem \
   --tls-private-key-file=/etc/kubernetes/ssl/worker-key.pem
+ExecStop=-/usr/bin/rkt stop --uuid-file=/var/lib/coreos/kubelet.uuid
 Restart=always
 RestartSec=10
+KillMode=control-group
 
 [Install]
 WantedBy=multi-user.target

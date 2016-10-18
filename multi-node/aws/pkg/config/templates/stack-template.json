@@ -571,7 +571,7 @@
           },
           {
             "Key": "KubernetesCluster",
-            "Value": "{{$.ClusterName}}"
+            "Value": "{{.ClusterName}}"
           }
         ],
         "VpcId": {{$.VPCRef}}

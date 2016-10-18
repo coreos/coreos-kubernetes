@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "kube-aws Kubernetes cluster {{.ClusterName}}",
+  "Description": "kube-aws Kubernetes cluster {{$.ClusterName}}",
   "Resources": {
     "AlarmControllerRecover": {
       "Properties": {
@@ -57,12 +57,12 @@
           {
             "Key": "KubernetesCluster",
             "PropagateAtLaunch": "true",
-            "Value": "{{.ClusterName}}"
+            "Value": "{{$.ClusterName}}"
           },
           {
             "Key": "Name",
             "PropagateAtLaunch": "true",
-            "Value": "{{.ClusterName}}-kube-aws-worker"
+            "Value": "{{$.ClusterName}}-kube-aws-worker"
           }
         ],
         "VPCZoneIdentifier": [
@@ -289,11 +289,11 @@
         "Tags": [
           {
             "Key": "KubernetesCluster",
-            "Value": "{{.ClusterName}}"
+            "Value": "{{$.ClusterName}}"
           },
           {
             "Key": "Name",
-            "Value": "{{.ClusterName}}-kube-aws-controller"
+            "Value": "{{$.ClusterName}}-kube-aws-controller"
           }
         ],
         "UserData": "{{ .UserDataController }}"
@@ -380,11 +380,11 @@
         "Tags": [
           {
             "Key": "Name",
-            "Value": "{{.ClusterName}}-sg-controller"
+            "Value": "{{$.ClusterName}}-sg-controller"
           },
           {
             "Key": "KubernetesCluster",
-            "Value": "{{.ClusterName}}"
+            "Value": "{{$.ClusterName}}"
           }
         ],
         "VpcId": {{.VPCRef}}
@@ -447,11 +447,11 @@
         "Tags": [
           {
             "Key": "Name",
-            "Value": "{{.ClusterName}}-sg-worker"
+            "Value": "{{$.ClusterName}}-sg-worker"
           },
           {
             "Key": "KubernetesCluster",
-            "Value": "{{.ClusterName}}"
+            "Value": "{{$.ClusterName}}"
           }
         ],
         "VpcId": {{.VPCRef}}
@@ -567,11 +567,11 @@
         "Tags": [
           {
             "Key": "Name",
-            "Value": "{{.ClusterName}}-{{$subnetLogicalName}}"
+            "Value": "{{$.ClusterName}}-{{$subnetLogicalName}}"
           },
           {
             "Key": "KubernetesCluster",
-            "Value": "{{.ClusterName}}"
+            "Value": "{{$.ClusterName}}"
           }
         ],
         "VpcId": {{$.VPCRef}}
@@ -591,11 +591,11 @@
         "Tags": [
           {
             "Key": "KubernetesCluster",
-            "Value": "{{.ClusterName}}"
+            "Value": "{{$.ClusterName}}"
           },
           {
             "Key": "Name",
-            "Value": "{{.ClusterName}}-vpc"
+            "Value": "{{$.ClusterName}}-vpc"
           }
         ]
       },
@@ -606,11 +606,11 @@
         "Tags": [
           {
             "Key": "Name",
-            "Value": "{{.ClusterName}}-route-table"
+            "Value": "{{$.ClusterName}}-route-table"
           },
           {
             "Key": "KubernetesCluster",
-            "Value": "{{.ClusterName}}"
+            "Value": "{{$.ClusterName}}"
           }
         ],
         "VpcId": {{.VPCRef}}
@@ -632,11 +632,11 @@
         "Tags": [
           {
             "Key": "Name",
-            "Value": "{{.ClusterName}}-igw"
+            "Value": "{{$.ClusterName}}-igw"
           },
           {
             "Key": "KubernetesCluster",
-            "Value": "{{.ClusterName}}"
+            "Value": "{{$.ClusterName}}"
           }
         ]
       },

@@ -37,9 +37,9 @@ func runCmdRender(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("Error generating default assets: %v", err)
 	}
-	if err := os.Mkdir("credentials", 0700); err != nil {
-		return err
-	}
+	// if err := os.Mkdir("credentials", 0700); err != nil {
+	// 	return err
+	// }
 	if err := assets.WriteToDir("./credentials"); err != nil {
 		return fmt.Errorf("Error create assets: %v", err)
 	}

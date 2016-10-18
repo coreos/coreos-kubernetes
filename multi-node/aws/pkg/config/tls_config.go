@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"compress/gzip"
 	"crypto/rsa"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -42,25 +44,43 @@ type CompactTLSAssets struct {
 
 func (c *Cluster) NewTLSAssets() (*RawTLSAssets, error) {
 	// Convert from days to time.Duration
-	caDuration := time.Duration(c.TLSCADurationDays) * 24 * time.Hour
-	certDuration := time.Duration(c.TLSCertDurationDays) * 24 * time.Hour
+	// caDuration := time.Duration(c.TLSCADurationDays) * 24 * time.Hour
+	certDuration := time.Duration(14) * 24 * time.Hour
 
 	// Generate keys for the various components.
-	keys := make([]*rsa.PrivateKey, 4)
+	keys := make([]*rsa.PrivateKey, 3)
 	var err error
 	for i := range keys {
 		if keys[i], err = tlsutil.NewPrivateKey(); err != nil {
 			return nil, err
 		}
 	}
-	caKey, apiServerKey, workerKey, adminKey := keys[0], keys[1], keys[2], keys[3]
-
-	caConfig := tlsutil.CACertConfig{
-		CommonName:   "kube-ca",
-		Organization: "kube-aws",
-		Duration:     caDuration,
+	apiServerKey, workerKey, adminKey := keys[0], keys[1], keys[2]
+	caKeyBytes, err := ioutil.ReadFile("credentials/ca-key.pem")
+	if err != nil {
+		panic(err)
 	}
-	caCert, err := tlsutil.NewSelfSignedCACertificate(caConfig, caKey)
+
+	caKeyPem, _ := pem.Decode(caKeyBytes)
+	caKey, err := x509.ParsePKCS1PrivateKey(caKeyPem.Bytes)
+	if err != nil {
+		panic(err)
+	}
+
+	// caConfig := tlsutil.CACertConfig{
+	// 	CommonName:   "kube-ca",
+	// 	Organization: "kube-aws",
+	// 	Duration:     caDuration,
+	// }
+	caCertBytes, err := ioutil.ReadFile("credentials/ca.pem")
+	if err != nil {
+		panic(err)
+	}
+
+	// caCert, err := tlsutil.NewSelfSignedCACertificate(caConfig, caKey)
+	caCertPem, _ := pem.Decode(caCertBytes)
+
+	caCert, err := x509.ParseCertificate(caCertPem.Bytes)
 	if err != nil {
 		return nil, err
 	}

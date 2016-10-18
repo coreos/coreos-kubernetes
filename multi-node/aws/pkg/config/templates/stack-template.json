@@ -591,11 +591,11 @@
           "Tags": [
             {
               "Key": "Name",
-              "Value": "{{$.ClusterName}}-controller-subnet"
+              "Value": "{{.ClusterName}}-controller-subnet"
             },
             {
               "Key": "KubernetesCluster",
-              "Value": "{{$.ClusterName}}"
+              "Value": "{{.ClusterName}}"
             }
           ],
           "VpcId": {{$.VPCRef}}

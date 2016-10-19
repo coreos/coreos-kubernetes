@@ -1,6 +1,6 @@
 # Upgrading Kubernetes
 
-This document describes upgrading the Kubernetes components on a cluster's master and worker nodes. For general information on Kubernetes cluster management, upgrades (including more advanced topics such as major API version upgrades) see the [Kubernetes upstream documentation](http://kubernetes.io/docs/admin/cluster-management.html) and [version upgrade notes](https://github.com/kubernetes/kubernetes/blob/release-1.2/docs/design/versioning.md#upgrades)
+This document describes upgrading the Kubernetes components on a cluster's master and worker nodes. For general information on Kubernetes cluster management, upgrades (including more advanced topics such as major API version upgrades) see the [Kubernetes upstream documentation](http://kubernetes.io/docs/admin/cluster-management.html) and [version upgrade notes](https://github.com/kubernetes/kubernetes/blob/release-1.4/docs/design/versioning.md#upgrades)
 
 **NOTE:** The following upgrade documentation is for installations based on the CoreOS + Kubernetes step-by-step [installation guide](https://coreos.com/kubernetes/docs/latest/getting-started.html). Upgrade documentation for the AWS cloud-formation based installation is forthcoming.
 
@@ -15,7 +15,7 @@ For example, modifying the `KUBELET_VERSION` environment variable in the followi
 **/etc/systemd/system/kubelet.service**
 
 ```
-Environment=KUBELET_VERSION=v1.3.4_coreos.0
+Environment=KUBELET_VERSION=v1.4.1_coreos.0
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=https://master [...]
 ```
@@ -33,6 +33,8 @@ To update the image version, change the image tag in the service file (`/etc/sys
 ExecStart=/usr/bin/rkt run --inherit-env --stage1-from-dir=stage1-fly.aci \
 --volume=modules,kind=host,source=/lib/modules,readOnly=false \
 --mount=volume=modules,target=/lib/modules \
+--volume=dns,kind=host,source=/etc/resolv.conf,readOnly=true \
+--mount=volume=dns,target=/etc/resolv.conf \
 --trust-keys-from-https quay.io/calico/node:v0.19.0
 ```
 

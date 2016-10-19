@@ -80,16 +80,27 @@ Create `/etc/systemd/system/kubelet.service` and substitute the following variab
 * Replace `${MASTER_HOST}`
 * Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
 * Replace `${DNS_SERVICE_IP}`
-* Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release.
+* Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release, e.g. `v1.4.1_coreos.0`.
 * Replace `${NETWORK_PLUGIN}` with `cni` if using Calico. Otherwise just leave it blank.
+* Decide if you will use [additional features][rkt-opts-examples] such as:
+  - [mounting ephemeral disks][mount-disks]
+  - [allow pods to mount RDB][rdb] or [iSCSI volumes][iscsi]
+  - [allowing access to insecure container registries][insecure-registry]
+  - [changing your CoreOS auto-update settings][update]
 
 **/etc/systemd/system/kubelet.service**
 
 ```yaml
 [Service]
 ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
+ExecStartPre=/usr/bin/mkdir -p /var/log/containers
 
 Environment=KUBELET_VERSION=${K8S_VER}
+Environment="RKT_OPTS=--volume var-log,kind=host,source=/var/log \
+  --mount volume=var-log,target=/var/log \
+  --volume dns,kind=host,source=/etc/resolv.conf \
+  --mount volume=dns,target=/etc/resolv.conf"
+
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=https://${MASTER_HOST} \
   --network-plugin-dir=/etc/kubernetes/cni/net.d \
@@ -109,7 +120,7 @@ RestartSec=10
 WantedBy=multi-user.target
 ```
 
-### Set Up the CNI config
+### Set Up the CNI config (optional)
 
 The kubelet reads the CNI configuration on startup and uses that to determine which CNI plugin to call. Create the following file which tells the kubelet to call the flannel plugin but to then delegate control to the Calico plugin. Using the flannel plugin ensures that the Calico plugin is called with the IP range for the node that was selected by flannel.
 
@@ -159,7 +170,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-proxy
-    image: quay.io/coreos/hyperkube:v1.3.4_coreos.0
+    image: quay.io/coreos/hyperkube:v1.4.1_coreos.0
     command:
     - /hyperkube
     - proxy
@@ -217,7 +228,7 @@ contexts:
 current-context: kubelet-context
 ```
 
-### Set Up Calico Node Container
+### Set Up Calico Node Container (optional)
 
 The Calico node container runs on all hosts, including the master node. It performs two functions:
 * Connects containers to the flannel overlay network, which enables the "one IP per pod" concept.
@@ -250,6 +261,8 @@ Environment=ETCD_ENDPOINTS=${ETCD_ENDPOINTS}
 ExecStart=/usr/bin/rkt run --inherit-env --stage1-from-dir=stage1-fly.aci \
 --volume=modules,kind=host,source=/lib/modules,readOnly=false \
 --mount=volume=modules,target=/lib/modules \
+--volume=dns,kind=host,source=/etc/resolv.conf,readOnly=true \
+--mount=volume=dns,target=/etc/resolv.conf \
 --trust-keys-from-https quay.io/calico/node:v0.19.0
 KillMode=mixed
 Restart=always
@@ -299,3 +312,11 @@ To check the health of the calico-node systemd unit that we created, run `system
   <p><strong>Is the kubelet running?</strong></p>
   <a href="configure-kubectl.md" class="btn btn-primary btn-icon-right"  data-category="Docs Next" data-event="Kubernetes: kubectl">Yes, ready to configure `kubectl`</a>
 </div>
+
+[rkt-opts-examples]: kubelet-wrapper.md#customizing-rkt-options
+[rdb]: kubelet-wrapper.md#allow-pods-to-use-rbd-volumes
+[iscsi]: kubelet-wrapper.md#allow-pods-to-use-iscsi-mounts
+[host-dns]: kubelet-wrapper.md#use-the-hosts-dns-configuration
+[mount-disks]: https://coreos.com/os/docs/latest/mounting-storage.html
+[insecure-registry]: https://coreos.com/os/docs/latest/registry-authentication.html#using-a-registry-without-ssl-configured
+[update]: https://coreos.com/os/docs/latest/switching-channels.html

@@ -73,7 +73,7 @@ In order for flannel to manage the pod network in the cluster, Docker needs to b
 
 *Note:* If the pod-network is being managed independently, this step can be skipped. See [kubernetes networking](kubernetes-networking.md) for more detail.
 
-We're going to do this, like we proceeded above with flannel, using a [systemd drop-in][dropins]:
+Again, we will use a [systemd drop-in][dropins]:
 
 **/etc/systemd/system/docker.service.d/40-flannel.conf**
 
@@ -97,17 +97,27 @@ Note that the kubelet running on a master node may log repeated attempts to post
 
 * Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
 * Replace `${DNS_SERVICE_IP}`
-* Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release.
+* Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release, e.g. `v1.4.1_coreos.0`.
 * Replace `${NETWORK_PLUGIN}` with `cni` if using Calico. Otherwise just leave it blank.
-* Decide if you will use [additional features][rkt-opts-examples] such as cluster logging, iSCSI volumes, or addressing workers by hostname in addition to IPs.
+* Decide if you will use [additional features][rkt-opts-examples] such as:
+  - [mounting ephemeral disks][mount-disks]
+  - [allow pods to mount RDB][rdb] or [iSCSI volumes][iscsi]
+  - [allowing access to insecure container registries][insecure-registry]
+  - [changing your CoreOS auto-update settings][update]
 
 **/etc/systemd/system/kubelet.service**
 
 ```yaml
 [Service]
 ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
+ExecStartPre=/usr/bin/mkdir -p /var/log/containers
 
 Environment=KUBELET_VERSION=${K8S_VER}
+Environment="RKT_OPTS=--volume var-log,kind=host,source=/var/log \
+  --mount volume=var-log,target=/var/log \
+  --volume dns,kind=host,source=/etc/resolv.conf \
+  --mount volume=dns,target=/etc/resolv.conf"
+
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \
   --network-plugin-dir=/etc/kubernetes/cni/net.d \
@@ -123,8 +133,6 @@ RestartSec=10
 [Install]
 WantedBy=multi-user.target
 ```
-
-[rkt-opts-examples]: kubelet-wrapper.md#customizing-rkt-options
 
 ### Set Up the kube-apiserver Pod
 
@@ -150,7 +158,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-apiserver
-    image: quay.io/coreos/hyperkube:v1.3.4_coreos.0
+    image: quay.io/coreos/hyperkube:v1.4.1_coreos.0
     command:
     - /hyperkube
     - apiserver
@@ -160,7 +168,7 @@ spec:
     - --service-cluster-ip-range=${SERVICE_IP_RANGE}
     - --secure-port=443
     - --advertise-address=${ADVERTISE_IP}
-    - --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,ResourceQuota
+    - --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota
     - --tls-cert-file=/etc/kubernetes/ssl/apiserver.pem
     - --tls-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
     - --client-ca-file=/etc/kubernetes/ssl/ca.pem
@@ -209,7 +217,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-proxy
-    image: quay.io/coreos/hyperkube:v1.3.4_coreos.0
+    image: quay.io/coreos/hyperkube:v1.4.1_coreos.0
     command:
     - /hyperkube
     - proxy
@@ -249,7 +257,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-controller-manager
-    image: quay.io/coreos/hyperkube:v1.3.4_coreos.0
+    image: quay.io/coreos/hyperkube:v1.4.1_coreos.0
     command:
     - /hyperkube
     - controller-manager
@@ -298,7 +306,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-scheduler
-    image: quay.io/coreos/hyperkube:v1.3.4_coreos.0
+    image: quay.io/coreos/hyperkube:v1.4.1_coreos.0
     command:
     - /hyperkube
     - scheduler
@@ -346,6 +354,8 @@ Environment=ETCD_ENDPOINTS=${ETCD_ENDPOINTS}
 ExecStart=/usr/bin/rkt run --inherit-env --stage1-from-dir=stage1-fly.aci \
 --volume=modules,kind=host,source=/lib/modules,readOnly=false \
 --mount=volume=modules,target=/lib/modules \
+--volume=dns,kind=host,source=/etc/resolv.conf,readOnly=true \
+--mount=volume=dns,target=/etc/resolv.conf \
 --trust-keys-from-https quay.io/calico/node:v0.19.0
 
 KillMode=mixed
@@ -450,6 +460,13 @@ Earlier it was mentioned that flannel stores cluster-level configuration in etcd
 $ curl -X PUT -d "value={\"Network\":\"$POD_NETWORK\",\"Backend\":{\"Type\":\"vxlan\"}}" "$ETCD_SERVER/v2/keys/coreos.com/network/config"
 ```
 
+After configuring flannel, we should restart it for our changes to take effect. Note that this will also restart the docker daemon and could impact running containers.
+
+```sh
+$ sudo systemctl start flanneld
+$ sudo systemctl enable flanneld
+```
+
 ### Start kubelet
 
 Now that everything is configured, we can start the kubelet, which will also start the Pod manifests for the API server, the controller manager, proxy and scheduler.
@@ -518,11 +535,27 @@ The Calico policy-controller runs in its own `calico-system` namespace. Create t
 $ curl -H "Content-Type: application/json" -XPOST -d'{"apiVersion":"v1","kind":"Namespace","metadata":{"name":"calico-system"}}' "http://127.0.0.1:8080/api/v1/namespaces"
 ```
 
-Our Pods should now be starting up and downloading their containers. To check the download progress, you can run `docker ps`.
-
 To check the health of the kubelet systemd unit that we created, run `systemctl status kubelet.service`.
 
+Our Pods should now be starting up and downloading their containers. Once the kubelet has started, you can check it's creating its pods via the metadata api:
+
+```sh
+$ curl -s localhost:10255/pods | jq -r '.items[].metadata.name'
+kube-scheduler-$node
+kube-apiserver-$node
+kube-controller-$node
+kube-proxy-$node
+```
+
 <div class="co-m-docs-next-step">
-  <p><strong>Did the containers start downloading?</strong> As long as they started to download, everything is working properly.</p>
+  <p><strong>Did the containers start downloading?</strong> As long as the kubelet knows about them, everything is working properly.</p>
   <a href="deploy-workers.md" class="btn btn-primary btn-icon-right" data-category="Docs Next" data-event="Kubernetes: Workers">Yes, ready to deploy the Workers</a>
 </div>
+
+[rkt-opts-examples]: kubelet-wrapper.md#customizing-rkt-options
+[rdb]: kubelet-wrapper.md#allow-pods-to-use-rbd-volumes
+[iscsi]: kubelet-wrapper.md#allow-pods-to-use-iscsi-mounts
+[host-dns]: kubelet-wrapper.md#use-the-hosts-dns-configuration
+[mount-disks]: https://coreos.com/os/docs/latest/mounting-storage.html
+[insecure-registry]: https://coreos.com/os/docs/latest/registry-authentication.html#using-a-registry-without-ssl-configured
+[update]: https://coreos.com/os/docs/latest/switching-channels.html

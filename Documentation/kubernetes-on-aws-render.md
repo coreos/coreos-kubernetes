@@ -36,7 +36,7 @@ You will use the KeyMetadata.Arn string to identify your KMS key in the init ste
 
 ### External DNS name
 
-Select a DNS hostname where the cluster API will be accessible. Typically this hostname is available over the internet ("external"), so end users can connect from different networks. This hostname be used to provision the TLS certificate for the API server, which encrypts traffic between your users and the API. Optionally, you can provide the certificates yourself, which is recommended for production clusters.
+Select a DNS hostname where the cluster API will be accessible. Typically this hostname is available over the internet ("external"), so end users can connect from different networks. This hostname will be used to provision the TLS certificate for the API server, which encrypts traffic between your users and the API. Optionally, you can provide the certificates yourself, which is recommended for production clusters.
 
 When the cluster is created, the controller will expose the TLS-secured API on a public IP address. You will need to create an A record for the external DNS hostname you want to point to this IP address. You can find the API external IP address after the cluster is created by invoking `kube-aws status`.
 
@@ -154,7 +154,10 @@ You can now customize your cluster by editing asset files. Any changes to these 
   Some common customizations are:
 
   - [mounting ephemeral disks][mount-disks]
+  - [allow pods to mount RDB][rdb] or [iSCSI volumes][iscsi]
   - [allowing access to insecure container registries][insecure-registry]
+  - [use host DNS configuration instead of a public DNS server][host-dns]
+  - [enable the cluster logging add-on][cluster-logging]
   - [changing your CoreOS auto-update settings][update]
   <br/><br/>
 
@@ -176,6 +179,19 @@ You can now customize your cluster by editing asset files. Any changes to these 
 [mount-disks]: https://coreos.com/os/docs/latest/mounting-storage.html
 [insecure-registry]: https://coreos.com/os/docs/latest/registry-authentication.html#using-a-registry-without-ssl-configured
 [update]: https://coreos.com/os/docs/latest/cloud-config.html#update
+
+### Kubernetes Container Runtime
+
+The kube-aws tool now optionally supports using rkt as the kubernetes container runtime. To configure rkt as the container runtime you must run with a CoreOS version >= `v1151.0.0` and configure the runtime flag.
+
+Edit the `cluster.yaml` file:
+
+```yaml
+containerRuntime: rkt
+releaseChannel: alpha
+```
+
+Note that while using rkt as the runtime is now supported, it is still a new option as of the Kubernetes v1.3 release and has a few [known issues](http://kubernetes.io/docs/getting-started-guides/rkt/notes/).
 
 ### Calico network policy
 
@@ -200,6 +216,21 @@ hostedZone: staging.example.com
 ```
 
 If `createRecordSet` is not set to true, the deployer will be responsible for making externalDNSName routable to the controller IP after the cluster is created.
+
+### Multi-AZ Clusters
+
+Kube-aws supports "spreading" a cluster across any number of Availability Zones in a given region.
+
+```yaml
+ subnets:
+   - availabilityZone: us-west-1a
+     instanceCIDR: "10.0.0.0/24"
+   - availabilityZone: us-west-1b
+     instanceCIDR: "10.0.1.0/24"
+```
+__A word of caution about EBS and Persistent Volumes__: Any pods deployed to a Multi-AZ cluster must mount EBS volumes via [Persistent Volume Claims](http://kubernetes.io/docs/user-guide/persistent-volumes/#persistentvolumeclaims). Specifying the ID of the EBS volume directly in the pod spec will not work consistently if nodes are spread across multiple zones.
+
+Read more about Kubernetes Multi-AZ cluster support [here](http://kubernetes.io/docs/admin/multiple-zones/).
 
 ### Certificates and Keys
 
@@ -268,3 +299,7 @@ If your files are valid, you are ready to [launch your cluster][aws-step-3].
 [k8s-openssl]: openssl.md
 [tls-note]: #certificates-and-keys
 [route53]: https://aws.amazon.com/route53/
+[rdb]: kubelet-wrapper.md#allow-pods-to-use-rbd-volumes
+[iscsi]: kubelet-wrapper.md#allow-pods-to-use-iscsi-mounts
+[host-dns]: kubelet-wrapper.md#use-the-hosts-dns-configuration
+[cluster-logging]: kubelet-wrapper.md#use-the-cluster-logging-add-on

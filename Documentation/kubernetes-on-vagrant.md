@@ -18,13 +18,13 @@ Navigate to the [Vagrant downloads page][vagrant-downloads] and grab the appropr
 The linux `kubectl` binary can be fetched with a command like:
 
 ```sh
-$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.3.4/bin/linux/amd64/kubectl
+$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.4.1/bin/linux/amd64/kubectl
 ```
 
 On an OS X workstation, replace `linux` in the URL above with `darwin`:
 
 ```sh
-$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.3.4/bin/darwin/amd64/kubectl
+$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.4.1/bin/darwin/amd64/kubectl
 ```
 
 After downloading the binary, ensure it is executable and move it into your PATH:
@@ -48,7 +48,7 @@ $ cd coreos-kubernetes/multi-node/vagrant
 The default cluster configuration is to start a virtual machine for each role &mdash; master node, worker node, and etcd server. However, you can modify the default cluster settings by copying `config.rb.sample` to `config.rb` and modifying configuration values.
 
 ```
-#$update_channel="stable"
+#$update_channel="alpha"
 
 #$controller_count=1
 #$controller_vm_memory=512
@@ -61,6 +61,8 @@ The default cluster configuration is to start a virtual machine for each role &m
 ```
 
 By default, Calico network policy is disabled. To enable it, change the line `export USE_CALICO=false` to `export USE_CALICO=true` in both the `../generic/controller-install.sh` and the `../generic/worker-install.sh` scripts.
+
+Also by default, the container runtime used is docker. To use rkt as the container runtime, change the line `export CONTAINER_RUNTIME=docker` to `export CONTAINER_RUNTIME=rkt` in both the `../generic/controller-install.sh` and the `../generic/worker-install.sh` scripts.
 
 Ensure the latest CoreOS vagrant image will be used by running `vagrant box update`.
 
@@ -103,6 +105,6 @@ NAME          LABELS                               STATUS
 <div class="co-m-docs-next-step">
   <p><strong>Is kubectl working correctly?</strong></p>
   <p>Now that you've got a working Kubernetes cluster with a functional CLI tool, you are free to deploy Kubernetes-ready applications.
-Start with a <a href="https://github.com/kubernetes/kubernetes/blob/release-1.2/examples/guestbook/README.md" data-category="Docs Next" data-event="kubernetes.io: Guestbook">multi-tier web application</a> from the official Kubernetes documentation to visualize how the various Kubernetes components fit together.</p>
-  <a href="https://github.com/kubernetes/kubernetes/blob/release-1.2/examples/guestbook/README.md" class="btn btn-default btn-icon-right" data-category="Docs Next" data-event="kubernetes.io: Guestbook">View the Guestbook example app</a>
+Start with a <a href="https://github.com/kubernetes/kubernetes/blob/release-1.4/examples/guestbook/README.md" data-category="Docs Next" data-event="kubernetes.io: Guestbook">multi-tier web application</a> from the official Kubernetes documentation to visualize how the various Kubernetes components fit together.</p>
+  <a href="https://github.com/kubernetes/kubernetes/blob/release-1.4/examples/guestbook/README.md" class="btn btn-default btn-icon-right" data-category="Docs Next" data-event="kubernetes.io: Guestbook">View the Guestbook example app</a>
 </div>

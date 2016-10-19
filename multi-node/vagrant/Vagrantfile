@@ -8,7 +8,7 @@ require 'yaml'
 
 Vagrant.require_version ">= 1.6.0"
 
-$update_channel = "stable"
+$update_channel = "alpha"
 $controller_count = 1
 $controller_vm_memory = 512
 $worker_count = 1
@@ -68,7 +68,7 @@ Vagrant.configure("2") do |config|
   config.ssh.insert_key = false
 
   config.vm.box = "coreos-%s" % $update_channel
-  config.vm.box_version = ">= 962.0.0"
+  config.vm.box_version = ">= 1151.0.0"
   config.vm.box_url = "http://%s.release.core-os.net/amd64-usr/current/coreos_production_vagrant.json" % $update_channel
 
   ["vmware_fusion", "vmware_workstation"].each do |vmware|
@@ -107,7 +107,7 @@ Vagrant.configure("2") do |config|
       data = YAML.load(IO.readlines(ETCD_CLOUD_CONFIG_PATH)[1..-1].join)
       data['coreos']['etcd2']['initial-cluster'] = initial_etcd_cluster
       data['coreos']['etcd2']['name'] = vm_name
-      etcd_config_file = Tempfile.new('etcd_config')
+      etcd_config_file = Tempfile.new('etcd_config', :binmode => true)
       etcd_config_file.write("#cloud-config\n#{data.to_yaml}")
       etcd_config_file.close
 
@@ -134,7 +134,7 @@ Vagrant.configure("2") do |config|
   (1..$controller_count).each do |i|
     config.vm.define vm_name = "c%d" % i do |controller|
 
-      env_file = Tempfile.new('env_file')
+      env_file = Tempfile.new('env_file', :binmode => true)
       env_file.write("ETCD_ENDPOINTS=#{etcd_endpoints}\n")
       env_file.close
 
@@ -168,7 +168,7 @@ Vagrant.configure("2") do |config|
     config.vm.define vm_name = "w%d" % i do |worker|
       worker.vm.hostname = vm_name
 
-      env_file = Tempfile.new('env_file')
+      env_file = Tempfile.new('env_file', :binmode => true)
       env_file.write("ETCD_ENDPOINTS=#{etcd_endpoints}\n")
       env_file.write("CONTROLLER_ENDPOINT=https://#{controllerIPs[0]}\n") #TODO(aaron): LB or DNS across control nodes
       env_file.close

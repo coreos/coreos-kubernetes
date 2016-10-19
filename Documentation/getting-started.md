@@ -10,7 +10,7 @@ This guide will walk you through a deployment of a single-master/multi-worker Ku
 - deploy the DNS add-on
 - deploy the network policy add-on
 
-Working through this guide may take you a few hours, but it will give you good understanding of the moving pieces of your cluster and set you up for success in the long run. Let's get started.
+Working through this guide may take you a few hours, but it will give you good understanding of the moving pieces of your cluster and set you up for success in the long run. For a shortcut, you can utilize [these generic user-data scripts][generic-userdata]. Let's get started.
 
 ## Deployment Options
 
@@ -95,7 +95,7 @@ Created symlink from /etc/systemd/system/multi-user.target.wants/etcd2.service t
 
 It is highly recommended that etcd is run as a dedicated cluster separately from Kubernetes components.
 
-Use the [official etcd clustering guide](https://coreos.com/etcd/docs/latest/clustering.html) to decide how best to deploy etcd into your environment.
+Use the [official etcd clustering guide](https://coreos.com/etcd/docs/latest/docker_guide.html) to decide how best to deploy etcd into your environment.
 
 ## Generate Kubernetes TLS Assets
 
@@ -140,3 +140,5 @@ admin-key.pem
   <p><strong>Did you generate all of the certificates?</strong> You will place these on disk next.</p>
   <a href="deploy-master.md" class="btn btn-primary btn-icon-right"  data-category="Docs Next" data-event="Kubernetes: Master">Yes, ready to deploy the master node</a>
 </div>
+
+[generic-userdata]: kubernetes-on-generic-platforms.md

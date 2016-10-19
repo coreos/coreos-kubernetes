@@ -1,8 +1,9 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 
 # define location of openssl binary manually since running this
 # script under Vagrant fails on some systems without it
-OPENSSL=/usr/bin/openssl
+OPENSSL=$(which openssl)
 
 function usage {
     echo "USAGE: $0 <output-dir> <cert-base-name> <CN> [SAN,SAN,SAN]"

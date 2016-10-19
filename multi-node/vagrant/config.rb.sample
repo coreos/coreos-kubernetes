@@ -1,4 +1,4 @@
-#$update_channel="stable"
+#$update_channel="alpha"
 
 #$controller_count=1
 #$controller_vm_memory=512

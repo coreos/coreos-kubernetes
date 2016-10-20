@@ -545,6 +545,7 @@ kube-scheduler-$node
 kube-apiserver-$node
 kube-controller-$node
 kube-proxy-$node
+calico-policy-controller-$node
 ```
 
 <div class="co-m-docs-next-step">

@@ -22,7 +22,7 @@ An example systemd kubelet.service file which takes advantage of the kubelet-wra
 Environment=KUBELET_VERSION=v1.4.3_coreos.0
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \
-  --config=/etc/kubernetes/manifests
+  --pod-manifest-path=/etc/kubernetes/manifests
 ```
 
 In the example above we set the `KUBELET_VERSION` and the kubelet-wrapper script takes care of running the correct container image with our desired API server address and manifest location.
@@ -41,7 +41,7 @@ Environment="RKT_OPTS=--volume=resolv,kind=host,source=/etc/resolv.conf --mount 
 Environment=KUBELET_VERSION=v1.4.3_coreos.0
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \
-  --config=/etc/kubernetes/manifests
+  --pod-manifest-path=/etc/kubernetes/manifests
   ...other flags...
 ```
 
@@ -55,7 +55,7 @@ Environment="RKT_OPTS=--volume iscsiadm,kind=host,source=/usr/sbin/iscsiadm --mo
 Environment=KUBELET_VERSION=v1.4.3_coreos.0
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \
-  --config=/etc/kubernetes/manifests
+  --pod-manifest-path=/etc/kubernetes/manifests
   ...other flags...
 ```
 
@@ -91,7 +91,7 @@ For example:
 Environment=KUBELET_VERSION=v1.4.3_coreos.0
 ExecStart=/opt/bin/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \
-  --config=/etc/kubernetes/manifests
+  --pod-manifest-path=/etc/kubernetes/manifests
 ```
 
 [#2141]: https://github.com/coreos/rkt/issues/2141

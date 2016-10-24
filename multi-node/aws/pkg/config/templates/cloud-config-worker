@@ -55,6 +55,23 @@ coreos:
         [Install]
         WantedBy=multi-user.target
 
+    - name: clean-reboot.service
+      command: start
+      runtime: true
+      content: |
+        [Unit]
+        Description=Delete all pods from the node before instance reboot, shutdown or terminate
+        Requires=decrypt-tls-assets.service
+        After=multi-user.target
+        [Service]
+        Type=oneshot
+        RemainAfterExit=true
+        ExecStart=/bin/sh -c "/opt/bin/node-status-change"
+        ExecStop=/bin/sh -c "/opt/bin/delete-pods-before-reboot"
+
+        [Install]
+        WantedBy=worker-reboot.target
+
 {{ if eq .ContainerRuntime "rkt" }}
     - name: rkt-api.service
       enable: true
@@ -192,6 +209,38 @@ write_files:
         base64 --decode < $encKey.b64 > ${encKey%.enc}
         sudo rkt rm --uuid-file=/var/run/coreos/decrypt-tls-assets.uuid
       done
+  - path: /opt/bin/delete-pods-before-reboot
+    owner: root:root
+    permissions: 0700
+    content: |
+      #!/bin/bash -e
+
+      curl \
+      -X "PATCH" "{{.SecureAPIServers}}/api/v1/nodes/`hostname`" \
+      -H "Content-Type: application/strategic-merge-patch+json; charset=utf-8" \
+      -d "{\"spec\":{\"unschedulable\":true}}" \
+      -k --cacert /etc/kubernetes/ssl/ca.pem \
+      --cert /etc/kubernetes/ssl/worker.pem \
+      --key /etc/kubernetes/ssl/worker-key.pem
+
+      for each in $(curl -XGET {{.SecureAPIServers}}/api/v1/namespaces -k --cacert /etc/kubernetes/ssl/ca.pem --cert /etc/kubernetes/ssl/worker.pem --key /etc/kubernetes/ssl/worker-key.pem | jq -r '.items[].metadata.name');
+      do
+      curl -XDELETE {{.SecureAPIServers}}/api/v1/namespaces/$each/pods -k --cacert /etc/kubernetes/ssl/ca.pem --cert /etc/kubernetes/ssl/worker.pem --key /etc/kubernetes/ssl/worker-key.pem
+      done
+
+  - path: /opt/bin/node-status-change
+    owner: root:root
+    permissions: 0700
+    content: |
+      #!/bin/bash -e
+
+      curl \
+      -X "PATCH" "{{.SecureAPIServers}}/api/v1/nodes/`hostname`" \
+      -H "Content-Type: application/strategic-merge-patch+json; charset=utf-8" \
+      -d "{\"spec\":{\"unschedulable\":false}}" \
+      -k --cacert /etc/kubernetes/ssl/ca.pem \
+      --cert /etc/kubernetes/ssl/worker.pem \
+      --key /etc/kubernetes/ssl/worker-key.pem
 
   - path: /etc/kubernetes/manifests/kube-proxy.yaml
     content: |

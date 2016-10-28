@@ -223,9 +223,11 @@ write_files:
       --cert /etc/kubernetes/ssl/worker.pem \
       --key /etc/kubernetes/ssl/worker-key.pem
 
-      for each in $(curl -XGET {{.SecureAPIServers}}/api/v1/namespaces -k --cacert /etc/kubernetes/ssl/ca.pem --cert /etc/kubernetes/ssl/worker.pem --key /etc/kubernetes/ssl/worker-key.pem | jq -r '.items[].metadata.name');
-      do
-      curl -XDELETE {{.SecureAPIServers}}/api/v1/namespaces/$each/pods -k --cacert /etc/kubernetes/ssl/ca.pem --cert /etc/kubernetes/ssl/worker.pem --key /etc/kubernetes/ssl/worker-key.pem
+      for each in $(curl -XGET {{.SecureAPIServers}}/api/v1/namespaces -k --cacert /etc/kubernetes/ssl/ca.pem --cert /etc/kubernetes/ssl/worker.pem --key /etc/kubernetes/ssl/worker-key.pem | jq -r '.items[].metadata.name'); 
+            do arr=($(curl -XGET {{.SecureAPIServers}}/api/v1/namespaces/$each/pods -k --cacert /etc/kubernetes/ssl/ca.pem --cert /etc/kubernetes/ssl/worker.pem --key /etc/kubernetes/ssl/worker-key.pem | jq --arg node `hostname` -r '.items[] | select(.spec.nodeName == $node) | .metadata.name')); 
+        for i in  ${arr[@]};
+            do curl -XDELETE {{.SecureAPIServers}}/api/v1/namespaces/$each/pods/$i -k --cacert /etc/kubernetes/ssl/ca.pem --cert /etc/kubernetes/ssl/worker.pem --key /etc/kubernetes/ssl/worker-key.pem;
+        done
       done
 
   - path: /opt/bin/node-status-change

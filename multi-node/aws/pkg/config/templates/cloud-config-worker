@@ -55,7 +55,7 @@ coreos:
         [Install]
         WantedBy=multi-user.target
 
-    - name: clean-reboot.service
+    - name: drain-node.service
       command: start
       runtime: true
       content: |
@@ -66,8 +66,8 @@ coreos:
         [Service]
         Type=oneshot
         RemainAfterExit=true
-        ExecStart=/bin/sh -c "/opt/bin/node-status-change"
-        ExecStop=/bin/sh -c "/opt/bin/delete-pods-before-reboot"
+        ExecStart=/bin/sh -c "/opt/bin/uncordon-node"
+        ExecStop=/bin/sh -c "/opt/bin/drain-node"
 
         [Install]
         WantedBy=worker-reboot.target
@@ -209,7 +209,7 @@ write_files:
         base64 --decode < $encKey.b64 > ${encKey%.enc}
         sudo rkt rm --uuid-file=/var/run/coreos/decrypt-tls-assets.uuid
       done
-  - path: /opt/bin/delete-pods-before-reboot
+  - path: /opt/bin/drain-node
     owner: root:root
     permissions: 0700
     content: |
@@ -223,14 +223,14 @@ write_files:
       --cert /etc/kubernetes/ssl/worker.pem \
       --key /etc/kubernetes/ssl/worker-key.pem
 
-      for each in $(curl -XGET {{.SecureAPIServers}}/api/v1/namespaces -k --cacert /etc/kubernetes/ssl/ca.pem --cert /etc/kubernetes/ssl/worker.pem --key /etc/kubernetes/ssl/worker-key.pem | jq -r '.items[].metadata.name'); 
-            do arr=($(curl -XGET {{.SecureAPIServers}}/api/v1/namespaces/$each/pods -k --cacert /etc/kubernetes/ssl/ca.pem --cert /etc/kubernetes/ssl/worker.pem --key /etc/kubernetes/ssl/worker-key.pem | jq --arg node `hostname` -r '.items[] | select(.spec.nodeName == $node) | .metadata.name')); 
+      for each in $(curl -XGET {{.SecureAPIServers}}/api/v1/namespaces -k --cacert /etc/kubernetes/ssl/ca.pem --cert /etc/kubernetes/ssl/worker.pem --key /etc/kubernetes/ssl/worker-key.pem | jq -r '.items[].metadata.name');
+            do arr=($(curl -XGET {{.SecureAPIServers}}/api/v1/namespaces/$each/pods -k --cacert /etc/kubernetes/ssl/ca.pem --cert /etc/kubernetes/ssl/worker.pem --key /etc/kubernetes/ssl/worker-key.pem | jq --arg node `hostname` -r '.items[] | select(.spec.nodeName == $node) | .metadata.name'));
         for i in  ${arr[@]};
             do curl -XDELETE {{.SecureAPIServers}}/api/v1/namespaces/$each/pods/$i -k --cacert /etc/kubernetes/ssl/ca.pem --cert /etc/kubernetes/ssl/worker.pem --key /etc/kubernetes/ssl/worker-key.pem;
         done
       done
 
-  - path: /opt/bin/node-status-change
+  - path: /opt/bin/uncordon-node
     owner: root:root
     permissions: 0700
     content: |

@@ -68,6 +68,9 @@ func NewSignedServerCertificate(cfg ServerCertConfig, key *rsa.PrivateKey, caCer
 		return nil, err
 	}
 
+	if cfg.Duration == time.Hour*0 {
+		cfg.Duration = Duration90d
+	}
 	if cfg.Duration <= 0 {
 		return nil, errors.New("Cert duration must not be negative or zero.")
 	}

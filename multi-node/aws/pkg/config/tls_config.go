@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"crypto/rsa"
+	"crypto/x509"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
@@ -18,26 +19,34 @@ import (
 
 // PEM encoded TLS assets.
 type RawTLSAssets struct {
-	CACert        []byte
-	CAKey         []byte
-	APIServerCert []byte
-	APIServerKey  []byte
-	WorkerCert    []byte
-	WorkerKey     []byte
-	AdminCert     []byte
-	AdminKey      []byte
+	CACert         []byte
+	CAKey          []byte
+	APIServerCert  []byte
+	APIServerKey   []byte
+	WorkerCert     []byte
+	WorkerKey      []byte
+	AdminCert      []byte
+	AdminKey       []byte
+	EtcdCert       []byte
+	EtcdClientCert []byte
+	EtcdKey        []byte
+	EtcdClientKey  []byte
 }
 
 // PEM -> gzip -> base64 encoded TLS assets.
 type CompactTLSAssets struct {
-	CACert        string
-	CAKey         string
-	APIServerCert string
-	APIServerKey  string
-	WorkerCert    string
-	WorkerKey     string
-	AdminCert     string
-	AdminKey      string
+	CACert         string
+	CAKey          string
+	APIServerCert  string
+	APIServerKey   string
+	WorkerCert     string
+	WorkerKey      string
+	AdminCert      string
+	AdminKey       string
+	EtcdCert       string
+	EtcdClientCert string
+	EtcdClientKey  string
+	EtcdKey        string
 }
 
 func (c *Cluster) NewTLSAssets() (*RawTLSAssets, error) {
@@ -53,7 +62,6 @@ func (c *Cluster) NewTLSAssets() (*RawTLSAssets, error) {
 			return nil, err
 		}
 	}
-	caKey, apiServerKey, workerKey, adminKey := keys[0], keys[1], keys[2], keys[3]
 
 	caConfig := tlsutil.CACertConfig{
 		CommonName:   "kube-ca",
@@ -62,8 +70,22 @@ func (c *Cluster) NewTLSAssets() (*RawTLSAssets, error) {
 	}
 	caCert, err := tlsutil.NewSelfSignedCACertificate(caConfig, caKey)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+
+	return caKey, caCert, nil
+}
+
+func (c *Cluster) NewTLSAssets(caKey *rsa.PrivateKey, caCert *x509.Certificate) (*RawTLSAssets, error) {
+	// Generate keys for the various components.
+	keys := make([]*rsa.PrivateKey, 5)
+	var err error
+	for i := range keys {
+		if keys[i], err = tlsutil.NewPrivateKey(); err != nil {
+			return nil, err
+		}
+	}
+	apiServerKey, workerKey, adminKey, etcdKey, etcdClientKey := keys[0], keys[1], keys[2], keys[3], keys[4]
 
 	//Compute kubernetesServiceIP from serviceCIDR
 	_, serviceNet, err := net.ParseCIDR(c.ServiceCIDR)
@@ -82,7 +104,6 @@ func (c *Cluster) NewTLSAssets() (*RawTLSAssets, error) {
 			c.ExternalDNSName,
 		},
 		IPAddresses: []string{
-			c.ControllerIP,
 			kubernetesServiceIPAddr.String(),
 		},
 		Duration: certDuration,
@@ -92,15 +113,40 @@ func (c *Cluster) NewTLSAssets() (*RawTLSAssets, error) {
 		return nil, err
 	}
 
+	etcdConfig := tlsutil.ServerCertConfig{
+		CommonName: "kube-etcd",
+		DNSNames: []string{
+			fmt.Sprintf("*.%s.compute.internal", c.Region),
+			"*.ec2.internal",
+		},
+		//etcd https client/peer interfaces are not exposed externally
+		//will live the full year with the CA
+		Duration: tlsutil.Duration365d,
+	}
+
+	etcdCert, err := tlsutil.NewSignedServerCertificate(etcdConfig, etcdKey, caCert, caKey)
+	if err != nil {
+		return nil, err
+	}
+
 	workerConfig := tlsutil.ClientCertConfig{
 		CommonName: "kube-worker",
 		DNSNames: []string{
-			"*.*.compute.internal",
+			fmt.Sprintf("*.%s.compute.internal", c.Region),
 			"*.ec2.internal",
 		},
 		Duration: certDuration,
 	}
 	workerCert, err := tlsutil.NewSignedClientCertificate(workerConfig, workerKey, caCert, caKey)
+	if err != nil {
+		return nil, err
+	}
+
+	etcdClientConfig := tlsutil.ClientCertConfig{
+		CommonName: "kube-etcd-client",
+	}
+
+	etcdClientCert, err := tlsutil.NewSignedClientCertificate(etcdClientConfig, etcdClientKey, caCert, caKey)
 	if err != nil {
 		return nil, err
 	}
@@ -115,14 +161,18 @@ func (c *Cluster) NewTLSAssets() (*RawTLSAssets, error) {
 	}
 
 	return &RawTLSAssets{
-		CACert:        tlsutil.EncodeCertificatePEM(caCert),
-		APIServerCert: tlsutil.EncodeCertificatePEM(apiServerCert),
-		WorkerCert:    tlsutil.EncodeCertificatePEM(workerCert),
-		AdminCert:     tlsutil.EncodeCertificatePEM(adminCert),
-		CAKey:         tlsutil.EncodePrivateKeyPEM(caKey),
-		APIServerKey:  tlsutil.EncodePrivateKeyPEM(apiServerKey),
-		WorkerKey:     tlsutil.EncodePrivateKeyPEM(workerKey),
-		AdminKey:      tlsutil.EncodePrivateKeyPEM(adminKey),
+		CACert:         tlsutil.EncodeCertificatePEM(caCert),
+		APIServerCert:  tlsutil.EncodeCertificatePEM(apiServerCert),
+		WorkerCert:     tlsutil.EncodeCertificatePEM(workerCert),
+		AdminCert:      tlsutil.EncodeCertificatePEM(adminCert),
+		EtcdCert:       tlsutil.EncodeCertificatePEM(etcdCert),
+		EtcdClientCert: tlsutil.EncodeCertificatePEM(etcdClientCert),
+		CAKey:          tlsutil.EncodePrivateKeyPEM(caKey),
+		APIServerKey:   tlsutil.EncodePrivateKeyPEM(apiServerKey),
+		WorkerKey:      tlsutil.EncodePrivateKeyPEM(workerKey),
+		AdminKey:       tlsutil.EncodePrivateKeyPEM(adminKey),
+		EtcdKey:        tlsutil.EncodePrivateKeyPEM(etcdKey),
+		EtcdClientKey:  tlsutil.EncodePrivateKeyPEM(etcdClientKey),
 	}, nil
 }
 
@@ -132,10 +182,12 @@ func ReadTLSAssets(dirname string) (*RawTLSAssets, error) {
 		name      string
 		cert, key *[]byte
 	}{
-		{"ca", &r.CACert, &r.CAKey},
+		{"ca", &r.CACert, nil},
 		{"apiserver", &r.APIServerCert, &r.APIServerKey},
 		{"worker", &r.WorkerCert, &r.WorkerKey},
 		{"admin", &r.AdminCert, &r.AdminKey},
+		{"etcd", &r.EtcdCert, &r.EtcdKey},
+		{"etcd-client", &r.EtcdClientCert, &r.EtcdClientKey},
 	}
 	for _, file := range files {
 		certPath := filepath.Join(dirname, file.name+".pem")
@@ -146,16 +198,19 @@ func ReadTLSAssets(dirname string) (*RawTLSAssets, error) {
 			return nil, err
 		}
 		*file.cert = certData
-		keyData, err := ioutil.ReadFile(keyPath)
-		if err != nil {
-			return nil, err
+
+		if file.key != nil {
+			keyData, err := ioutil.ReadFile(keyPath)
+			if err != nil {
+				return nil, err
+			}
+			*file.key = keyData
 		}
-		*file.key = keyData
 	}
 	return r, nil
 }
 
-func (r *RawTLSAssets) WriteToDir(dirname string) error {
+func (r *RawTLSAssets) WriteToDir(dirname string, includeCAKey bool) error {
 	assets := []struct {
 		name      string
 		cert, key []byte
@@ -164,15 +219,21 @@ func (r *RawTLSAssets) WriteToDir(dirname string) error {
 		{"apiserver", r.APIServerCert, r.APIServerKey},
 		{"worker", r.WorkerCert, r.WorkerKey},
 		{"admin", r.AdminCert, r.AdminKey},
+		{"etcd", r.EtcdCert, r.EtcdKey},
+		{"etcd-client", r.EtcdClientCert, r.EtcdClientKey},
 	}
 	for _, asset := range assets {
 		certPath := filepath.Join(dirname, asset.name+".pem")
 		keyPath := filepath.Join(dirname, asset.name+"-key.pem")
+
 		if err := ioutil.WriteFile(certPath, asset.cert, 0600); err != nil {
 			return err
 		}
-		if err := ioutil.WriteFile(keyPath, asset.key, 0600); err != nil {
-			return err
+
+		if asset.name != "ca" || includeCAKey {
+			if err := ioutil.WriteFile(keyPath, asset.key, 0600); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -219,14 +280,17 @@ func (r *RawTLSAssets) compact(cfg *Config, kmsSvc encryptService) (*CompactTLSA
 		return out
 	}
 	compactAssets := CompactTLSAssets{
-		CACert:        compact(r.CACert),
-		CAKey:         compact(r.CAKey),
-		APIServerCert: compact(r.APIServerCert),
-		APIServerKey:  compact(r.APIServerKey),
-		WorkerCert:    compact(r.WorkerCert),
-		WorkerKey:     compact(r.WorkerKey),
-		AdminCert:     compact(r.AdminCert),
-		AdminKey:      compact(r.AdminKey),
+		CACert:         compact(r.CACert),
+		APIServerCert:  compact(r.APIServerCert),
+		APIServerKey:   compact(r.APIServerKey),
+		WorkerCert:     compact(r.WorkerCert),
+		WorkerKey:      compact(r.WorkerKey),
+		AdminCert:      compact(r.AdminCert),
+		AdminKey:       compact(r.AdminKey),
+		EtcdCert:       compact(r.EtcdCert),
+		EtcdClientCert: compact(r.EtcdClientCert),
+		EtcdClientKey:  compact(r.EtcdClientKey),
+		EtcdKey:        compact(r.EtcdKey),
 	}
 	if err != nil {
 		return nil, err

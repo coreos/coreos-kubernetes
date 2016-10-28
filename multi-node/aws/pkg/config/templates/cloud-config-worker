@@ -4,7 +4,10 @@ coreos:
     reboot-strategy: "off"
   flannel:
     interface: $private_ipv4
-    etcd_endpoints: {{ .ETCDEndpoints }}
+    etcd_endpoints: {{ .EtcdEndpoints }}
+    etcd_cafile: /etc/kubernetes/ssl/ca.pem
+    etcd_certfile: /etc/kubernetes/ssl/etcd-client.pem
+    etcd_keyfile: /etc/kubernetes/ssl/etcd-client-key.pem
   units:
     - name: docker.service
       drop-ins:
@@ -15,6 +18,16 @@ coreos:
             After=flanneld.service
             [Service]
             EnvironmentFile=/etc/kubernetes/cni/docker_opts_cni.env
+
+    - name: flanneld.service
+      drop-ins:
+        - name: 10-etcd.conf
+          content: |
+            [Unit]
+            Requires=decrypt-tls-assets.service
+            After=decrypt-tls-assets.service
+            [Service]
+            Environment="ETCD_SSL_DIR=/etc/kubernetes/ssl"
 
     - name: kubelet.service
       command: start
@@ -35,8 +48,8 @@ coreos:
         --mount volume=var-log,target=/var/log"
         ExecStartPre=/usr/bin/mkdir -p /var/log/containers
         ExecStart=/usr/lib/coreos/kubelet-wrapper \
-        --api-servers={{.SecureAPIServers}} \
-        --cni-conf-dir=/etc/kubernetes/cni/net.d \
+        --api-servers={{.APIServerEndpoint}} \
+        --network-plugin-dir=/etc/kubernetes/cni/net.d \
         --network-plugin={{.K8sNetworkPlugin}} \
         --container-runtime={{.ContainerRuntime}} \
         --rkt-path=/usr/bin/rkt \
@@ -103,7 +116,7 @@ coreos:
         Environment=FELIX_FELIXHOSTNAME=$private_ipv4
         Environment=CALICO_NETWORKING=false
         Environment=NO_DEFAULT_POOLS=true
-        Environment=ETCD_ENDPOINTS={{ .ETCDEndpoints }}
+        Environment=ETCD_ENDPOINTS={{ .EtcdEndpoints }}
         ExecStart=/usr/bin/rkt run --inherit-env --stage1-from-dir=stage1-fly.aci \
         --volume=modules,kind=host,source=/lib/modules,readOnly=false \
         --mount=volume=modules,target=/lib/modules \
@@ -123,17 +136,28 @@ coreos:
       content: |
         [Unit]
         Description=decrypt kubelet tls assets using amazon kms
-        Before=kubelet.service
+        Before=kubelet.service flanneld.service
+        After=early-docker.service
+        Requires=early-docker.service
 
         [Service]
         Type=oneshot
         RemainAfterExit=yes
+        Environment="DOCKER_HOST=unix:///var/run/early-docker.sock"
         ExecStart=/opt/bin/decrypt-tls-assets
 
         [Install]
-        RequiredBy=kubelet.service
+        RequiredBy=kubelet.service flanneld.service
+
 
 write_files:
+  - path: /etc/kubernetes/ssl/etcd-client.pem.enc
+    encoding: gzip+base64
+    content: {{.TLSConfig.EtcdClientCert}}
+
+  - path: /etc/kubernetes/ssl/etcd-client-key.pem.enc
+    encoding: gzip+base64
+    content: {{.TLSConfig.EtcdClientKey}}
   - path: /etc/kubernetes/cni/docker_opts_cni.env
     content: |
       DOCKER_OPT_BIP=""
@@ -210,7 +234,7 @@ write_files:
             command:
             - /hyperkube
             - proxy
-            - --master=https://{{.ControllerIP}}:443
+            - --master={{.APIServerEndpoint}}
             - --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml
             securityContext:
               privileged: true
@@ -268,13 +292,13 @@ write_files:
             "type": "flannel",
             "delegate": {
                 "type": "calico",
-                "etcd_endpoints": "{{ .ETCDEndpoints }}",
+                "etcd_endpoints": "{{ .EtcdEndpoints }}",
                 "log_level": "none",
                 "log_level_stderr": "info",
                 "hostname": "$private_ipv4",
                 "policy": {
                     "type": "k8s",
-                    "k8s_api_root": "https://{{.ControllerIP}}:443/api/v1/",
+                    "k8s_api_root": "{{.APIServerEndpoint}}/api/v1/",
                     "k8s_client_key": "/etc/kubernetes/ssl/worker-key.pem",
                     "k8s_client_certificate": "/etc/kubernetes/ssl/worker.pem"
                 }

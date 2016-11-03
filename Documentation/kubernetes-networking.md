@@ -95,6 +95,6 @@ IP addresses assigned on the pod network are typically not routable outside of t
 
 In a manually configured network, it may be necessary to open a range of ports to outside clients (default 30000-32767) for use with "external services". See the [Kubernetes Service][kube-service] documentation for more information on external services.
 
-[calico-external]: https://github.com/projectcalico/calico-containers/blob/v0.19.0/docs/ExternalConnectivity.md
+[calico-external]: https://github.com/projectcalico/calico-containers/blob/v0.22.0/docs/ExternalConnectivity.md
 [kube-service]: http://kubernetes.io/docs/user-guide/services/#publishing-services---service-types
 

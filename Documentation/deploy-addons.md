@@ -41,30 +41,29 @@ spec:
 apiVersion: v1
 kind: ReplicationController
 metadata:
-  name: kube-dns-v19
+  name: kube-dns-v20
   namespace: kube-system
   labels:
     k8s-app: kube-dns
-    version: v19
+    version: v20
     kubernetes.io/cluster-service: "true"
 spec:
   replicas: 1
   selector:
     k8s-app: kube-dns
-    version: v19
+    version: v20
   template:
     metadata:
       labels:
         k8s-app: kube-dns
-        version: v19
-        kubernetes.io/cluster-service: "true"
+        version: v20
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
         scheduler.alpha.kubernetes.io/tolerations: '[{"key":"CriticalAddonsOnly", "operator":"Exists"}]'
     spec:
       containers:
       - name: kubedns
-        image: gcr.io/google_containers/kubedns-amd64:1.7
+        image: gcr.io/google_containers/kubedns-amd64:1.8
         resources:
           limits:
             memory: 170Mi
@@ -73,7 +72,7 @@ spec:
             memory: 70Mi
         livenessProbe:
           httpGet:
-            path: /healthz
+            path: /healthz-kubedns
             port: 8080
             scheme: HTTP
           initialDelaySeconds: 60
@@ -85,7 +84,7 @@ spec:
             path: /readiness
             port: 8081
             scheme: HTTP
-          initialDelaySeconds: 30
+          initialDelaySeconds: 3
           timeoutSeconds: 5
         args:
         - --domain=cluster.local.
@@ -98,7 +97,16 @@ spec:
           name: dns-tcp-local
           protocol: TCP
       - name: dnsmasq
-        image: gcr.io/google_containers/kube-dnsmasq-amd64:1.3
+        image: gcr.io/google_containers/kube-dnsmasq-amd64:1.4
+        livenessProbe:
+          httpGet:
+            path: /healthz-dnsmasq
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 60
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 5
         args:
         - --cache-size=1000
         - --no-resolv
@@ -112,7 +120,7 @@ spec:
           name: dns-tcp
           protocol: TCP
       - name: healthz
-        image: gcr.io/google_containers/exechealthz-amd64:1.1
+        image: gcr.io/google_containers/exechealthz-amd64:1.2
         resources:
           limits:
             memory: 50Mi
@@ -120,18 +128,21 @@ spec:
             cpu: 10m
             memory: 50Mi
         args:
-        - -cmd=nslookup kubernetes.default.svc.cluster.local 127.0.0.1 >/dev/null && nslookup kubernetes.default.svc.cluster.local 127.0.0.1:10053 >/dev/null
-        - -port=8080
-        - -quiet
+        - --cmd=nslookup kubernetes.default.svc.cluster.local 127.0.0.1 >/dev/null
+        - --url=/healthz-dnsmasq
+        - --cmd=nslookup kubernetes.default.svc.cluster.local 127.0.0.1:10053 >/dev/null
+        - --url=/healthz-kubedns
+        - --port=8080
+        - --quiet
         ports:
         - containerPort: 8080
           protocol: TCP
-      dnsPolicy: Default 
+      dnsPolicy: Default
 ```
 
 *Note:* The above YAML definition is based on the upstream DNS addon in the [Kubernetes addon folder][k8s-dns-addon].
 
-[k8s-dns-addon]: https://github.com/kubernetes/kubernetes/tree/v1.4.0/cluster/addons/dns
+[k8s-dns-addon]: https://github.com/kubernetes/kubernetes/tree/v1.4.3/cluster/addons/dns
 
 This single YAML file is actually creating 2 different Kubernetes objects, separated by `---`.
 
@@ -145,10 +156,10 @@ Next, start the DNS add-on:
 $ kubectl create -f dns-addon.yml
 ```
 
-And check for `kube-dns-v19-*` pod up and running:
+And check for `kube-dns-v20-*` pod up and running:
 
 ```sh
-$ kubectl get pods --namespace=kube-system | grep kube-dns-v19
+$ kubectl get pods --namespace=kube-system | grep kube-dns-v20
 ```
 
 ## Deploy the kube Dashboard Add-on
@@ -162,11 +173,11 @@ Create `kube-dashboard-rc.yaml` and `kube-dashboard-svc.yaml` on your local mach
 apiVersion: v1
 kind: ReplicationController
 metadata:
-  name: kubernetes-dashboard-v1.4.0
+  name: kubernetes-dashboard-v1.4.1
   namespace: kube-system
   labels:
     k8s-app: kubernetes-dashboard
-    version: v1.4.0
+    version: v1.4.1
     kubernetes.io/cluster-service: "true"
 spec:
   replicas: 1
@@ -176,7 +187,7 @@ spec:
     metadata:
       labels:
         k8s-app: kubernetes-dashboard
-        version: v1.4.0
+        version: v1.4.1
         kubernetes.io/cluster-service: "true"
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
@@ -184,7 +195,7 @@ spec:
     spec:
       containers:
       - name: kubernetes-dashboard
-        image: gcr.io/google_containers/kubernetes-dashboard-amd64:v1.4.0
+        image: gcr.io/google_containers/kubernetes-dashboard-amd64:v1.4.1
         resources:
           limits:
             cpu: 100m
@@ -234,7 +245,7 @@ Access the dashboard by port forwarding with `kubectl`.
 
 ```sh
 $ kubectl get pods --namespace=kube-system
-$ kubectl port-forward kubernetes-dashboard-v1.4.0-SOME-ID 9090 --namespace=kube-system
+$ kubectl port-forward kubernetes-dashboard-v1.4.1-SOME-ID 9090 --namespace=kube-system
 ```
 
 Then visit [http://127.0.0.1:9090](http://127.0.0.1:9090/) in your browser.

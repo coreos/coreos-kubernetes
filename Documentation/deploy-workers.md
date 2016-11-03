@@ -80,7 +80,7 @@ Create `/etc/systemd/system/kubelet.service` and substitute the following variab
 * Replace `${MASTER_HOST}`
 * Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
 * Replace `${DNS_SERVICE_IP}`
-* Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release, e.g. `v1.4.0_coreos.0`.
+* Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release, e.g. `v1.4.3_coreos.0`.
 * Replace `${NETWORK_PLUGIN}` with `cni` if using Calico. Otherwise just leave it blank.
 * Decide if you will use [additional features][rkt-opts-examples] such as:
   - [mounting ephemeral disks][mount-disks]
@@ -107,7 +107,7 @@ ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --network-plugin=${NETWORK_PLUGIN} \
   --register-node=true \
   --allow-privileged=true \
-  --config=/etc/kubernetes/manifests \
+  --pod-manifest-path=/etc/kubernetes/manifests \
   --hostname-override=${ADVERTISE_IP} \
   --cluster-dns=${DNS_SERVICE_IP} \
   --cluster-domain=cluster.local \
@@ -120,7 +120,7 @@ RestartSec=10
 WantedBy=multi-user.target
 ```
 
-### Set Up the CNI config
+### Set Up the CNI config (optional)
 
 The kubelet reads the CNI configuration on startup and uses that to determine which CNI plugin to call. Create the following file which tells the kubelet to call the flannel plugin but to then delegate control to the Calico plugin. Using the flannel plugin ensures that the Calico plugin is called with the IP range for the node that was selected by flannel.
 
@@ -170,7 +170,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-proxy
-    image: quay.io/coreos/hyperkube:v1.4.0_coreos.0
+    image: quay.io/coreos/hyperkube:v1.4.3_coreos.0
     command:
     - /hyperkube
     - proxy
@@ -228,7 +228,7 @@ contexts:
 current-context: kubelet-context
 ```
 
-### Set Up Calico Node Container
+### Set Up Calico Node Container (optional)
 
 The Calico node container runs on all hosts, including the master node. It performs two functions:
 * Connects containers to the flannel overlay network, which enables the "one IP per pod" concept.

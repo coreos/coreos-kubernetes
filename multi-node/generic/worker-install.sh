@@ -10,7 +10,7 @@ export ETCD_ENDPOINTS=
 export CONTROLLER_ENDPOINT=
 
 # Specify the version (vX.Y.Z) of Kubernetes assets to deploy
-export K8S_VER=v1.4.0_coreos.0
+export K8S_VER=v1.4.3_coreos.0
 
 # Hyperkube image repository to use.
 export HYPERKUBE_IMAGE_REPO=quay.io/coreos/hyperkube
@@ -79,7 +79,7 @@ ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --rkt-stage1-image=coreos.com/rkt/stage1-coreos \
   --register-node=true \
   --allow-privileged=true \
-  --config=/etc/kubernetes/manifests \
+  --pod-manifest-path=/etc/kubernetes/manifests \
   --hostname-override=${ADVERTISE_IP} \
   --cluster_dns=${DNS_SERVICE_IP} \
   --cluster_domain=cluster.local \

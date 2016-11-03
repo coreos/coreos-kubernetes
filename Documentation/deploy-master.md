@@ -97,7 +97,7 @@ Note that the kubelet running on a master node may log repeated attempts to post
 
 * Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
 * Replace `${DNS_SERVICE_IP}`
-* Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release, e.g. `v1.4.0_coreos.0`.
+* Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release, e.g. `v1.4.3_coreos.0`.
 * Replace `${NETWORK_PLUGIN}` with `cni` if using Calico. Otherwise just leave it blank.
 * Decide if you will use [additional features][rkt-opts-examples] such as:
   - [mounting ephemeral disks][mount-disks]
@@ -124,7 +124,7 @@ ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --network-plugin=${NETWORK_PLUGIN} \
   --register-schedulable=false \
   --allow-privileged=true \
-  --config=/etc/kubernetes/manifests \
+  --pod-manifest-path=/etc/kubernetes/manifests \
   --hostname-override=${ADVERTISE_IP} \
   --cluster-dns=${DNS_SERVICE_IP} \
   --cluster-domain=cluster.local
@@ -138,7 +138,7 @@ WantedBy=multi-user.target
 
 The API server is where most of the magic happens. It is stateless by design and takes in API requests, processes them and stores the result in etcd if needed, and then returns the result of the request.
 
-We're going to use a unique feature of the kubelet to launch a Pod that runs the API server. Above we configured the kubelet to watch a local directory for pods to run with the `--config=/etc/kubernetes/manifests` flag. All we need to do is place our Pod manifest in that location, and the kubelet will make sure it stays running, just as if the Pod was submitted via the API. The cool trick here is that we don't have an API running yet, but the Pod will function the exact same way, which simplifies troubleshooting later on.
+We're going to use a unique feature of the kubelet to launch a Pod that runs the API server. Above we configured the kubelet to watch a local directory for pods to run with the `--pod-manifest-path=/etc/kubernetes/manifests` flag. All we need to do is place our Pod manifest in that location, and the kubelet will make sure it stays running, just as if the Pod was submitted via the API. The cool trick here is that we don't have an API running yet, but the Pod will function the exact same way, which simplifies troubleshooting later on.
 
 If this is your first time looking at a Pod manifest, don't worry, they aren't all this complicated. But, this shows off the power and flexibility of the Pod concept. Create `/etc/kubernetes/manifests/kube-apiserver.yaml` with the following settings:
 
@@ -158,7 +158,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-apiserver
-    image: quay.io/coreos/hyperkube:v1.4.0_coreos.0
+    image: quay.io/coreos/hyperkube:v1.4.3_coreos.0
     command:
     - /hyperkube
     - apiserver
@@ -168,7 +168,7 @@ spec:
     - --service-cluster-ip-range=${SERVICE_IP_RANGE}
     - --secure-port=443
     - --advertise-address=${ADVERTISE_IP}
-    - --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,ResourceQuota
+    - --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota
     - --tls-cert-file=/etc/kubernetes/ssl/apiserver.pem
     - --tls-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
     - --client-ca-file=/etc/kubernetes/ssl/ca.pem
@@ -217,7 +217,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-proxy
-    image: quay.io/coreos/hyperkube:v1.4.0_coreos.0
+    image: quay.io/coreos/hyperkube:v1.4.3_coreos.0
     command:
     - /hyperkube
     - proxy
@@ -257,7 +257,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-controller-manager
-    image: quay.io/coreos/hyperkube:v1.4.0_coreos.0
+    image: quay.io/coreos/hyperkube:v1.4.3_coreos.0
     command:
     - /hyperkube
     - controller-manager
@@ -306,7 +306,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-scheduler
-    image: quay.io/coreos/hyperkube:v1.4.0_coreos.0
+    image: quay.io/coreos/hyperkube:v1.4.3_coreos.0
     command:
     - /hyperkube
     - scheduler

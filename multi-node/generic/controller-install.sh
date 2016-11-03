@@ -5,7 +5,7 @@ set -e
 export ETCD_ENDPOINTS=
 
 # Specify the version (vX.Y.Z) of Kubernetes assets to deploy
-export K8S_VER=v1.4.0_coreos.0
+export K8S_VER=v1.4.3_coreos.0
 
 # Hyperkube image repository to use.
 export HYPERKUBE_IMAGE_REPO=quay.io/coreos/hyperkube
@@ -113,7 +113,7 @@ ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --rkt-path=/usr/bin/rkt \
   --rkt-stage1-image=coreos.com/rkt/stage1-coreos \
   --allow-privileged=true \
-  --config=/etc/kubernetes/manifests \
+  --pod-manifest-path=/etc/kubernetes/manifests \
   --hostname-override=${ADVERTISE_IP} \
   --cluster_dns=${DNS_SERVICE_IP} \
   --cluster_domain=cluster.local
@@ -282,7 +282,7 @@ spec:
     - --service-cluster-ip-range=${SERVICE_IP_RANGE}
     - --secure-port=443
     - --advertise-address=${ADVERTISE_IP}
-    - --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,ResourceQuota
+    - --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota
     - --tls-cert-file=/etc/kubernetes/ssl/apiserver.pem
     - --tls-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
     - --client-ca-file=/etc/kubernetes/ssl/ca.pem
@@ -458,30 +458,29 @@ EOF
 apiVersion: v1
 kind: ReplicationController
 metadata:
-  name: kube-dns-v19
+  name: kube-dns-v20
   namespace: kube-system
   labels:
     k8s-app: kube-dns
-    version: v19
+    version: v20
     kubernetes.io/cluster-service: "true"
 spec:
   replicas: 1
   selector:
     k8s-app: kube-dns
-    version: v19
+    version: v20
   template:
     metadata:
       labels:
         k8s-app: kube-dns
-        version: v19
-        kubernetes.io/cluster-service: "true"
+        version: v20
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
         scheduler.alpha.kubernetes.io/tolerations: '[{"key":"CriticalAddonsOnly", "operator":"Exists"}]'
     spec:
       containers:
       - name: kubedns
-        image: gcr.io/google_containers/kubedns-amd64:1.7
+        image: gcr.io/google_containers/kubedns-amd64:1.8
         resources:
           limits:
             memory: 170Mi
@@ -490,7 +489,7 @@ spec:
             memory: 70Mi
         livenessProbe:
           httpGet:
-            path: /healthz
+            path: /healthz-kubedns
             port: 8080
             scheme: HTTP
           initialDelaySeconds: 60
@@ -502,7 +501,7 @@ spec:
             path: /readiness
             port: 8081
             scheme: HTTP
-          initialDelaySeconds: 30
+          initialDelaySeconds: 3
           timeoutSeconds: 5
         args:
         - --domain=cluster.local.
@@ -515,7 +514,16 @@ spec:
           name: dns-tcp-local
           protocol: TCP
       - name: dnsmasq
-        image: gcr.io/google_containers/kube-dnsmasq-amd64:1.3
+        image: gcr.io/google_containers/kube-dnsmasq-amd64:1.4
+        livenessProbe:
+          httpGet:
+            path: /healthz-dnsmasq
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 60
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 5
         args:
         - --cache-size=1000
         - --no-resolv
@@ -529,7 +537,7 @@ spec:
           name: dns-tcp
           protocol: TCP
       - name: healthz
-        image: gcr.io/google_containers/exechealthz-amd64:1.1
+        image: gcr.io/google_containers/exechealthz-amd64:1.2
         resources:
           limits:
             memory: 50Mi
@@ -537,13 +545,16 @@ spec:
             cpu: 10m
             memory: 50Mi
         args:
-        - -cmd=nslookup kubernetes.default.svc.cluster.local 127.0.0.1 >/dev/null && nslookup kubernetes.default.svc.cluster.local 127.0.0.1:10053 >/dev/null
-        - -port=8080
-        - -quiet
+        - --cmd=nslookup kubernetes.default.svc.cluster.local 127.0.0.1 >/dev/null
+        - --url=/healthz-dnsmasq
+        - --cmd=nslookup kubernetes.default.svc.cluster.local 127.0.0.1:10053 >/dev/null
+        - --url=/healthz-kubedns
+        - --port=8080
+        - --quiet
         ports:
         - containerPort: 8080
           protocol: TCP
-      dnsPolicy: Default 
+      dnsPolicy: Default
 EOF
     fi
 
@@ -687,11 +698,11 @@ EOF
 apiVersion: v1
 kind: ReplicationController
 metadata:
-  name: kubernetes-dashboard-v1.4.0
+  name: kubernetes-dashboard-v1.4.1
   namespace: kube-system
   labels:
     k8s-app: kubernetes-dashboard
-    version: v1.4.0
+    version: v1.4.1
     kubernetes.io/cluster-service: "true"
 spec:
   replicas: 1
@@ -701,7 +712,7 @@ spec:
     metadata:
       labels:
         k8s-app: kubernetes-dashboard
-        version: v1.4.0
+        version: v1.4.1
         kubernetes.io/cluster-service: "true"
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
@@ -709,7 +720,7 @@ spec:
     spec:
       containers:
       - name: kubernetes-dashboard
-        image: gcr.io/google_containers/kubernetes-dashboard-amd64:v1.4.0
+        image: gcr.io/google_containers/kubernetes-dashboard-amd64:v1.4.1
         resources:
           limits:
             cpu: 100m

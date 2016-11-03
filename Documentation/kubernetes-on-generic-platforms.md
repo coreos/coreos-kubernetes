@@ -104,5 +104,5 @@ $ journalctl -u kubelet -f
 [mount-disks]: https://coreos.com/os/docs/latest/mounting-storage.html
 [insecure-registry]: https://coreos.com/os/docs/latest/registry-authentication.html#using-a-registry-without-ssl-configured
 [update]: https://coreos.com/os/docs/latest/switching-channels.html
-[controller-script]: ../multi-node/generic/controller-install.sh
-[worker-script]: ../multi-node/generic/worker-install.sh
+[controller-script]: https://github.com/coreos/coreos-kubernetes/blob/master/multi-node/generic/controller-install.sh
+[worker-script]: https://github.com/coreos/coreos-kubernetes/blob/master/multi-node/generic/worker-install.sh

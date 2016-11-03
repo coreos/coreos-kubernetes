@@ -406,7 +406,7 @@ spec:
   containers:
     # The Calico policy controller.
     - name: kube-policy-controller
-      image: calico/kube-policy-controller:v0.2.0
+      image: calico/kube-policy-controller:v0.3.0
       env:
         - name: ETCD_ENDPOINTS
           value: "${ETCD_ENDPOINTS}"

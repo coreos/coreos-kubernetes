@@ -298,7 +298,7 @@ func (c Cluster) stackConfig(opts StackTemplateOptions, compressUserData bool) (
 
 	// if no controller subnet specified, the controller IP should match one of the worker subnet CIDRs
 	controllerSubnets := stackConfig.Subnets
-	if &stackConfig.ControllerSubnets != nil {
+	if &stackConfig.ControllerSubnets != nil && len(stackConfig.ControllerSubnets) > 0 {
 		controllerSubnets = stackConfig.ControllerSubnets
 	}
 

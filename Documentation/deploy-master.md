@@ -62,7 +62,7 @@ Next create a [systemd drop-in][dropins], which is a method for appending or ove
 ExecStartPre=/usr/bin/ln -sf /etc/flannel/options.env /run/flannel/options.env
 ```
 
-[calico-docs]: https://github.com/projectcalico/calico-containers/tree/v0.19.0/docs/cni/kubernetes
+[calico-docs]: https://github.com/projectcalico/calico-containers/tree/v0.22.0/docs/cni/kubernetes
 [flannel-docs]: https://coreos.com/flannel/docs/latest/
 [pod-overview]: https://coreos.com/kubernetes/docs/latest/pods.html
 [service-overview]: https://coreos.com/kubernetes/docs/latest/services.html

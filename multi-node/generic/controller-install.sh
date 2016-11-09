@@ -778,6 +778,7 @@ EOF
         cat << EOF > $TEMPLATE
 [Service]
 ExecStartPre=/usr/bin/ln -sf /etc/flannel/options.env /run/flannel/options.env
+TimeoutSec=20m
 EOF
     fi
 

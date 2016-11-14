@@ -42,7 +42,8 @@ coreos:
         [Service]
         Environment=KUBELET_VERSION={{.K8sVer}}
         Environment=KUBELET_ACI={{.HyperkubeImageRepo}}
-        Environment="RKT_OPTS=--volume dns,kind=host,source=/etc/resolv.conf \
+        Environment="RKT_OPTS=--uuid-file-save=/var/run/kubelet-pod.uuid \
+        --volume dns,kind=host,source=/etc/resolv.conf \
         --mount volume=dns,target=/etc/resolv.conf \
         --volume rkt,kind=host,source=/opt/bin/host-rkt \
         --mount volume=rkt,target=/usr/bin/rkt \
@@ -53,6 +54,7 @@ coreos:
         --volume var-log,kind=host,source=/var/log \
         --mount volume=var-log,target=/var/log"
         ExecStartPre=/usr/bin/mkdir -p /var/log/containers
+        ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
         ExecStart=/usr/lib/coreos/kubelet-wrapper \
         --api-servers=http://localhost:8080 \
         --cni-conf-dir=/etc/kubernetes/cni/net.d \
@@ -66,6 +68,7 @@ coreos:
         --cluster_dns={{.DNSServiceIP}} \
         --cluster_domain=cluster.local \
         --cloud-provider=aws
+        ExecStop=-/usr/bin/rkt stop --uuid-file=/var/run/kubelet-pod.uuid
         Restart=always
         RestartSec=10
 

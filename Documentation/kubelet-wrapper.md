@@ -20,9 +20,12 @@ An example systemd kubelet.service file which takes advantage of the kubelet-wra
 ```ini
 [Service]
 Environment=KUBELET_VERSION=v1.4.6_coreos.0
+Environment="RKT_OPTS=--uuid-file-save=/var/run/kubelet-pod.uuid"
+ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \
   --pod-manifest-path=/etc/kubernetes/manifests
+ExecStop=-/usr/bin/rkt stop --uuid-file=/var/run/kubelet-pod.uuid
 ```
 
 In the example above we set the `KUBELET_VERSION` and the kubelet-wrapper script takes care of running the correct container image with our desired API server address and manifest location.
@@ -37,12 +40,16 @@ Mount the host's `/etc/resolv.conf` file directly into the container in order to
 
 ```ini
 [Service]
-Environment="RKT_OPTS=--volume resolv,kind=host,source=/etc/resolv.conf --mount volume=resolv,target=/etc/resolv.conf"
 Environment=KUBELET_VERSION=v1.4.6_coreos.0
+Environment="RKT_OPTS=--volume=resolv,kind=host,source=/etc/resolv.conf \
+  --mount volume=resolv,target=/etc/resolv.conf \
+  --uuid-file-save=/var/run/kubelet-pod.uuid"
+ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \
   --pod-manifest-path=/etc/kubernetes/manifests
   ...other flags...
+ExecStop=-/usr/bin/rkt stop --uuid-file=/var/run/kubelet-pod.uuid
 ```
 
 ### Allow pods to use iSCSI mounts
@@ -51,12 +58,16 @@ Pods running in your cluster can reference remote storage volumes located on an 
 
 ```ini
 [Service]
-Environment="RKT_OPTS=--volume iscsiadm,kind=host,source=/usr/sbin/iscsiadm --mount volume=iscsiadm,target=/usr/sbin/iscsiadm"
 Environment=KUBELET_VERSION=v1.4.6_coreos.0
+Environment="RKT_OPTS=--volume iscsiadm,kind=host,source=/usr/sbin/iscsiadm \
+  --mount volume=iscsiadm,target=/usr/sbin/iscsiadm \
+  --uuid-file-save=/var/run/kubelet-pod.uuid"
+ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \
   --pod-manifest-path=/etc/kubernetes/manifests
   ...other flags...
+ExecStop=-/usr/bin/rkt stop --uuid-file=/var/run/kubelet-pod.uuid
 ```
 
 ### Allow pods to use rbd volumes
@@ -65,11 +76,12 @@ Pods using the [rbd volume plugin][rbd-example] to consume data from ceph must e
 
 ```ini
 [Service]
-Environment="RKT_OPTS=--volume modprobe,kind=host,source=/usr/sbin/modprobe \
---mount volume=modprobe,target=/usr/sbin/modprobe \
---volume lib-modules,kind=host,source=/lib/modules \
---mount volume=lib-modules,target=/lib/modules \
 Environment=KUBELET_VERSION=v1.4.6_coreos.0
+Environment="RKT_OPTS=--volume modprobe,kind=host,source=/usr/sbin/modprobe \
+  --mount volume=modprobe,target=/usr/sbin/modprobe \
+  --volume lib-modules,kind=host,source=/lib/modules \
+  --mount volume=lib-modules,target=/lib/modules \
+  --uuid-file-save=/var/run/kubelet-pod.uuid"
 ...
 ```
 
@@ -89,9 +101,11 @@ For example:
 ```ini
 [Service]
 Environment=KUBELET_VERSION=v1.4.6_coreos.0
+...
 ExecStart=/opt/bin/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \
   --pod-manifest-path=/etc/kubernetes/manifests
+...
 ```
 
 [#2141]: https://github.com/coreos/rkt/issues/2141

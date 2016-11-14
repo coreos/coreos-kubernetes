@@ -4,6 +4,10 @@ This repo contains tooling and documentation around deploying Kubernetes using C
 Initial setup of a Kubernetes cluster is covered, but ongoing maintenance and updates of the cluster is not addressed.
 It is officially maintained by the CoreOS team and meant to be a set of introductory documentation to get a feel for using Kubernetes on CoreOS.
 
+*Notice: kube-aws has moved!*
+
+If you're looking for kube-aws, it has been moved to a new [dedicated repository](https://github.com/coreos/kube-aws). All oustanding AWS-related issues and PRs should be moved to there. This repository will continue to host development on single and multi node vagrant distributions.
+
 ## The CoreOS Way
 
 When designing these guides and tools, the following considerations are made:
@@ -30,7 +34,7 @@ https://coreos.com/kubernetes/docs/latest/
 - [Step-by-Step for Any Platform](Documentation/getting-started.md)
 - [Single-Node Vagrant Stack](single-node/README.md)
 - [Multi-Node Vagrant Cluster](multi-node/vagrant/README.md)
-- [Multi-Node AWS Cluster](multi-node/aws/README.md)
+- [Multi-Node AWS Cluster](https://github.com/coreos/kube-aws)
 - [Multi-Node Bare Metal Cluster](Documentation/kubernetes-on-baremetal.md)
 
 ## Running Kubernetes Conformance Tests

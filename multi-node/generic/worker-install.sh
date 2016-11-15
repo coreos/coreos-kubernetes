@@ -51,6 +51,7 @@ function init_config {
 
 function init_templates {
     local TEMPLATE=/etc/systemd/system/kubelet.service
+    local uuid_file="/var/run/kubelet-pod.uuid"
     if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
@@ -58,7 +59,8 @@ function init_templates {
 [Service]
 Environment=KUBELET_VERSION=${K8S_VER}
 Environment=KUBELET_ACI=${HYPERKUBE_IMAGE_REPO}
-Environment="RKT_OPTS=--volume dns,kind=host,source=/etc/resolv.conf \
+Environment="RKT_OPTS=--uuid-file-save=${uuid_file} \
+  --volume dns,kind=host,source=/etc/resolv.conf \
   --mount volume=dns,target=/etc/resolv.conf \
   --volume rkt,kind=host,source=/opt/bin/host-rkt \
   --mount volume=rkt,target=/usr/bin/rkt \
@@ -70,6 +72,7 @@ Environment="RKT_OPTS=--volume dns,kind=host,source=/etc/resolv.conf \
   --mount volume=var-log,target=/var/log"
 ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
 ExecStartPre=/usr/bin/mkdir -p /var/log/containers
+ExecStartPre=-/usr/bin/rkt rm --uuid-file=${uuid_file}
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=${CONTROLLER_ENDPOINT} \
   --cni-conf-dir=/etc/kubernetes/cni/net.d \
@@ -86,6 +89,7 @@ ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml \
   --tls-cert-file=/etc/kubernetes/ssl/worker.pem \
   --tls-private-key-file=/etc/kubernetes/ssl/worker-key.pem
+ExecStop=-/usr/bin/rkt stop --uuid-file=${uuid_file}
 Restart=always
 RestartSec=10
 

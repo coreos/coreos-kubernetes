@@ -96,11 +96,13 @@ ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
 ExecStartPre=/usr/bin/mkdir -p /var/log/containers
 
 Environment=KUBELET_VERSION=${K8S_VER}
-Environment="RKT_OPTS=--volume var-log,kind=host,source=/var/log \
+Environment="RKT_OPTS=--uuid-file-save=/var/run/kubelet-pod.uuid \
+  --volume var-log,kind=host,source=/var/log \
   --mount volume=var-log,target=/var/log \
   --volume dns,kind=host,source=/etc/resolv.conf \
   --mount volume=dns,target=/etc/resolv.conf"
 
+ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=https://${MASTER_HOST} \
   --network-plugin-dir=/etc/kubernetes/cni/net.d \
@@ -114,6 +116,7 @@ ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml \
   --tls-cert-file=/etc/kubernetes/ssl/worker.pem \
   --tls-private-key-file=/etc/kubernetes/ssl/worker-key.pem
+ExecStop=-/usr/bin/rkt stop --uuid-file=/var/run/kubelet-pod.uuid
 Restart=always
 RestartSec=10
 [Install]

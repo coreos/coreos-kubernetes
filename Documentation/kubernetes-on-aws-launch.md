@@ -42,7 +42,6 @@ Once the API server is running, you should see:
 $ kubectl --kubeconfig=kubeconfig get nodes
 NAME                                       STATUS                     AGE
 ip-10-0-0-xxx.us-west-1.compute.internal   Ready                      5m
-ip-10-0-0-xxx.us-west-1.compute.internal   Ready                      5m
 ip-10-0-0-xx.us-west-1.compute.internal    Ready,SchedulingDisabled   5m
 ```
 

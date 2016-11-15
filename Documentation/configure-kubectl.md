@@ -10,18 +10,18 @@ To quickly launch a cluster, follow these guides for [AWS][kube-aws], [Vagrant][
 
 ## Download the kubectl Executable
 
-Download `kubectl` from the Kubernetes release artifact site with the `curl` tool.
+Download `kubectl` from the Kubernetes github release site with the `curl` tool.
 
 The linux `kubectl` binary can be fetched with a command like:
 
 ```sh
-$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.4.5/bin/linux/amd64/kubectl
+$  curl -L  https://github.com/kubernetes/kubernetes/releases/download/v1.4.5/kubernetes.tar.gz | tar xzf - kubernetes/platforms/linux/amd64/kubectl
 ```
 
 On an OS X workstation, replace `linux` in the URL above with `darwin`:
 
 ```sh
-$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.4.5/bin/darwin/amd64/kubectl
+$  curl -L  https://github.com/kubernetes/kubernetes/releases/download/v1.4.5/kubernetes.tar.gz | tar xzf - kubernetes/platforms/darwin/amd64/kubectl
 ```
 
 After downloading the binary, ensure it is executable and move it into your `PATH`:

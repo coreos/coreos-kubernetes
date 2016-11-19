@@ -92,33 +92,42 @@ Create `/etc/systemd/system/kubelet.service` and substitute the following variab
 
 ```yaml
 [Service]
+Environment=KUBELET_VERSION=${K8S_VER}
+Environment=KUBELET_ACI=quay.io/coreos/hyperkube
+Environment="RKT_OPTS=--uuid-file-save=${uuid_file} \
+  --volume dns,kind=host,source=/etc/resolv.conf \
+  --mount volume=dns,target=/etc/resolv.conf \
+  --volume rkt,kind=host,source=/opt/bin/host-rkt \
+  --mount volume=rkt,target=/usr/bin/rkt \
+  --volume var-lib-rkt,kind=host,source=/var/lib/rkt \
+  --mount volume=var-lib-rkt,target=/var/lib/rkt \
+  --volume stage,kind=host,source=/tmp \
+  --mount volume=stage,target=/tmp \
+  --volume var-log,kind=host,source=/var/log \
+  --mount volume=var-log,target=/var/log"
 ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
 ExecStartPre=/usr/bin/mkdir -p /var/log/containers
-
-Environment=KUBELET_VERSION=${K8S_VER}
-Environment="RKT_OPTS=--uuid-file-save=/var/run/kubelet-pod.uuid \
-  --volume var-log,kind=host,source=/var/log \
-  --mount volume=var-log,target=/var/log \
-  --volume dns,kind=host,source=/etc/resolv.conf \
-  --mount volume=dns,target=/etc/resolv.conf"
-
 ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
-  --api-servers=https://${MASTER_HOST} \
-  --network-plugin-dir=/etc/kubernetes/cni/net.d \
-  --network-plugin=${NETWORK_PLUGIN} \
+  --api-servers=${CONTROLLER_ENDPOINT} \
+  --cni-conf-dir=/etc/kubernetes/cni/net.d \
+  --network-plugin=cni \
+  --container-runtime=docker \
+  --rkt-path=/usr/bin/rkt \
+  --rkt-stage1-image=coreos.com/rkt/stage1-coreos \
   --register-node=true \
   --allow-privileged=true \
   --pod-manifest-path=/etc/kubernetes/manifests \
   --hostname-override=${ADVERTISE_IP} \
-  --cluster-dns=${DNS_SERVICE_IP} \
-  --cluster-domain=cluster.local \
+  --cluster_dns=${DNS_SERVICE_IP} \
+  --cluster_domain=cluster.local \
   --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml \
   --tls-cert-file=/etc/kubernetes/ssl/worker.pem \
   --tls-private-key-file=/etc/kubernetes/ssl/worker-key.pem
 ExecStop=-/usr/bin/rkt stop --uuid-file=/var/run/kubelet-pod.uuid
 Restart=always
 RestartSec=10
+
 [Install]
 WantedBy=multi-user.target
 ```
@@ -169,6 +178,8 @@ kind: Pod
 metadata:
   name: kube-proxy
   namespace: kube-system
+    annotations:
+    rkt.alpha.kubernetes.io/stage1-name-override: coreos.com/rkt/stage1-fly
 spec:
   hostNetwork: true
   containers:
@@ -179,7 +190,6 @@ spec:
     - proxy
     - --master=https://${MASTER_HOST}
     - --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml
-    - --proxy-mode=iptables
     securityContext:
       privileged: true
     volumeMounts:
@@ -191,6 +201,9 @@ spec:
       - mountPath: /etc/kubernetes/ssl
         name: "etc-kube-ssl"
         readOnly: true
+      - mountPath: /var/run/dbus
+        name: dbus
+        readOnly: false
   volumes:
     - name: "ssl-certs"
       hostPath:
@@ -201,6 +214,9 @@ spec:
     - name: "etc-kube-ssl"
       hostPath:
         path: "/etc/kubernetes/ssl"
+    - hostPath:
+        path: /var/run/dbus
+      name: dbus
 ```
 
 ### Set Up kubeconfig

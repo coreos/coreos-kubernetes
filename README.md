@@ -36,6 +36,7 @@ https://coreos.com/kubernetes/docs/latest/
 - [Multi-Node Vagrant Cluster](multi-node/vagrant/README.md)
 - [Multi-Node AWS Cluster](https://github.com/coreos/kube-aws)
 - [Multi-Node Bare Metal Cluster](Documentation/kubernetes-on-baremetal.md)
+- [Ceph RBD Example](Documentation/ceph-rbd.md)
 
 ## Running Kubernetes Conformance Tests
 

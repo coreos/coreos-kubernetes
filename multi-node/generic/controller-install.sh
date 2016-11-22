@@ -42,7 +42,7 @@ ENV_FILE=/run/coreos-kubernetes/options.env
 # -------------
 
 function init_config {
-    local REQUIRED=('ADVERTISE_IP' 'POD_NETWORK' 'ETCD_ENDPOINTS' 'SERVICE_IP_RANGE' 'K8S_SERVICE_IP' 'DNS_SERVICE_IP' 'K8S_VER' 'HYPERKUBE_IMAGE_REPO' 'USE_CALICO')
+    local REQUIRED=('ADVERTISE_IP' 'INTERNAL_IP' 'POD_NETWORK' 'ETCD_ENDPOINTS' 'SERVICE_IP_RANGE' 'K8S_SERVICE_IP' 'DNS_SERVICE_IP' 'K8S_VER' 'HYPERKUBE_IMAGE_REPO' 'USE_CALICO')
 
     if [ -f $ENV_FILE ]; then
         export $(cat $ENV_FILE | xargs)
@@ -50,6 +50,9 @@ function init_config {
 
     if [ -z $ADVERTISE_IP ]; then
         export ADVERTISE_IP=$(awk -F= '/COREOS_PUBLIC_IPV4/ {print $2}' /etc/environment)
+    fi
+    if [ -z $INTERNAL_IP ]; then
+        export INTERNAL_IP=$(awk -F= '/COREOS_PRIVATE_IPV4/ {print $2}' /etc/environment)
     fi
 
     for REQ in "${REQUIRED[@]}"; do
@@ -84,6 +87,49 @@ function init_flannel {
 }
 
 function init_templates {
+    local CEPH_ADMIN_SECRET=AQCE9hxYbWb5GBAA/QaOJw7ruR/NUFPKwy66QA==
+    local ROOKD_ACI=quay.io/rook/rookd:latest
+
+    local TEMPLATE=/etc/systemd/system/rookd.service
+    if [ ! -f $TEMPLATE ]; then
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+[Unit]
+Description=Rook Daemon - software defined storage
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+Slice=machine.slice
+Restart=always
+KillMode=process
+
+Environment=ROOKD_ID=%m
+Environment=ROOKD_PUBLIC_IPV4=${ADVERTISE_IP}
+Environment=ROOKD_PRIVATE_IPV4=${INTERNAL_IP}
+Environment=ROOKD_DATA_DIR=/var/lib/rook
+Environment=ROOKD_ETCD_MEMBERS=${ETCD_ENDPOINTS}
+Environment=ROOKD_ADMIN_SECRET=${CEPH_ADMIN_SECRET}
+
+ExecStartPre=/usr/bin/mkdir -p /var/lib/rook
+ExecStart=/usr/bin/rkt run \
+  --trust-keys-from-https \
+  --stage1-from-dir=stage1-fly.aci \
+  --inherit-env \
+  --volume dns,kind=host,source=/run/systemd/resolve/resolv.conf,readOnly=true \
+  --mount volume=dns,target=/etc/resolv.conf \
+  --volume var-lib-rook,kind=host,source=/var/lib/rook \
+  --mount volume=var-lib-rook,target=/var/lib/rook \
+  $RKT_OPTIONS \
+  $ROOKD_ACI
+
+[Install]
+WantedBy=multi-user.target
+RequiredBy=kubelet.service
+EOF
+    fi
+
     local TEMPLATE=/etc/systemd/system/kubelet.service
     local uuid_file="/var/run/kubelet-pod.uuid"
     if [ ! -f $TEMPLATE ]; then
@@ -103,7 +149,13 @@ Environment="RKT_OPTS=--uuid-file-save=${uuid_file} \
   --volume stage,kind=host,source=/tmp \
   --mount volume=stage,target=/tmp \
   --volume var-log,kind=host,source=/var/log \
-  --mount volume=var-log,target=/var/log"
+  --mount volume=var-log,target=/var/log \
+  --volume modprobe,kind=host,source=/usr/sbin/modprobe \
+  --mount volume=modprobe,target=/usr/sbin/modprobe \
+  --volume lib-modules,kind=host,source=/lib/modules \
+  --mount volume=lib-modules,target=/lib/modules \
+  --volume ceph,kind=host,source=/etc/ceph \
+  --mount volume=ceph,target=/etc/ceph"
 ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
 ExecStartPre=/usr/bin/mkdir -p /var/log/containers
 ExecStartPre=-/usr/bin/rkt rm --uuid-file=${uuid_file}
@@ -892,6 +944,7 @@ if [ $CONTAINER_RUNTIME = "rkt" ]; then
         systemctl enable rkt-api
 fi
 
+systemctl enable rookd; systemctl start rookd
 systemctl enable flanneld; systemctl start flanneld
 systemctl enable kubelet; systemctl start kubelet
 

@@ -19,7 +19,7 @@ The apiserver is stateless, but handles recording the results of leader election
 Create the required directory and place the keys generated previously in the following locations:
 
 ```sh
-$ mkdir -p /etc/kubernetes/ssl
+$ sudo mkdir -p /etc/kubernetes/ssl
 ```
 
 * File: `/etc/kubernetes/ssl/ca.pem`
@@ -81,6 +81,34 @@ Again, we will use a [systemd drop-in][dropins]:
 [Unit]
 Requires=flanneld.service
 After=flanneld.service
+[Service]
+EnvironmentFile=/etc/kubernetes/cni/docker_opts_cni.env
+```
+
+Create the Docker CNI Options file:
+
+**/etc/kubernetes/cni/docker_opts_cni.env**
+
+```yaml
+DOCKER_OPT_BIP=""
+DOCKER_OPT_IPMASQ=""
+```
+
+If using Flannel for networking. 
+
+*Note:* Do not use below if you intend to use Callico for networking
+
+**/etc/kubernetes/cni/net.d/10-flannel.conf**
+
+```yaml
+{
+    "name": "podnet",
+    "type": "flannel",
+    "delegate": {
+        "isDefaultGateway": true
+    }
+}
+
 ```
 
 [dropins]: https://coreos.com/os/docs/latest/using-systemd-drop-in-units.html
@@ -144,6 +172,29 @@ RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
+```
+
+Create Host rkt
+
+**/opt/bin/host-rkt**
+
+```yaml
+#!/bin/sh
+# This is bind mounted into the kubelet rootfs and all rkt shell-outs go
+# through this rkt wrapper. It essentially enters the host mount namespace
+# (which it is already in) only for the purpose of breaking out of the chroot
+# before calling rkt. It makes things like rkt gc work and avoids bind mounting
+# in certain rkt filesystem dependancies into the kubelet rootfs. This can
+# eventually be obviated when the write-api stuff gets upstream and rkt gc is
+# through the api-server. Related issue:
+# https://github.com/coreos/rkt/issues/2878
+exec nsenter -m -u -i -n -p -t 1 -- /usr/bin/rkt "\$@"
+```
+
+Set the host-rkt script to executable
+
+```sh
+$ sudo chmod +x /opt/bin/host-rkt
 ```
 
 ### Set Up the kube-apiserver Pod

@@ -71,7 +71,34 @@ Create `/etc/systemd/system/docker.service.d/40-flannel.conf`
 [Unit]
 Requires=flanneld.service
 After=flanneld.service
+[Service]
+EnvironmentFile=/etc/kubernetes/cni/docker_opts_cni.env
 ```
+
+Create the Docker CNI Options file:
+
+**/etc/kubernetes/cni/docker_opts_cni.env**
+
+```yaml
+DOCKER_OPT_BIP=""
+DOCKER_OPT_IPMASQ=""
+```
+
+If using Flannel for networking. 
+
+*Note:* Do not use below if you intend to use Callico for networking
+
+**/etc/kubernetes/cni/net.d/10-flannel.conf**
+
+```yaml
+{
+    "name": "podnet",
+    "type": "flannel",
+    "delegate": {
+        "isDefaultGateway": true
+    }
+}
+
 
 ### Create the kubelet Unit
 
@@ -94,7 +121,7 @@ Create `/etc/systemd/system/kubelet.service` and substitute the following variab
 [Service]
 Environment=KUBELET_VERSION=${K8S_VER}
 Environment=KUBELET_ACI=quay.io/coreos/hyperkube
-Environment="RKT_OPTS=--uuid-file-save=${uuid_file} \
+Environment="RKT_OPTS=--uuid-file-save=/var/run/kubelet-pod.uuid \
   --volume dns,kind=host,source=/etc/resolv.conf \
   --mount volume=dns,target=/etc/resolv.conf \
   --volume rkt,kind=host,source=/opt/bin/host-rkt \
@@ -130,6 +157,29 @@ RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
+```
+
+Create Host rkt
+
+**/opt/bin/host-rkt**
+
+```yaml
+#!/bin/sh
+# This is bind mounted into the kubelet rootfs and all rkt shell-outs go
+# through this rkt wrapper. It essentially enters the host mount namespace
+# (which it is already in) only for the purpose of breaking out of the chroot
+# before calling rkt. It makes things like rkt gc work and avoids bind mounting
+# in certain rkt filesystem dependancies into the kubelet rootfs. This can
+# eventually be obviated when the write-api stuff gets upstream and rkt gc is
+# through the api-server. Related issue:
+# https://github.com/coreos/rkt/issues/2878
+exec nsenter -m -u -i -n -p -t 1 -- /usr/bin/rkt "\$@"
+```
+
+Set the host-rkt script to executable
+
+```sh
+$ sudo chmod +x /opt/bin/host-rkt
 ```
 
 ### Set Up the CNI config (optional)
@@ -193,31 +243,32 @@ spec:
     securityContext:
       privileged: true
     volumeMounts:
-      - mountPath: /etc/ssl/certs
-        name: "ssl-certs"
-      - mountPath: /etc/kubernetes/worker-kubeconfig.yaml
-        name: "kubeconfig"
-        readOnly: true
-      - mountPath: /etc/kubernetes/ssl
-        name: "etc-kube-ssl"
-        readOnly: true
-      - mountPath: /var/run/dbus
-        name: dbus
-        readOnly: false
-  volumes:
-    - name: "ssl-certs"
-      hostPath:
-        path: "/usr/share/ca-certificates"
-    - name: "kubeconfig"
-      hostPath:
-        path: "/etc/kubernetes/worker-kubeconfig.yaml"
-    - name: "etc-kube-ssl"
-      hostPath:
-        path: "/etc/kubernetes/ssl"
-    - hostPath:
-        path: /var/run/dbus
+    - mountPath: /etc/ssl/certs
+      name: "ssl-certs"
+    - mountPath: /etc/kubernetes/worker-kubeconfig.yaml
+      name: "kubeconfig"
+      readOnly: true
+    - mountPath: /etc/kubernetes/ssl
+      name: "etc-kube-ssl"
+      readOnly: true
+    - mountPath: /var/run/dbus
       name: dbus
+      readOnly: false
+  volumes:
+  - name: "ssl-certs"
+    hostPath:
+      path: "/usr/share/ca-certificates"
+  - name: "kubeconfig"
+    hostPath:
+      path: "/etc/kubernetes/worker-kubeconfig.yaml"
+  - name: "etc-kube-ssl"
+    hostPath:
+      path: "/etc/kubernetes/ssl"
+  - hostPath:
+      path: /var/run/dbus
+    name: dbus
 ```
+
 
 ### Set Up kubeconfig
 

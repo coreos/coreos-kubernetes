@@ -84,9 +84,7 @@ DOCKER_OPT_BIP=""
 DOCKER_OPT_IPMASQ=""
 ```
 
-If using Flannel for networking. 
-
-*Note:* Do not use below if you intend to use Callico for networking
+If using Flannel for networking, setup the Flannel CNI configuration with below. If you intend to use Calico for networking, setup using [Set Up the CNI config (optional)](#set-up-the-cni-config-optional) instead.
 
 **/etc/kubernetes/cni/net.d/10-flannel.conf**
 
@@ -268,7 +266,6 @@ spec:
       path: /var/run/dbus
     name: dbus
 ```
-
 
 ### Set Up kubeconfig
 

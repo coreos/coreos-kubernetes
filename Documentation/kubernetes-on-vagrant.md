@@ -43,6 +43,30 @@ $ git clone https://github.com/coreos/coreos-kubernetes.git
 $ cd coreos-kubernetes/multi-node/vagrant
 ```
 
+## Choose Container Runtime (Optional)
+
+The runtime defaults to docker. To change to use rkt edit the following files:
+
+```
+../generic/controller-install.sh
+../generic/worker-install.sh
+```
+
+ And change the line beginning with `export CONTAINER_RUNTIME` to:
+
+`export CONTAINER_RUNTIME=rkt`
+
+## Enable Network Policy (Optional)
+
+To enable network policy edit the following files:
+
+```
+../generic/controller-install.sh
+../generic/worker-install.sh
+```
+
+And set `USE_CALICO=true`.
+
 ## Start the Machines
 
 The default cluster configuration is to start a virtual machine for each role &mdash; master node, worker node, and etcd server. However, you can modify the default cluster settings by copying `config.rb.sample` to `config.rb` and modifying configuration values.
@@ -51,18 +75,14 @@ The default cluster configuration is to start a virtual machine for each role &m
 #$update_channel="alpha"
 
 #$controller_count=1
-#$controller_vm_memory=512
+#$controller_vm_memory=1024
 
 #$worker_count=1
-#$worker_vm_memory=512
+#$worker_vm_memory=1024
 
 #$etcd_count=1
 #$etcd_vm_memory=512
 ```
-
-By default, Calico network policy is disabled. To enable it, change the line `export USE_CALICO=false` to `export USE_CALICO=true` in both the `../generic/controller-install.sh` and the `../generic/worker-install.sh` scripts.
-
-Also by default, the container runtime used is docker. To use rkt as the container runtime, change the line `export CONTAINER_RUNTIME=docker` to `export CONTAINER_RUNTIME=rkt` in both the `../generic/controller-install.sh` and the `../generic/worker-install.sh` scripts.
 
 Ensure the latest CoreOS vagrant image will be used by running `vagrant box update`.
 

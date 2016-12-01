@@ -15,6 +15,11 @@ export K8S_VER=v1.4.6_coreos.0
 # Hyperkube image repository to use.
 export HYPERKUBE_IMAGE_REPO=quay.io/coreos/hyperkube
 
+# The CIDR network to use for pod IPs.
+# Each pod launched in the cluster will be assigned an IP out of this range.
+# Each node will be configured such that these IPs will be routable using the flannel overlay network.
+export POD_NETWORK=10.2.0.0/16
+
 # The IP address of the cluster DNS service.
 # This must be the same DNS_SERVICE_IP used when configuring the controller nodes.
 export DNS_SERVICE_IP=10.3.0.10
@@ -27,6 +32,14 @@ export CONTAINER_RUNTIME=docker
 
 # The above settings can optionally be overridden using an environment file:
 ENV_FILE=/run/coreos-kubernetes/options.env
+
+# To run a self hosted Calico install it needs to be able to write to the CNI dir
+if [ "${USE_CALICO}" = "true" ]; then
+    export CALICO_OPTS="--volume cni-bin,kind=host,source=/opt/cni/bin \
+                        --mount volume=cni-bin,target=/opt/cni/bin"
+else
+    export CALICO_OPTS=""
+fi
 
 # -------------
 
@@ -69,10 +82,12 @@ Environment="RKT_OPTS=--uuid-file-save=${uuid_file} \
   --volume stage,kind=host,source=/tmp \
   --mount volume=stage,target=/tmp \
   --volume var-log,kind=host,source=/var/log \
-  --mount volume=var-log,target=/var/log"
+  --mount volume=var-log,target=/var/log \
+  ${CALICO_OPTS}"
 ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
 ExecStartPre=/usr/bin/mkdir -p /var/log/containers
 ExecStartPre=-/usr/bin/rkt rm --uuid-file=${uuid_file}
+ExecStartPre=/usr/bin/mkdir -p /opt/cni/bin
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=${CONTROLLER_ENDPOINT} \
   --cni-conf-dir=/etc/kubernetes/cni/net.d \
@@ -156,40 +171,6 @@ RequiredBy=kubelet.service
 EOF
     fi
 
-    local TEMPLATE=/etc/systemd/system/calico-node.service
-    if [ "${USE_CALICO}" = "true" ] && [ ! -f "${TEMPLATE}" ]; then
-        echo "TEMPLATE: $TEMPLATE"
-        mkdir -p $(dirname $TEMPLATE)
-        cat << EOF > $TEMPLATE
-[Unit]
-Description=Calico per-host agent
-Requires=network-online.target
-After=network-online.target
-
-[Service]
-Slice=machine.slice
-Environment=CALICO_DISABLE_FILE_LOGGING=true
-Environment=HOSTNAME=${ADVERTISE_IP}
-Environment=IP=${ADVERTISE_IP}
-Environment=FELIX_FELIXHOSTNAME=${ADVERTISE_IP}
-Environment=CALICO_NETWORKING=false
-Environment=NO_DEFAULT_POOLS=true
-Environment=ETCD_ENDPOINTS=${ETCD_ENDPOINTS}
-ExecStart=/usr/bin/rkt run --inherit-env --stage1-from-dir=stage1-fly.aci \
---volume=modules,kind=host,source=/lib/modules,readOnly=false \
---mount=volume=modules,target=/lib/modules \
---volume=dns,kind=host,source=/etc/resolv.conf,readOnly=true \
---mount=volume=dns,target=/etc/resolv.conf \
---trust-keys-from-https quay.io/calico/node:v0.19.0
-KillMode=mixed
-Restart=always
-TimeoutStartSec=0
-
-[Install]
-WantedBy=multi-user.target
-EOF
-    fi
-
     local TEMPLATE=/etc/kubernetes/worker-kubeconfig.yaml
     if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
@@ -236,6 +217,7 @@ spec:
     - /hyperkube
     - proxy
     - --master=${CONTROLLER_ENDPOINT}
+    - --cluster-cidr=${POD_NETWORK}
     - --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml
     securityContext:
       privileged: true
@@ -308,31 +290,7 @@ EOF
 DOCKER_OPT_BIP=""
 DOCKER_OPT_IPMASQ=""
 EOF
-    fi
 
-    local TEMPLATE=/etc/kubernetes/cni/net.d/10-calico.conf
-    if [ "${USE_CALICO}" = "true" ] && [ ! -f "${TEMPLATE}" ]; then
-        echo "TEMPLATE: $TEMPLATE"
-        mkdir -p $(dirname $TEMPLATE)
-        cat << EOF > $TEMPLATE
-{
-    "name": "calico",
-    "type": "flannel",
-    "delegate": {
-        "type": "calico",
-        "etcd_endpoints": "$ETCD_ENDPOINTS",
-        "log_level": "none",
-        "log_level_stderr": "info",
-        "hostname": "${ADVERTISE_IP}",
-        "policy": {
-            "type": "k8s",
-            "k8s_api_root": "${CONTROLLER_ENDPOINT}:443/api/v1/",
-            "k8s_client_key": "/etc/kubernetes/ssl/worker-key.pem",
-            "k8s_client_certificate": "/etc/kubernetes/ssl/worker.pem"
-        }
-    }
-}
-EOF
     fi
 
     local TEMPLATE=/etc/kubernetes/cni/net.d/10-flannel.conf
@@ -367,8 +325,6 @@ if [ $CONTAINER_RUNTIME = "rkt" ]; then
 fi
 
 systemctl enable flanneld; systemctl start flanneld
-systemctl enable kubelet; systemctl start kubelet
 
-if [ $USE_CALICO = "true" ]; then
-        systemctl enable calico-node; systemctl start calico-node
-fi
+
+systemctl enable kubelet; systemctl start kubelet

@@ -22,21 +22,11 @@ ExecStart=/usr/lib/coreos/kubelet-wrapper \
 
 ## Upgrading Calico
 
-The Calico agent runs on both master and worker nodes, and is is distributed as a container image. It runs under rkt using systemd.
+The Calico agent runs on both master and worker nodes, and is distributed as a container image. It runs self hosted under Kubernetes.
 
-To update the image version, change the image tag in the service file (`/etc/systemd/system/calico-node.service`) to reference the new calico-node image.
+To upgrade Calico, follow the documentation [here](http://docs.projectcalico.org/v2.0/getting-started/kubernetes/upgrade)
 
-
-**/etc/systemd/system/calico-node.service**
-
-```
-ExecStart=/usr/bin/rkt run --inherit-env --stage1-from-dir=stage1-fly.aci \
---volume=modules,kind=host,source=/lib/modules,readOnly=false \
---mount=volume=modules,target=/lib/modules \
---volume=dns,kind=host,source=/etc/resolv.conf,readOnly=true \
---mount=volume=dns,target=/etc/resolv.conf \
---trust-keys-from-https quay.io/calico/node:v0.19.0
-```
+**Note:** If you are running Calico as a systemd service, you will first need to change to a self-hosted install by following [this guide](https://coreos.com/kubernetes/docs/latest/deploy-master.html)
 
 ## Upgrading Master Nodes
 

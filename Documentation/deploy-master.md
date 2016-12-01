@@ -62,7 +62,7 @@ Next create a [systemd drop-in][dropins], which is a method for appending or ove
 ExecStartPre=/usr/bin/ln -sf /etc/flannel/options.env /run/flannel/options.env
 ```
 
-[calico-docs]: https://github.com/projectcalico/calico-containers/tree/v0.19.0/docs/cni/kubernetes
+[calico-docs]: http://docs.projectcalico.org/v2.0/getting-started/kubernetes/
 [flannel-docs]: https://coreos.com/flannel/docs/latest/
 [pod-overview]: https://coreos.com/kubernetes/docs/latest/pods.html
 [service-overview]: https://coreos.com/kubernetes/docs/latest/services.html
@@ -124,7 +124,14 @@ Note that the kubelet running on a master node may log repeated attempts to post
 * Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
 * Replace `${DNS_SERVICE_IP}`
 * Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release, e.g. `v1.4.6_coreos.0`.
-* Replace `${NETWORK_PLUGIN}` with `cni` if using Calico. Otherwise just leave it blank.
+* If using Calico for network policy
+  - Replace `${NETWORK_PLUGIN}` with `cni`
+  - Add the following to `RKT_OPS=`
+    ```
+    --volume cni-bin,kind=host,source=/opt/cni/bin \
+    --mount volume=cni-bin,target=/opt/cni/bin
+    ```
+  - Add `ExecStartPre=/usr/bin/mkdir -p /opt/cni/bin`
 * Decide if you will use [additional features][rkt-opts-examples] such as:
   - [mounting ephemeral disks][mount-disks]
   - [allow pods to mount RDB][rdb] or [iSCSI volumes][iscsi]
@@ -363,121 +370,212 @@ spec:
       timeoutSeconds: 15
 ```
 
-### Set Up Calico Node Container (optional)
+### Set Up Calico For Network Policy (optional)
 
 This step can be skipped if you do not wish to provide network policy to your cluster using Calico.
 
-The Calico node container runs on all hosts, including the master node. It performs two functions:
+Several things happen here.  First the `ConfigMap` will create some configuration needed for Calico and the kubelet.
+
+Second the `DaemonSet` runs on all hosts, including the master node. It performs several functions:
+* The `install-cni` container drops in the necessary CNI binaries to `/opt/cni/bin/` that was setup in the kubelet step
 * Connects containers to the flannel overlay network, which enables the "one IP per pod" concept.
 * Enforces network policy created through the Kubernetes policy API, ensuring pods talk to authorized resources only.
 
-When creating `/etc/systemd/system/calico-node.service`:
+The policy controller is the last major piece of the calico.yaml. It monitors the API for changes related to network policy and configures Calico to implement that policy. 
+
+When creating `/etc/kubernetes/manifests/calico.yaml`:
 
 * Replace `${ETCD_ENDPOINTS}`
-* Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
 
-**/etc/systemd/system/calico-node.service**
-
-```yaml
-[Unit]
-Description=Calico per-host agent
-Requires=network-online.target
-After=network-online.target
-
-[Service]
-Slice=machine.slice
-Environment=CALICO_DISABLE_FILE_LOGGING=true
-Environment=HOSTNAME=${ADVERTISE_IP}
-Environment=IP=${ADVERTISE_IP}
-Environment=FELIX_FELIXHOSTNAME=${ADVERTISE_IP}
-Environment=CALICO_NETWORKING=false
-Environment=NO_DEFAULT_POOLS=true
-Environment=ETCD_ENDPOINTS=${ETCD_ENDPOINTS}
-ExecStart=/usr/bin/rkt run --inherit-env --stage1-from-dir=stage1-fly.aci \
---volume=modules,kind=host,source=/lib/modules,readOnly=false \
---mount=volume=modules,target=/lib/modules \
---volume=dns,kind=host,source=/etc/resolv.conf,readOnly=true \
---mount=volume=dns,target=/etc/resolv.conf \
---trust-keys-from-https quay.io/calico/node:v0.19.0
-
-KillMode=mixed
-Restart=always
-TimeoutStartSec=0
-
-[Install]
-WantedBy=multi-user.target
-```
-
-### Set Up the policy-controller Pod (optional)
-
-This step can be skipped if you do not wish to provide network policy to your cluster using Calico.
-
-The policy agent is the last major piece of the master node. It monitors the API for changes related to network policy and configures Calico to implement that policy. 
-
-When creating `/etc/kubernetes/manifests/policy-controller.yaml`:
-
-* Replace `${ETCD_ENDPOINTS}` with the same endpoints used in calico-node.service, above.
-
-**/etc/kubernetes/manifests/policy-controller.yaml**
+**/etc/kubernetes/manifests/calico.yaml**
 
 ```yaml
+# This ConfigMap is used to configure a self-hosted Calico installation.
+kind: ConfigMap
 apiVersion: v1
-kind: Pod
 metadata:
-  name: calico-policy-controller
-  namespace: calico-system
-spec:
-  hostNetwork: true
-  containers:
-    # The Calico policy controller.
-    - name: kube-policy-controller
-      image: calico/kube-policy-controller:v0.2.0
-      env:
-        - name: ETCD_ENDPOINTS
-          value: "${ETCD_ENDPOINTS}"
-        - name: K8S_API
-          value: "http://127.0.0.1:8080"
-        - name: LEADER_ELECTION
-          value: "true"
-    # Leader election container used by the policy controller.
-    - name: leader-elector
-      image: quay.io/calico/leader-elector:v0.1.0
-      imagePullPolicy: IfNotPresent
-      args:
-        - "--election=calico-policy-election"
-        - "--election-namespace=calico-system"
-        - "--http=127.0.0.1:4040"
-```
+  name: calico-config 
+  namespace: kube-system
+data:
+  # Configure this with the location of your etcd cluster.
+  etcd_endpoints: "${ETCD_ENDPOINTS}"
 
-### Set Up the CNI config (optional)
-
-This step can be skipped if you do not wish to provide network policy to your cluster using Calico.
-
-The kubelet reads the CNI configuration on startup and uses that to determine which CNI plugin to call. Create the following file which tells the kubelet to call the flannel plugin but to then delegate control to the Calico plugin. Using the flannel plugin ensures that the Calico plugin is called with the IP range for the host that was selected by flannel.
-
-* Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
-* Replace `${ETCD_ENDPOINTS}`
-
-**/etc/kubernetes/cni/net.d/10-calico.conf**
-
-```json
-{
-    "name": "calico",
-    "type": "flannel",
-    "delegate": {
-        "type": "calico",
-        "etcd_endpoints": "$ETCD_ENDPOINTS",
-        "log_level": "none",
-        "log_level_stderr": "info",
-        "hostname": "${ADVERTISE_IP}",
-        "policy": {
-            "type": "k8s",
-            "k8s_api_root": "http://127.0.0.1:8080/api/v1/"
+  # The CNI network configuration to install on each node.  The special
+  # values in this config will be automatically populated.
+  cni_network_config: |-
+    {
+        "name": "calico",
+        "type": "flannel",
+        "delegate": {
+          "type": "calico",
+          "etcd_endpoints": "__ETCD_ENDPOINTS__",
+          "log_level": "info",
+          "policy": {
+              "type": "k8s",
+              "k8s_api_root": "https://__KUBERNETES_SERVICE_HOST__:__KUBERNETES_SERVICE_PORT__",
+              "k8s_auth_token": "__SERVICEACCOUNT_TOKEN__"
+          },
+          "kubernetes": {
+              "kubeconfig": "/etc/kubernetes/cni/net.d/__KUBECONFIG_FILENAME__"
+          }
         }
     }
-}
-```
 
+---
+
+# This manifest installs the calico/node container, as well
+# as the Calico CNI plugins and network config on 
+# each master and worker node in a Kubernetes cluster.
+kind: DaemonSet
+apiVersion: extensions/v1beta1
+metadata:
+  name: calico-node
+  namespace: kube-system
+  labels:
+    k8s-app: calico-node
+spec:
+  selector:
+    matchLabels:
+      k8s-app: calico-node
+  template:
+    metadata:
+      labels:
+        k8s-app: calico-node
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ''
+        scheduler.alpha.kubernetes.io/tolerations: |
+          [{"key": "dedicated", "value": "master", "effect": "NoSchedule" },
+           {"key":"CriticalAddonsOnly", "operator":"Exists"}]
+    spec:
+      hostNetwork: true
+      containers:
+        # Runs calico/node container on each Kubernetes node.  This 
+        # container programs network policy and routes on each
+        # host.
+        - name: calico-node
+          image: quay.io/calico/node:v0.23.0
+          env:
+            # The location of the Calico etcd cluster.
+            - name: ETCD_ENDPOINTS
+              valueFrom:
+                configMapKeyRef:
+                  name: calico-config
+                  key: etcd_endpoints
+            # Choose the backend to use. 
+            - name: CALICO_NETWORKING_BACKEND
+              value: "none"
+            # Disable file logging so `kubectl logs` works.
+            - name: CALICO_DISABLE_FILE_LOGGING
+              value: "true"
+            - name: NO_DEFAULT_POOLS
+              value: "true"
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - mountPath: /lib/modules
+              name: lib-modules
+              readOnly: false
+            - mountPath: /var/run/calico
+              name: var-run-calico
+              readOnly: false
+            - mountPath: /etc/resolv.conf
+              name: dns
+              readOnly: true
+        # This container installs the Calico CNI binaries
+        # and CNI network config file on each node.
+        - name: install-cni
+          image: quay.io/calico/cni:v1.5.2
+          imagePullPolicy: Always
+          command: ["/install-cni.sh"]
+          env:
+            # CNI configuration filename
+            - name: CNI_CONF_NAME
+              value: "10-calico.conf"
+            # The location of the Calico etcd cluster.
+            - name: ETCD_ENDPOINTS
+              valueFrom:
+                configMapKeyRef:
+                  name: calico-config
+                  key: etcd_endpoints
+            # The CNI network config to install on each node.
+            - name: CNI_NETWORK_CONFIG
+              valueFrom:
+                configMapKeyRef:
+                  name: calico-config
+                  key: cni_network_config
+          volumeMounts:
+            - mountPath: /host/opt/cni/bin
+              name: cni-bin-dir
+            - mountPath: /host/etc/cni/net.d
+              name: cni-net-dir
+      volumes:
+        # Used by calico/node.
+        - name: lib-modules
+          hostPath:
+            path: /lib/modules
+        - name: var-run-calico
+          hostPath:
+            path: /var/run/calico
+        # Used to install CNI.
+        - name: cni-bin-dir
+          hostPath:
+            path: /opt/cni/bin
+        - name: cni-net-dir
+          hostPath:
+            path: /etc/kubernetes/cni/net.d
+        - name: dns
+          hostPath:
+            path: /etc/resolv.conf
+
+---
+
+# This manifest deploys the Calico policy controller on Kubernetes.
+# See https://github.com/projectcalico/k8s-policy
+apiVersion: extensions/v1beta1
+kind: ReplicaSet 
+metadata:
+  name: calico-policy-controller
+  namespace: kube-system
+  labels:
+    k8s-app: calico-policy
+spec:
+  # The policy controller can only have a single active instance.
+  replicas: 1
+  template:
+    metadata:
+      name: calico-policy-controller
+      namespace: kube-system
+      labels:
+        k8s-app: calico-policy
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ''
+        scheduler.alpha.kubernetes.io/tolerations: |
+          [{"key": "dedicated", "value": "master", "effect": "NoSchedule" },
+           {"key":"CriticalAddonsOnly", "operator":"Exists"}]
+    spec:
+      # The policy controller must run in the host network namespace so that
+      # it isn't governed by policy that would prevent it from working.
+      hostNetwork: true
+      containers:
+        - name: calico-policy-controller
+          image: calico/kube-policy-controller:v0.4.0
+          env:
+            # The location of the Calico etcd cluster.
+            - name: ETCD_ENDPOINTS
+              valueFrom:
+                configMapKeyRef:
+                  name: calico-config
+                  key: etcd_endpoints
+            # The location of the Kubernetes API.  Use the default Kubernetes
+            # service for API access.
+            - name: K8S_API
+              value: "https://kubernetes.default:443"
+            # Since we're running in the host namespace and might not have KubeDNS 
+            # access, configure the container's /etc/hosts to resolve
+            # kubernetes.default to the correct service clusterIP.
+            - name: CONFIGURE_ETC_HOSTS
+              value: "true"
+```
 
 ## Start Services
 
@@ -524,23 +622,6 @@ $ sudo systemctl enable kubelet
 Created symlink from /etc/systemd/system/multi-user.target.wants/kubelet.service to /etc/systemd/system/kubelet.service.
 ```
 
-### Start Calico (optional)
-
-This step can be skipped if you do not wish to provide network policy to your cluster using Calico.
-
-Start Calico if you configured your kubelet to use CNI plugins earlier:
-
-```sh
-$ sudo systemctl start calico-node
-```
-
-Ensure that the Calico node container will start after a reboot:
-
-```sh
-$ sudo systemctl enable calico-node
-Created symlink from /etc/systemd/system/multi-user.target.wants/calico-node.service to /etc/systemd/system/calico-node.service.
-```
-
 ### Create Namespaces
 
 The Kubernetes Pods that make up the control plane will exist in their own namespace. We need to create this namespace so these components are discoverable by other hosts in the cluster.
@@ -568,11 +649,10 @@ A successful response should look something like:
   "platform": "linux/amd64"
 }
 ```
-
-The Calico policy-controller runs in its own `calico-system` namespace. Create this namespace:
+Now we can create the `kube-system` namespace:
 
 ```sh
-$ curl -H "Content-Type: application/json" -XPOST -d'{"apiVersion":"v1","kind":"Namespace","metadata":{"name":"calico-system"}}' "http://127.0.0.1:8080/api/v1/namespaces"
+$ curl -H "Content-Type: application/json" -XPOST -d'{"apiVersion":"v1","kind":"Namespace","metadata":{"name":"kube-system"}}' "http://127.0.0.1:8080/api/v1/namespaces"
 ```
 
 To check the health of the kubelet systemd unit that we created, run `systemctl status kubelet.service`.

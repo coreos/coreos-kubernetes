@@ -5,6 +5,7 @@ require 'fileutils'
 require 'open-uri'
 require 'tempfile'
 require 'yaml'
+require_relative '../lib/create_ssl.rb'
 
 Vagrant.require_version ">= 1.6.0"
 
@@ -14,11 +15,13 @@ CLUSTER_IP="10.3.0.1"
 NODE_IP = "172.17.4.99"
 NODE_MEMORY_SIZE = 2048
 USER_DATA_PATH = File.expand_path("user-data")
-SSL_TARBALL_PATH = File.expand_path("ssl/controller.tar")
+CERT_BASE_DIR="ssl"
 
-system("mkdir -p ssl && ./../lib/init-ssl-ca ssl") or abort ("failed generating SSL CA artifacts")
-system("./../lib/init-ssl ssl apiserver controller IP.1=#{NODE_IP},IP.2=#{CLUSTER_IP}") or abort ("failed generating SSL certificate artifacts")
-system("./../lib/init-ssl ssl admin kube-admin") or abort("failed generating admin SSL artifacts")
+FileUtils.mkdir_p(CERT_BASE_DIR)
+
+CA_CERT_PATHS = create_ca_cert(CERT_BASE_DIR)
+API_CERT_PATHS = create_ssl_cert(CERT_BASE_DIR, "apiserver", "controller", [NODE_IP, CLUSTER_IP], CA_CERT_PATHS)
+ADMIN_CERT_PATHS = create_ssl_cert(CERT_BASE_DIR, "admin", "kube-admin", [], CA_CERT_PATHS)
 
 Vagrant.configure("2") do |config|
   # always use Vagrant's insecure key
@@ -56,10 +59,26 @@ Vagrant.configure("2") do |config|
 
   config.vm.network :private_network, ip: NODE_IP
 
-  config.vm.provision :file, :source => SSL_TARBALL_PATH, :destination => "/tmp/ssl.tar"
-  config.vm.provision :shell, :inline => "mkdir -p /etc/kubernetes/ssl && tar -C /etc/kubernetes/ssl -xf /tmp/ssl.tar", :privileged => true
+  [CA_CERT_PATHS, API_CERT_PATHS, ADMIN_CERT_PATHS].each do |cert|
+    [:key, :pem].each do |k|
+      config.vm.provision(
+        :file,
+        :source => cert[k],
+        :destination => "/tmp/ssl/#{File.basename(cert[k])}"
+      )
+    end
+  end
+
+  config.vm.provision(
+    :shell,
+    :inline => (
+      "mkdir -p /etc/kubernetes/ssl" \
+      " && " \
+      "mv -f /tmp/ssl/* /etc/kubernetes/ssl"
+    ),
+    :privileged => true
+  )
 
   config.vm.provision :file, :source => USER_DATA_PATH, :destination => "/tmp/vagrantfile-user-data"
   config.vm.provision :shell, :inline => "mv /tmp/vagrantfile-user-data /var/lib/coreos-vagrant/", :privileged => true
-
 end

@@ -33,11 +33,16 @@ func runCmdDestroy(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("Error parsing config: %v", err)
 	}
 
-	c := cluster.New(cfg, destroyOpts.awsDebug)
-	if err := c.Destroy(); err != nil {
-		return fmt.Errorf("Failed destroying cluster: %v", err)
+	confirm := askForConfirmation("Do you really want to destroy the Kubernetes cluster?")
+	if confirm {
+		c := cluster.New(cfg, destroyOpts.awsDebug)
+		if err := c.Destroy(); err != nil {
+			return fmt.Errorf("Failed destroying cluster: %v", err)
+		}
+		fmt.Println("CloudFormation stack is being destroyed. This will take several minutes")
+	} else {
+		fmt.Println("Cluster destruction canceled")
 	}
 
-	fmt.Println("CloudFormation stack is being destroyed. This will take several minutes")
 	return nil
 }

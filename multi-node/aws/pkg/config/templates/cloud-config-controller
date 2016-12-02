@@ -71,6 +71,7 @@ coreos:
         ExecStop=-/usr/bin/rkt stop --uuid-file=/var/run/kubelet-pod.uuid
         Restart=always
         RestartSec=10
+        TimeoutStartSec=infinity
 
         [Install]
         WantedBy=multi-user.target

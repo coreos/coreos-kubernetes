@@ -36,6 +36,10 @@ export USE_CALICO=false
 # Determines the container runtime for kubernetes to use. Accepts 'docker' or 'rkt'.
 export CONTAINER_RUNTIME=docker
 
+# The etcd prefix the cluster will use (defaults to /registry).
+# Further documentation can be found here: http://kubernetes.io/docs/admin/etcd/
+export ETCD_PREFIX=/registry
+
 # The above settings can optionally be overridden using an environment file:
 ENV_FILE=/run/coreos-kubernetes/options.env
 
@@ -292,6 +296,7 @@ spec:
     - --client-ca-file=/etc/kubernetes/ssl/ca.pem
     - --service-account-key-file=/etc/kubernetes/ssl/apiserver-key.pem
     - --runtime-config=extensions/v1beta1/networkpolicies=true
+    - --etcd-prefix=${ETCD_PREFIX}
     livenessProbe:
       httpGet:
         host: 127.0.0.1

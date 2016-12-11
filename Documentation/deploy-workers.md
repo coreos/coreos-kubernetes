@@ -102,7 +102,7 @@ If using Flannel for networking, setup the Flannel CNI configuration with below.
 
 Create `/etc/systemd/system/kubelet.service` and substitute the following variables:
 
-* Replace `${MASTER_HOST}`
+* Replace `${MASTER_HOST}` 
 * Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
 * Replace `${DNS_SERVICE_IP}`
 * Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release, e.g. `v1.4.6_coreos.0`.
@@ -118,28 +118,19 @@ Create `/etc/systemd/system/kubelet.service` and substitute the following variab
 ```yaml
 [Service]
 Environment=KUBELET_VERSION=${K8S_VER}
-Environment=KUBELET_ACI=quay.io/coreos/hyperkube
 Environment="RKT_OPTS=--uuid-file-save=/var/run/kubelet-pod.uuid \
   --volume dns,kind=host,source=/etc/resolv.conf \
   --mount volume=dns,target=/etc/resolv.conf \
-  --volume rkt,kind=host,source=/opt/bin/host-rkt \
-  --mount volume=rkt,target=/usr/bin/rkt \
-  --volume var-lib-rkt,kind=host,source=/var/lib/rkt \
-  --mount volume=var-lib-rkt,target=/var/lib/rkt \
-  --volume stage,kind=host,source=/tmp \
-  --mount volume=stage,target=/tmp \
   --volume var-log,kind=host,source=/var/log \
   --mount volume=var-log,target=/var/log"
 ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
 ExecStartPre=/usr/bin/mkdir -p /var/log/containers
 ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
-  --api-servers=${CONTROLLER_ENDPOINT} \
+  --api-servers=${MASTER_HOST} \
   --cni-conf-dir=/etc/kubernetes/cni/net.d \
   --network-plugin=cni \
   --container-runtime=docker \
-  --rkt-path=/usr/bin/rkt \
-  --rkt-stage1-image=coreos.com/rkt/stage1-coreos \
   --register-node=true \
   --allow-privileged=true \
   --pod-manifest-path=/etc/kubernetes/manifests \
@@ -155,29 +146,6 @@ RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
-```
-
-Create Host rkt
-
-**/opt/bin/host-rkt**
-
-```yaml
-#!/bin/sh
-# This is bind mounted into the kubelet rootfs and all rkt shell-outs go
-# through this rkt wrapper. It essentially enters the host mount namespace
-# (which it is already in) only for the purpose of breaking out of the chroot
-# before calling rkt. It makes things like rkt gc work and avoids bind mounting
-# in certain rkt filesystem dependancies into the kubelet rootfs. This can
-# eventually be obviated when the write-api stuff gets upstream and rkt gc is
-# through the api-server. Related issue:
-# https://github.com/coreos/rkt/issues/2878
-exec nsenter -m -u -i -n -p -t 1 -- /usr/bin/rkt "\$@"
-```
-
-Set the host-rkt script to executable
-
-```sh
-$ sudo chmod +x /opt/bin/host-rkt
 ```
 
 ### Set Up the CNI config (optional)
@@ -226,8 +194,6 @@ kind: Pod
 metadata:
   name: kube-proxy
   namespace: kube-system
-    annotations:
-    rkt.alpha.kubernetes.io/stage1-name-override: coreos.com/rkt/stage1-fly
 spec:
   hostNetwork: true
   containers:
@@ -236,7 +202,7 @@ spec:
     command:
     - /hyperkube
     - proxy
-    - --master=https://${MASTER_HOST}
+    - --master=${MASTER_HOST}
     - --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml
     securityContext:
       privileged: true
@@ -249,9 +215,6 @@ spec:
     - mountPath: /etc/kubernetes/ssl
       name: "etc-kube-ssl"
       readOnly: true
-    - mountPath: /var/run/dbus
-      name: dbus
-      readOnly: false
   volumes:
   - name: "ssl-certs"
     hostPath:
@@ -262,9 +225,6 @@ spec:
   - name: "etc-kube-ssl"
     hostPath:
       path: "/etc/kubernetes/ssl"
-  - hostPath:
-      path: /var/run/dbus
-    name: dbus
 ```
 
 ### Set Up kubeconfig

@@ -19,7 +19,7 @@ The apiserver is stateless, but handles recording the results of leader election
 Create the required directory and place the keys generated previously in the following locations:
 
 ```sh
-$ mkdir -p /etc/kubernetes/ssl
+$ sudo mkdir -p /etc/kubernetes/ssl
 ```
 
 * File: `/etc/kubernetes/ssl/ca.pem`
@@ -81,6 +81,32 @@ Again, we will use a [systemd drop-in][dropins]:
 [Unit]
 Requires=flanneld.service
 After=flanneld.service
+[Service]
+EnvironmentFile=/etc/kubernetes/cni/docker_opts_cni.env
+```
+
+Create the Docker CNI Options file:
+
+**/etc/kubernetes/cni/docker_opts_cni.env**
+
+```yaml
+DOCKER_OPT_BIP=""
+DOCKER_OPT_IPMASQ=""
+```
+
+If using Flannel for networking, setup the Flannel CNI configuration with below. If you intend to use Calico for networking, setup using [Set Up the CNI config (optional)](#set-up-the-cni-config-optional) instead.
+
+**/etc/kubernetes/cni/net.d/10-flannel.conf**
+
+```yaml
+{
+    "name": "podnet",
+    "type": "flannel",
+    "delegate": {
+        "isDefaultGateway": true
+    }
+}
+
 ```
 
 [dropins]: https://coreos.com/os/docs/latest/using-systemd-drop-in-units.html
@@ -109,27 +135,30 @@ Note that the kubelet running on a master node may log repeated attempts to post
 
 ```yaml
 [Service]
-ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
-ExecStartPre=/usr/bin/mkdir -p /var/log/containers
-
 Environment=KUBELET_VERSION=${K8S_VER}
-Environment="RKT_OPTS=--volume var-log,kind=host,source=/var/log \
-  --mount volume=var-log,target=/var/log \
+Environment="RKT_OPTS=--uuid-file-save=/var/run/kubelet-pod.uuid \
+  --volume var-log,kind=host,source=/var/log \
+  --mount volume=var-log,target=/var/log
   --volume dns,kind=host,source=/etc/resolv.conf \
   --mount volume=dns,target=/etc/resolv.conf"
-
+ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
+ExecStartPre=/usr/bin/mkdir -p /var/log/containers
+ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=http://127.0.0.1:8080 \
-  --network-plugin-dir=/etc/kubernetes/cni/net.d \
-  --network-plugin=${NETWORK_PLUGIN} \
   --register-schedulable=false \
+  --cni-conf-dir=/etc/kubernetes/cni/net.d \
+  --network-plugin=cni \
+  --container-runtime=docker \
   --allow-privileged=true \
   --pod-manifest-path=/etc/kubernetes/manifests \
   --hostname-override=${ADVERTISE_IP} \
-  --cluster-dns=${DNS_SERVICE_IP} \
-  --cluster-domain=cluster.local
+  --cluster_dns=${DNS_SERVICE_IP} \
+  --cluster_domain=cluster.local
+ExecStop=-/usr/bin/rkt stop --uuid-file=/var/run/kubelet-pod.uuid
 Restart=always
 RestartSec=10
+
 [Install]
 WantedBy=multi-user.target
 ```
@@ -173,7 +202,14 @@ spec:
     - --tls-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
     - --client-ca-file=/etc/kubernetes/ssl/ca.pem
     - --service-account-key-file=/etc/kubernetes/ssl/apiserver-key.pem
-    - --runtime-config=extensions/v1beta1=true,extensions/v1beta1/networkpolicies=true
+    - --runtime-config=extensions/v1beta1/networkpolicies=true
+    livenessProbe:
+      httpGet:
+        host: 127.0.0.1
+        port: 8080
+        path: /healthz
+      initialDelaySeconds: 15
+      timeoutSeconds: 15
     ports:
     - containerPort: 443
       hostPort: 443
@@ -222,7 +258,6 @@ spec:
     - /hyperkube
     - proxy
     - --master=http://127.0.0.1:8080
-    - --proxy-mode=iptables
     securityContext:
       privileged: true
     volumeMounts:
@@ -265,13 +300,16 @@ spec:
     - --leader-elect=true
     - --service-account-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
     - --root-ca-file=/etc/kubernetes/ssl/ca.pem
+    resources:
+      requests:
+        cpu: 200m
     livenessProbe:
       httpGet:
         host: 127.0.0.1
         path: /healthz
         port: 10252
       initialDelaySeconds: 15
-      timeoutSeconds: 1
+      timeoutSeconds: 15
     volumeMounts:
     - mountPath: /etc/kubernetes/ssl
       name: ssl-certs-kubernetes
@@ -279,6 +317,7 @@ spec:
     - mountPath: /etc/ssl/certs
       name: ssl-certs-host
       readOnly: true
+  hostNetwork: true
   volumes:
   - hostPath:
       path: /etc/kubernetes/ssl
@@ -312,13 +351,16 @@ spec:
     - scheduler
     - --master=http://127.0.0.1:8080
     - --leader-elect=true
+    resources:
+      requests:
+        cpu: 100m
     livenessProbe:
       httpGet:
         host: 127.0.0.1
         path: /healthz
         port: 10251
       initialDelaySeconds: 15
-      timeoutSeconds: 1
+      timeoutSeconds: 15
 ```
 
 ### Set Up Calico Node Container (optional)
@@ -388,7 +430,7 @@ spec:
   hostNetwork: true
   containers:
     # The Calico policy controller.
-    - name: k8s-policy-controller
+    - name: kube-policy-controller
       image: calico/kube-policy-controller:v0.2.0
       env:
         - name: ETCD_ENDPOINTS
@@ -516,17 +558,15 @@ A successful response should look something like:
 ```
 {
   "major": "1",
-  "minor": "1",
-  "gitVersion": "v1.1.7_coreos.2",
-  "gitCommit": "388061f00f0d9e4d641f9ed4971c775e1654579d",
-  "gitTreeState": "clean"
+  "minor": "4",
+  "gitVersion": "v1.4.6+coreos.0",
+  "gitCommit": "ec2b52fabadf824a42b66b6729fe4cff2c62af8c",
+  "gitTreeState": "clean",
+  "buildDate": "2016-11-14T19:42:00Z",
+  "goVersion": "go1.6.3",
+  "compiler": "gc",
+  "platform": "linux/amd64"
 }
-```
-
-Now we can create the `kube-system` namespace:
-
-```sh
-$ curl -H "Content-Type: application/json" -XPOST -d'{"apiVersion":"v1","kind":"Namespace","metadata":{"name":"kube-system"}}' "http://127.0.0.1:8080/api/v1/namespaces"
 ```
 
 The Calico policy-controller runs in its own `calico-system` namespace. Create this namespace:

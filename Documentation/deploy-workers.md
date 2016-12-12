@@ -71,13 +71,38 @@ Create `/etc/systemd/system/docker.service.d/40-flannel.conf`
 [Unit]
 Requires=flanneld.service
 After=flanneld.service
+[Service]
+EnvironmentFile=/etc/kubernetes/cni/docker_opts_cni.env
+```
+
+Create the Docker CNI Options file:
+
+**/etc/kubernetes/cni/docker_opts_cni.env**
+
+```yaml
+DOCKER_OPT_BIP=""
+DOCKER_OPT_IPMASQ=""
+```
+
+If using Flannel for networking, setup the Flannel CNI configuration with below. If you intend to use Calico for networking, setup using [Set Up the CNI config (optional)](#set-up-the-cni-config-optional) instead.
+
+**/etc/kubernetes/cni/net.d/10-flannel.conf**
+
+```yaml
+{
+    "name": "podnet",
+    "type": "flannel",
+    "delegate": {
+        "isDefaultGateway": true
+    }
+}
 ```
 
 ### Create the kubelet Unit
 
 Create `/etc/systemd/system/kubelet.service` and substitute the following variables:
 
-* Replace `${MASTER_HOST}`
+* Replace `${MASTER_HOST}` 
 * Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
 * Replace `${DNS_SERVICE_IP}`
 * Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release, e.g. `v1.4.6_coreos.0`.
@@ -92,33 +117,33 @@ Create `/etc/systemd/system/kubelet.service` and substitute the following variab
 
 ```yaml
 [Service]
-ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
-ExecStartPre=/usr/bin/mkdir -p /var/log/containers
-
 Environment=KUBELET_VERSION=${K8S_VER}
 Environment="RKT_OPTS=--uuid-file-save=/var/run/kubelet-pod.uuid \
-  --volume var-log,kind=host,source=/var/log \
-  --mount volume=var-log,target=/var/log \
   --volume dns,kind=host,source=/etc/resolv.conf \
-  --mount volume=dns,target=/etc/resolv.conf"
-
+  --mount volume=dns,target=/etc/resolv.conf \
+  --volume var-log,kind=host,source=/var/log \
+  --mount volume=var-log,target=/var/log"
+ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
+ExecStartPre=/usr/bin/mkdir -p /var/log/containers
 ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
-  --api-servers=https://${MASTER_HOST} \
-  --network-plugin-dir=/etc/kubernetes/cni/net.d \
-  --network-plugin=${NETWORK_PLUGIN} \
+  --api-servers=${MASTER_HOST} \
+  --cni-conf-dir=/etc/kubernetes/cni/net.d \
+  --network-plugin=cni \
+  --container-runtime=docker \
   --register-node=true \
   --allow-privileged=true \
   --pod-manifest-path=/etc/kubernetes/manifests \
   --hostname-override=${ADVERTISE_IP} \
-  --cluster-dns=${DNS_SERVICE_IP} \
-  --cluster-domain=cluster.local \
+  --cluster_dns=${DNS_SERVICE_IP} \
+  --cluster_domain=cluster.local \
   --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml \
   --tls-cert-file=/etc/kubernetes/ssl/worker.pem \
   --tls-private-key-file=/etc/kubernetes/ssl/worker-key.pem
 ExecStop=-/usr/bin/rkt stop --uuid-file=/var/run/kubelet-pod.uuid
 Restart=always
 RestartSec=10
+
 [Install]
 WantedBy=multi-user.target
 ```
@@ -177,30 +202,29 @@ spec:
     command:
     - /hyperkube
     - proxy
-    - --master=https://${MASTER_HOST}
+    - --master=${MASTER_HOST}
     - --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml
-    - --proxy-mode=iptables
     securityContext:
       privileged: true
     volumeMounts:
-      - mountPath: /etc/ssl/certs
-        name: "ssl-certs"
-      - mountPath: /etc/kubernetes/worker-kubeconfig.yaml
-        name: "kubeconfig"
-        readOnly: true
-      - mountPath: /etc/kubernetes/ssl
-        name: "etc-kube-ssl"
-        readOnly: true
+    - mountPath: /etc/ssl/certs
+      name: "ssl-certs"
+    - mountPath: /etc/kubernetes/worker-kubeconfig.yaml
+      name: "kubeconfig"
+      readOnly: true
+    - mountPath: /etc/kubernetes/ssl
+      name: "etc-kube-ssl"
+      readOnly: true
   volumes:
-    - name: "ssl-certs"
-      hostPath:
-        path: "/usr/share/ca-certificates"
-    - name: "kubeconfig"
-      hostPath:
-        path: "/etc/kubernetes/worker-kubeconfig.yaml"
-    - name: "etc-kube-ssl"
-      hostPath:
-        path: "/etc/kubernetes/ssl"
+  - name: "ssl-certs"
+    hostPath:
+      path: "/usr/share/ca-certificates"
+  - name: "kubeconfig"
+    hostPath:
+      path: "/etc/kubernetes/worker-kubeconfig.yaml"
+  - name: "etc-kube-ssl"
+    hostPath:
+      path: "/etc/kubernetes/ssl"
 ```
 
 ### Set Up kubeconfig

@@ -3,7 +3,7 @@
 Deploy a fully-functional Kubernetes cluster using AWS CloudFormation.
 Your cluster will be configured to use AWS features to enhance Kubernetes.
 For example, Kubernetes may automatically provision an Elastic Load Balancer for each Kubernetes Service.
-At CoreOS, we use the [kube-aws](https://github.com/coreos/coreos-kubernetes/releases) CLI tool to automate cluster deployment to AWS.
+At CoreOS, we use the [kube-aws](https://github.com/coreos/kube-aws/releases) CLI tool to automate cluster deployment to AWS.
 
 After completing this guide, a deployer will be able to interact with the Kubernetes API from their workstation using the `kubectl` CLI tool.
 

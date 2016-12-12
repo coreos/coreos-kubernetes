@@ -266,7 +266,7 @@ ExecStart=/usr/bin/rkt run --inherit-env --stage1-from-dir=stage1-fly.aci \
 --mount=volume=modules,target=/lib/modules \
 --volume=dns,kind=host,source=/etc/resolv.conf,readOnly=true \
 --mount=volume=dns,target=/etc/resolv.conf \
---trust-keys-from-https quay.io/calico/node:v0.19.0
+--trust-keys-from-https quay.io/calico/node:v0.22.0
 KillMode=mixed
 Restart=always
 TimeoutStartSec=0

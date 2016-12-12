@@ -62,7 +62,7 @@ Next create a [systemd drop-in][dropins], which is a method for appending or ove
 ExecStartPre=/usr/bin/ln -sf /etc/flannel/options.env /run/flannel/options.env
 ```
 
-[calico-docs]: https://github.com/projectcalico/calico-containers/tree/v0.19.0/docs/cni/kubernetes
+[calico-docs]: https://github.com/projectcalico/calico-containers/tree/v0.22.0/docs/cni/kubernetes
 [flannel-docs]: https://coreos.com/flannel/docs/latest/
 [pod-overview]: https://coreos.com/kubernetes/docs/latest/pods.html
 [service-overview]: https://coreos.com/kubernetes/docs/latest/services.html
@@ -356,7 +356,7 @@ ExecStart=/usr/bin/rkt run --inherit-env --stage1-from-dir=stage1-fly.aci \
 --mount=volume=modules,target=/lib/modules \
 --volume=dns,kind=host,source=/etc/resolv.conf,readOnly=true \
 --mount=volume=dns,target=/etc/resolv.conf \
---trust-keys-from-https quay.io/calico/node:v0.19.0
+--trust-keys-from-https quay.io/calico/node:v0.22.0
 
 KillMode=mixed
 Restart=always
@@ -389,7 +389,7 @@ spec:
   containers:
     # The Calico policy controller.
     - name: k8s-policy-controller
-      image: calico/kube-policy-controller:v0.2.0
+      image: calico/kube-policy-controller:v0.3.0
       env:
         - name: ETCD_ENDPOINTS
           value: "${ETCD_ENDPOINTS}"
@@ -545,6 +545,7 @@ kube-scheduler-$node
 kube-apiserver-$node
 kube-controller-$node
 kube-proxy-$node
+calico-policy-controller-$node
 ```
 
 <div class="co-m-docs-next-step">

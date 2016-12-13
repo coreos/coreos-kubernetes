@@ -210,6 +210,7 @@ spec:
     - --client-ca-file=/etc/kubernetes/ssl/ca.pem
     - --service-account-key-file=/etc/kubernetes/ssl/apiserver-key.pem
     - --runtime-config=extensions/v1beta1/networkpolicies=true
+    - --anonymous-auth=false
     livenessProbe:
       httpGet:
         host: 127.0.0.1

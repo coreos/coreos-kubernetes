@@ -50,6 +50,10 @@ The runtime defaults to docker. If you wish to use rkt simply edit the user-data
 
 `export CONTAINER_RUNTIME=rkt`
 
+## Enable Network Policy (Optional)
+
+To enable network policy edit the user-data file and set `USE_CALICO=true`.
+
 ## Start the Machine
 
 Ensure the latest CoreOS vagrant image will be used by running `vagrant box update`.

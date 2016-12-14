@@ -900,7 +900,7 @@ spec:
             # Choose the backend to use. 
             - name: CALICO_NETWORKING_BACKEND
               value: "none"
-            # Disable file logging so `kubectl logs` works.
+            # Disable file logging so 'kubectl logs' works.
             - name: CALICO_DISABLE_FILE_LOGGING
               value: "true"
             - name: NO_DEFAULT_POOLS

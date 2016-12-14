@@ -48,6 +48,10 @@ kmsKeyArn: "{{.KMSKeyARN}}"
 # Disk size (GiB) for controller node
 #controllerRootVolumeSize: 30
 
+# Tenancy of the controller node. Options are "default" and "dedicated"
+# Documentation: http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/dedicated-instance.html
+# controllerTenancy: default
+
 # Disk type for controller node (one of standard, io1, or gp2)
 #controllerRootVolumeType: gp2
 
@@ -62,6 +66,10 @@ kmsKeyArn: "{{.KMSKeyARN}}"
 
 # Disk size (GiB) for worker nodes
 #workerRootVolumeSize: 30
+
+# Tenancy of the controller node. Options are "default" and "dedicated"
+# Documentation: http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/dedicated-instance.html
+# workerTenancy: default
 
 # Disk type for worker node (one of standard, io1, or gp2)
 #workerRootVolumeType: gp2

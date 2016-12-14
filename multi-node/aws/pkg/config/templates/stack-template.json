@@ -296,6 +296,7 @@
             "Value": "{{.ClusterName}}-kube-aws-controller"
           }
         ],
+        "Tenancy": "{{ .ControllerTenancy }}",
         "UserData": "{{ .UserDataController }}"
       },
       "Type": "AWS::EC2::Instance"
@@ -327,6 +328,8 @@
         ],
         {{if .WorkerSpotPrice}}
         "SpotPrice": {{.WorkerSpotPrice}},
+        {{else}}
+        "PlacementTenancy": "{{.WorkerTenancy}}",
         {{end}}
         "UserData": "{{ .UserDataWorker }}"
       },

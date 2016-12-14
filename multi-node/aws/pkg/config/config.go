@@ -44,6 +44,7 @@ func newDefaultCluster() *Cluster {
 		TLSCertDurationDays:      365,
 		ContainerRuntime:         "docker",
 		ControllerInstanceType:   "m3.medium",
+		ControllerTenancy:        "default",
 		ControllerRootVolumeType: "gp2",
 		ControllerRootVolumeIOPS: 0,
 		ControllerRootVolumeSize: 30,
@@ -52,6 +53,7 @@ func newDefaultCluster() *Cluster {
 		WorkerRootVolumeType:     "gp2",
 		WorkerRootVolumeIOPS:     0,
 		WorkerRootVolumeSize:     30,
+		WorkerTenancy:            "default",
 		CreateRecordSet:          false,
 		RecordSetTTL:             300,
 		Subnets:                  []Subnet{},
@@ -118,11 +120,13 @@ type Cluster struct {
 	ControllerRootVolumeType string            `yaml:"controllerRootVolumeType,omitempty"`
 	ControllerRootVolumeIOPS int               `yaml:"controllerRootVolumeIOPS,omitempty"`
 	ControllerRootVolumeSize int               `yaml:"controllerRootVolumeSize,omitempty"`
+	ControllerTenancy        string            `yaml:"controllerTenancy,omitempty"`
 	WorkerCount              int               `yaml:"workerCount,omitempty"`
 	WorkerInstanceType       string            `yaml:"workerInstanceType,omitempty"`
 	WorkerRootVolumeType     string            `yaml:"workerRootVolumeType,omitempty"`
 	WorkerRootVolumeIOPS     int               `yaml:"workerRootVolumeIOPS,omitempty"`
 	WorkerRootVolumeSize     int               `yaml:"workerRootVolumeSize,omitempty"`
+	WorkerTenancy            string            `yaml:"workerTenancy,omitempty"`
 	WorkerSpotPrice          string            `yaml:"workerSpotPrice,omitempty"`
 	VPCID                    string            `yaml:"vpcId,omitempty"`
 	RouteTableID             string            `yaml:"routeTableId,omitempty"`

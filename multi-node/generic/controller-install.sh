@@ -5,7 +5,7 @@ set -e
 export ETCD_ENDPOINTS=
 
 # Specify the version (vX.Y.Z) of Kubernetes assets to deploy
-export K8S_VER=v1.4.6_coreos.0
+export K8S_VER=v1.5.1_coreos.0
 
 # Hyperkube image repository to use.
 export HYPERKUBE_IMAGE_REPO=quay.io/coreos/hyperkube
@@ -269,6 +269,7 @@ spec:
     - --client-ca-file=/etc/kubernetes/ssl/ca.pem
     - --service-account-key-file=/etc/kubernetes/ssl/apiserver-key.pem
     - --runtime-config=extensions/v1beta1/networkpolicies=true
+    - --anonymous-auth=false
     livenessProbe:
       httpGet:
         host: 127.0.0.1
@@ -382,37 +383,38 @@ spec:
 EOF
     fi
 
-    local TEMPLATE=/srv/kubernetes/manifests/kube-dns-rc.yaml
+    local TEMPLATE=/srv/kubernetes/manifests/kube-dns-de.yaml
     if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
-apiVersion: v1
-kind: ReplicationController
+apiVersion: extensions/v1beta1
+kind: Deployment
 metadata:
-  name: kube-dns-v20
+  name: kube-dns
   namespace: kube-system
   labels:
     k8s-app: kube-dns
-    version: v20
     kubernetes.io/cluster-service: "true"
 spec:
-  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 10%
+      maxUnavailable: 0
   selector:
-    k8s-app: kube-dns
-    version: v20
+    matchLabels:
+      k8s-app: kube-dns
   template:
     metadata:
       labels:
         k8s-app: kube-dns
-        version: v20
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
         scheduler.alpha.kubernetes.io/tolerations: '[{"key":"CriticalAddonsOnly", "operator":"Exists"}]'
     spec:
       containers:
       - name: kubedns
-        image: gcr.io/google_containers/kubedns-amd64:1.8
+        image: gcr.io/google_containers/kubedns-amd64:1.9
         resources:
           limits:
             memory: 170Mi
@@ -438,12 +440,22 @@ spec:
         args:
         - --domain=cluster.local.
         - --dns-port=10053
+        - --config-map=kube-dns
+        # This should be set to v=2 only after the new image (cut from 1.5) has
+        # been released, otherwise we will flood the logs.
+        - --v=2
+        env:
+        - name: PROMETHEUS_PORT
+          value: "10055"
         ports:
         - containerPort: 10053
           name: dns-local
           protocol: UDP
         - containerPort: 10053
           name: dns-tcp-local
+          protocol: TCP
+        - containerPort: 10055
+          name: metrics
           protocol: TCP
       - name: dnsmasq
         image: gcr.io/google_containers/kube-dnsmasq-amd64:1.4
@@ -468,6 +480,32 @@ spec:
         - containerPort: 53
           name: dns-tcp
           protocol: TCP
+        # see: https://github.com/kubernetes/kubernetes/issues/29055 for details
+        resources:
+          requests:
+            cpu: 150m
+            memory: 10Mi
+      - name: dnsmasq-metrics
+        image: gcr.io/google_containers/dnsmasq-metrics-amd64:1.0
+        livenessProbe:
+          httpGet:
+            path: /metrics
+            port: 10054
+            scheme: HTTP
+          initialDelaySeconds: 60
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 5
+        args:
+        - --v=2
+        - --logtostderr
+        ports:
+        - containerPort: 10054
+          name: metrics
+          protocol: TCP
+        resources:
+          requests:
+            memory: 10Mi
       - name: healthz
         image: gcr.io/google_containers/exechealthz-amd64:1.2
         resources:
@@ -487,6 +525,48 @@ spec:
         - containerPort: 8080
           protocol: TCP
       dnsPolicy: Default
+
+EOF
+    fi
+
+    local TEMPLATE=/srv/kubernetes/manifests/kube-dns-autoscaler-de.yaml
+    if [ ! -f $TEMPLATE ]; then
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: kube-dns-autoscaler
+  namespace: kube-system
+  labels:
+    k8s-app: kube-dns-autoscaler
+    kubernetes.io/cluster-service: "true"
+spec:
+  template:
+    metadata:
+      labels:
+        k8s-app: kube-dns-autoscaler
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ''
+        scheduler.alpha.kubernetes.io/tolerations: '[{"key":"CriticalAddonsOnly", "operator":"Exists"}]'
+    spec:
+      containers:
+      - name: autoscaler
+        image: gcr.io/google_containers/cluster-proportional-autoscaler-amd64:1.0.0
+        resources:
+            requests:
+                cpu: "20m"
+                memory: "10Mi"
+        command:
+          - /cluster-proportional-autoscaler
+          - --namespace=kube-system
+          - --configmap=kube-dns-autoscaler
+          - --mode=linear
+          - --target=Deployment/kube-dns
+          - --default-params={"linear":{"coresPerReplica":256,"nodesPerReplica":16,"min":1}}
+          - --logtostderr=true
+          - --v=2
 EOF
     fi
 
@@ -557,14 +637,6 @@ spec:
               scheme: HTTP
             initialDelaySeconds: 180
             timeoutSeconds: 5
-          resources:
-            # keep request = limit to keep this container in guaranteed class
-            limits:
-              cpu: 80m
-              memory: 200Mi
-            requests:
-              cpu: 80m
-              memory: 200Mi
           command:
             - /heapster
             - --source=kubernetes.summary_api:''
@@ -622,38 +694,36 @@ spec:
 EOF
     fi
 
-    local TEMPLATE=/srv/kubernetes/manifests/kube-dashboard-rc.yaml
+    local TEMPLATE=/srv/kubernetes/manifests/kube-dashboard-de.yaml
     if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
-apiVersion: v1
-kind: ReplicationController
+apiVersion: extensions/v1beta1
+kind: Deployment
 metadata:
-  name: kubernetes-dashboard-v1.4.1
+  name: kubernetes-dashboard
   namespace: kube-system
   labels:
     k8s-app: kubernetes-dashboard
-    version: v1.4.1
     kubernetes.io/cluster-service: "true"
 spec:
-  replicas: 1
   selector:
-    k8s-app: kubernetes-dashboard
+    matchLabels:
+      k8s-app: kubernetes-dashboard
   template:
     metadata:
       labels:
         k8s-app: kubernetes-dashboard
-        version: v1.4.1
-        kubernetes.io/cluster-service: "true"
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
         scheduler.alpha.kubernetes.io/tolerations: '[{"key":"CriticalAddonsOnly", "operator":"Exists"}]'
     spec:
       containers:
       - name: kubernetes-dashboard
-        image: gcr.io/google_containers/kubernetes-dashboard-amd64:v1.4.1
+        image: gcr.io/google_containers/kubernetes-dashboard-amd64:v1.5.0
         resources:
+          # keep request = limit to keep this container in guaranteed class
           limits:
             cpu: 100m
             memory: 50Mi
@@ -830,7 +900,7 @@ spec:
             # Choose the backend to use. 
             - name: CALICO_NETWORKING_BACKEND
               value: "none"
-            # Disable file logging so `kubectl logs` works.
+            # Disable file logging so 'kubectl logs' works.
             - name: CALICO_DISABLE_FILE_LOGGING
               value: "true"
             - name: NO_DEFAULT_POOLS
@@ -954,13 +1024,14 @@ function start_addons {
 
     echo
     echo "K8S: DNS addon"
-    curl --silent -H "Content-Type: application/yaml" -XPOST -d"$(cat /srv/kubernetes/manifests/kube-dns-rc.yaml)" "http://127.0.0.1:8080/api/v1/namespaces/kube-system/replicationcontrollers" > /dev/null
+    curl --silent -H "Content-Type: application/yaml" -XPOST -d"$(cat /srv/kubernetes/manifests/kube-dns-de.yaml)" "http://127.0.0.1:8080/apis/extensions/v1beta1/namespaces/kube-system/deployments" > /dev/null
     curl --silent -H "Content-Type: application/yaml" -XPOST -d"$(cat /srv/kubernetes/manifests/kube-dns-svc.yaml)" "http://127.0.0.1:8080/api/v1/namespaces/kube-system/services" > /dev/null
+    curl --silent -H "Content-Type: application/yaml" -XPOST -d"$(cat /srv/kubernetes/manifests/kube-dns-autoscaler-de.yaml)" "http://127.0.0.1:8080/apis/extensions/v1beta1/namespaces/kube-system/deployments" > /dev/null
     echo "K8S: Heapster addon"
     curl --silent -H "Content-Type: application/yaml" -XPOST -d"$(cat /srv/kubernetes/manifests/heapster-de.yaml)" "http://127.0.0.1:8080/apis/extensions/v1beta1/namespaces/kube-system/deployments" > /dev/null
     curl --silent -H "Content-Type: application/yaml" -XPOST -d"$(cat /srv/kubernetes/manifests/heapster-svc.yaml)" "http://127.0.0.1:8080/api/v1/namespaces/kube-system/services" > /dev/null
     echo "K8S: Dashboard addon"
-    curl --silent -H "Content-Type: application/yaml" -XPOST -d"$(cat /srv/kubernetes/manifests/kube-dashboard-rc.yaml)" "http://127.0.0.1:8080/api/v1/namespaces/kube-system/replicationcontrollers" > /dev/null
+    curl --silent -H "Content-Type: application/yaml" -XPOST -d"$(cat /srv/kubernetes/manifests/kube-dashboard-de.yaml)" "http://127.0.0.1:8080/apis/extensions/v1beta1/namespaces/kube-system/deployments" > /dev/null
     curl --silent -H "Content-Type: application/yaml" -XPOST -d"$(cat /srv/kubernetes/manifests/kube-dashboard-svc.yaml)" "http://127.0.0.1:8080/api/v1/namespaces/kube-system/services" > /dev/null
 }
 

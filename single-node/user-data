@@ -85,6 +85,25 @@ function init_flannel {
 }
 
 function init_templates {
+    local TEMPLATE=/etc/kubernetes/master-kubeconfig.yaml
+    if [[ ! -f "${TEMPLATE}" ]]; then
+      cat > "${TEMPLATE}" <<EOF
+apiVersion: v1
+kind: Config
+clusters:
+- name: kubernetes
+  cluster:
+    server: http://127.0.0.1:8080
+users:
+- name: kubelet
+context:
+- context:
+    cluster: kubernetes
+    user: kubelet
+  name: kubelet-context
+current-context: kubelet-context
+EOF
+    fi
     local TEMPLATE=/etc/systemd/system/kubelet.service
     local uuid_file="/var/run/kubelet-pod.uuid"
     if [ ! -f $TEMPLATE ]; then
@@ -112,7 +131,8 @@ ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
 ExecStartPre=/usr/bin/mkdir -p /var/log/containers
 ExecStartPre=-/usr/bin/rkt rm --uuid-file=${uuid_file}
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
-  --api-servers=http://127.0.0.1:8080 \
+  --kubeconfig=/etc/kubernetes/master-kubeconfig.yaml \
+  --require-kubeconfig \
   --cni-conf-dir=/etc/kubernetes/cni/net.d \
   --network-plugin=cni \
   --container-runtime=${CONTAINER_RUNTIME} \

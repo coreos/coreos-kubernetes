@@ -37,7 +37,8 @@ coreos:
         ExecStartPre=/usr/bin/mkdir -p /var/log/containers
         ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
         ExecStart=/usr/lib/coreos/kubelet-wrapper \
-        --api-servers={{.SecureAPIServers}} \
+        --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml \
+        --require-kubeconfig \
         --cni-conf-dir=/etc/kubernetes/cni/net.d \
         --network-plugin={{.K8sNetworkPlugin}} \
         --container-runtime={{.ContainerRuntime}} \
@@ -49,7 +50,6 @@ coreos:
         --cluster_dns={{.DNSServiceIP}} \
         --cluster_domain=cluster.local \
         --cloud-provider=aws \
-        --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml \
         --tls-cert-file=/etc/kubernetes/ssl/worker.pem \
         --tls-private-key-file=/etc/kubernetes/ssl/worker-key.pem
         ExecStop=-/usr/bin/rkt stop --uuid-file=/var/run/kubelet-pod.uuid
@@ -250,6 +250,7 @@ write_files:
         clusters:
         - name: local
           cluster:
+            server: {{.SecureAPIServers}}
             certificate-authority: /etc/kubernetes/ssl/ca.pem
         users:
         - name: kubelet

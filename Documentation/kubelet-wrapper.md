@@ -23,10 +23,12 @@ Environment=KUBELET_VERSION=v1.5.1_coreos.0
 Environment="RKT_OPTS=--uuid-file-save=/var/run/kubelet-pod.uuid"
 ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
-  --api-servers=http://127.0.0.1:8080 \
+  --kubeconfig=/etc/kubernetes/kubeconfig.yaml \
   --pod-manifest-path=/etc/kubernetes/manifests
 ExecStop=-/usr/bin/rkt stop --uuid-file=/var/run/kubelet-pod.uuid
 ```
+
+<!-- TODO we should definitely provide a minimal kubeconfig here -->
 
 In the example above we set the `KUBELET_VERSION` and the kubelet-wrapper script takes care of running the correct container image with our desired API server address and manifest location.
 
@@ -46,7 +48,7 @@ Environment="RKT_OPTS=--volume=resolv,kind=host,source=/etc/resolv.conf \
   --uuid-file-save=/var/run/kubelet-pod.uuid"
 ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
-  --api-servers=http://127.0.0.1:8080 \
+  --kubeconfig=/etc/kubernetes/kubeconfig.yaml \
   --pod-manifest-path=/etc/kubernetes/manifests
   ...other flags...
 ExecStop=-/usr/bin/rkt stop --uuid-file=/var/run/kubelet-pod.uuid
@@ -64,7 +66,7 @@ Environment="RKT_OPTS=--volume iscsiadm,kind=host,source=/usr/sbin/iscsiadm \
   --uuid-file-save=/var/run/kubelet-pod.uuid"
 ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
-  --api-servers=http://127.0.0.1:8080 \
+  --kubeconfig=/etc/kubernetes/kubeconfig.yaml \
   --pod-manifest-path=/etc/kubernetes/manifests
   ...other flags...
 ExecStop=-/usr/bin/rkt stop --uuid-file=/var/run/kubelet-pod.uuid
@@ -103,7 +105,7 @@ For example:
 Environment=KUBELET_VERSION=v1.5.1_coreos.0
 ...
 ExecStart=/opt/bin/kubelet-wrapper \
-  --api-servers=http://127.0.0.1:8080 \
+  --kubeconfig=/etc/kubernetes/kubeconfig.yaml \
   --pod-manifest-path=/etc/kubernetes/manifests
 ...
 ```

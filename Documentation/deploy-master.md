@@ -152,7 +152,8 @@ ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
 ExecStartPre=/usr/bin/mkdir -p /var/log/containers
 ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
-  --api-servers=http://127.0.0.1:8080 \
+  --kubeconfig=/etc/kubernetes/master-kubeconfig.yaml \
+  --require-kubeconfig \
   --register-schedulable=false \
   --cni-conf-dir=/etc/kubernetes/cni/net.d \
   --network-plugin=cni \
@@ -168,6 +169,25 @@ RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
+```
+
+**/etc/kubernetes/master-kubeconfig.yaml**
+
+```yaml
+apiVersion: v1
+kind: Config
+clusters:
+- name: local
+  cluster:
+    server: http://127.0.0.1:8080
+users:
+- name: kubelet
+contexts:
+- context:
+    cluster: local
+    user: kubelet
+  name: kubelet-context
+current-context: kubelet-context
 ```
 
 ### Set Up the kube-apiserver Pod

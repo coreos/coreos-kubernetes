@@ -17,7 +17,7 @@ For example, modifying the `KUBELET_VERSION` environment variable in the followi
 ```
 Environment=KUBELET_VERSION=v1.5.1_coreos.0
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
-  --api-servers=https://master [...]
+  [...]
 ```
 
 ## Upgrading Calico

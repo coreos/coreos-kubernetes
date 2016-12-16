@@ -134,7 +134,8 @@ ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
 ExecStartPre=/usr/bin/mkdir -p /var/log/containers
 ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
-  --api-servers=${MASTER_HOST} \
+  --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml \
+  --require-kubeconfig \
   --cni-conf-dir=/etc/kubernetes/cni/net.d \
   --network-plugin=cni \
   --container-runtime=docker \
@@ -144,7 +145,6 @@ ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --hostname-override=${ADVERTISE_IP} \
   --cluster_dns=${DNS_SERVICE_IP} \
   --cluster_domain=cluster.local \
-  --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml \
   --tls-cert-file=/etc/kubernetes/ssl/worker.pem \
   --tls-private-key-file=/etc/kubernetes/ssl/worker-key.pem
 ExecStop=-/usr/bin/rkt stop --uuid-file=/var/run/kubelet-pod.uuid
@@ -216,6 +216,7 @@ kind: Config
 clusters:
 - name: local
   cluster:
+    server: ${MASTER_HOST}
     certificate-authority: /etc/kubernetes/ssl/ca.pem
 users:
 - name: kubelet

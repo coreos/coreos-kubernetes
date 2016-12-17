@@ -5,6 +5,7 @@ require 'fileutils'
 require 'open-uri'
 require 'tempfile'
 require 'yaml'
+require_relative '../../lib/volume.rb'
 
 Vagrant.require_version ">= 1.6.0"
 
@@ -15,6 +16,8 @@ $worker_count = 1
 $worker_vm_memory = 1024
 $etcd_count = 1
 $etcd_vm_memory = 512
+$disks_per_node = 0
+$disk_size = 5
 
 CONFIG = File.expand_path("config.rb")
 if File.exist?(CONFIG)
@@ -153,6 +156,8 @@ Vagrant.configure("2") do |config|
       controllerIP = controllerIP(i)
       controller.vm.network :private_network, ip: controllerIP
 
+      attach_volumes(controller, $disks_per_node, $disk_size)
+
       # Each controller gets the same cert
       provisionMachineSSL(controller,"apiserver","kube-apiserver-#{controllerIP}",controllerIPs)
 
@@ -185,6 +190,8 @@ Vagrant.configure("2") do |config|
 
       workerIP = workerIP(i)
       worker.vm.network :private_network, ip: workerIP
+
+      attach_volumes(worker, $disks_per_node, $disk_size)
 
       provisionMachineSSL(worker,"worker","kube-worker-#{workerIP}",[workerIP])
 

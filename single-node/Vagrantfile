@@ -5,6 +5,7 @@ require 'fileutils'
 require 'open-uri'
 require 'tempfile'
 require 'yaml'
+require_relative '../lib/volume.rb'
 
 Vagrant.require_version ">= 1.6.0"
 
@@ -16,6 +17,8 @@ NODE_VCPUS = 1
 NODE_MEMORY_SIZE = 2048
 USER_DATA_PATH = File.expand_path("user-data")
 SSL_TARBALL_PATH = File.expand_path("ssl/controller.tar")
+$disks_per_node = 0
+$disk_size = 5
 
 system("mkdir -p ssl && ./../lib/init-ssl-ca ssl") or abort ("failed generating SSL CA artifacts")
 system("./../lib/init-ssl ssl apiserver controller IP.1=#{NODE_IP},IP.2=#{CLUSTER_IP}") or abort ("failed generating SSL certificate artifacts")
@@ -56,6 +59,7 @@ Vagrant.configure("2") do |config|
   end
 
   config.vm.network :private_network, ip: NODE_IP
+  attach_volumes(config, $disks_per_node, $disk_size)
 
   config.vm.provision :file, :source => SSL_TARBALL_PATH, :destination => "/tmp/ssl.tar"
   config.vm.provision :shell, :inline => "mkdir -p /etc/kubernetes/ssl && tar -C /etc/kubernetes/ssl -xf /tmp/ssl.tar", :privileged => true

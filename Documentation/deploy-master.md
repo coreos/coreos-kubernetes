@@ -145,7 +145,7 @@ Note that the kubelet running on a master node may log repeated attempts to post
 Environment=KUBELET_VERSION=${K8S_VER}
 Environment="RKT_OPTS=--uuid-file-save=/var/run/kubelet-pod.uuid \
   --volume var-log,kind=host,source=/var/log \
-  --mount volume=var-log,target=/var/log
+  --mount volume=var-log,target=/var/log \
   --volume dns,kind=host,source=/etc/resolv.conf \
   --mount volume=dns,target=/etc/resolv.conf"
 ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests

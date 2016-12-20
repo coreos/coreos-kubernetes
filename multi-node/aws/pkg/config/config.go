@@ -206,9 +206,8 @@ func (c Cluster) Config() (*Config, error) {
 	return &config, nil
 }
 
-// isMinImageVersion will return true if the supplied version is greater then
-// or equal to the current CoreOS release indicated by the given release
-// channel.
+// isMinImageVersion returns true if the current CoreOS release for the provided channel
+// is greater than or equal to the provided minVersion
 func isMinImageVersion(minVersion semver.Version, release string) (bool, error) {
 	metaData, err := coreosutil.GetAMIData(release)
 	if err != nil {
@@ -225,7 +224,7 @@ func isMinImageVersion(minVersion semver.Version, release string) (bool, error) 
 		return false, fmt.Errorf("Error parsing semver from image version %v", err)
 	}
 
-	if minVersion.LessThan(*current) {
+	if current.LessThan(minVersion) {
 		return false, nil
 	}
 

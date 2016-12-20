@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "kube-aws Kubernetes cluster {{.ClusterName}}",
+  "Description": "kube-aws Kubernetes cluster {{$.ClusterName}}",
   "Resources": {
     "AlarmControllerRecover": {
       "Properties": {
@@ -57,12 +57,12 @@
           {
             "Key": "KubernetesCluster",
             "PropagateAtLaunch": "true",
-            "Value": "{{.ClusterName}}"
+            "Value": "{{$.ClusterName}}"
           },
           {
             "Key": "Name",
             "PropagateAtLaunch": "true",
-            "Value": "{{.ClusterName}}-kube-aws-worker"
+            "Value": "{{$.ClusterName}}-kube-aws-worker"
           }
         ],
         "VPCZoneIdentifier": [
@@ -251,7 +251,12 @@
     },
     "InstanceController": {
       "Properties": {
-        "AvailabilityZone": "{{(index .Subnets .ControllerSubnetIndex).AvailabilityZone}}",
+        "AvailabilityZone":
+        {{if .ControllerSubnets}}
+        "{{(index .ControllerSubnets .ControllerSubnetIndex).AvailabilityZone}}"
+        {{else}}
+        "{{(index .Subnets .ControllerSubnetIndex).AvailabilityZone}}"
+        {{end}},
         "BlockDeviceMappings": [
           {
             "DeviceName": "/dev/xvda",
@@ -282,18 +287,23 @@
             ],
             "PrivateIpAddress": "{{.ControllerIP}}",
             "SubnetId": {
-              "Ref": "Subnet{{.ControllerSubnetIndex}}"
+              "Ref": 
+              {{if .ControllerSubnets}}
+              "ControllerSubnet{{.ControllerSubnetIndex}}"
+              {{else}}
+              "Subnet{{.ControllerSubnetIndex}}"
+              {{end}}
             }
           }
         ],
         "Tags": [
           {
             "Key": "KubernetesCluster",
-            "Value": "{{.ClusterName}}"
+            "Value": "{{$.ClusterName}}"
           },
           {
             "Key": "Name",
-            "Value": "{{.ClusterName}}-kube-aws-controller"
+            "Value": "{{$.ClusterName}}-kube-aws-controller"
           }
         ],
         "UserData": "{{ .UserDataController }}"
@@ -380,7 +390,7 @@
         "Tags": [
           {
             "Key": "KubernetesCluster",
-            "Value": "{{.ClusterName}}"
+            "Value": "{{$.ClusterName}}"
           }
         ],
         "VpcId": {{.VPCRef}}
@@ -443,7 +453,7 @@
         "Tags": [
           {
             "Key": "KubernetesCluster",
-            "Value": "{{.ClusterName}}"
+            "Value": "{{$.ClusterName}}"
           }
         ],
         "VpcId": {{.VPCRef}}
@@ -568,6 +578,46 @@
     }
     {{end}}
     {{end}}
+
+    {{if .ControllerSubnets}}
+      {{range $index, $subnet := .ControllerSubnets}}
+      {{with $subnetLogicalName := printf "ControllerSubnet%d" $index}}
+      ,
+      "{{$subnetLogicalName}}": {
+        "Properties": {
+          "AvailabilityZone": "{{$subnet.AvailabilityZone}}",
+          "CidrBlock": "{{$subnet.InstanceCIDR}}",
+          "MapPublicIpOnLaunch": true,
+          "Tags": [
+            {
+              "Key": "Name",
+              "Value": "{{$.ClusterName}}-controller-subnet"
+            },
+            {
+              "Key": "KubernetesCluster",
+              "Value": "{{$.ClusterName}}"
+            }
+          ],
+          "VpcId": {{$.VPCRef}}
+        },
+        "Type": "AWS::EC2::Subnet"
+      }
+      {{if $subnet.RouteTableID}}
+        ,
+        "{{$subnetLogicalName}}RouteTableAssociation": {
+          "Properties": {
+            "RouteTableId": "{{$subnet.RouteTableID}}",
+            "SubnetId": {
+              "Ref": "{{$subnetLogicalName}}"
+            }
+          },
+          "Type": "AWS::EC2::SubnetRouteTableAssociation"
+        }
+      {{end}}
+      {{end}}
+      {{end}}
+    {{end}}
+
     {{if not .VPCID}}
     ,
     "{{.VPCLogicalName}}": {
@@ -579,11 +629,11 @@
         "Tags": [
           {
             "Key": "KubernetesCluster",
-            "Value": "{{.ClusterName}}"
+            "Value": "{{$.ClusterName}}"
           },
           {
             "Key": "Name",
-            "Value": "kubernetes-{{.ClusterName}}-vpc"
+            "Value": "kubernetes-{{$.ClusterName}}-vpc"
           }
         ]
       },
@@ -594,7 +644,7 @@
         "Tags": [
           {
             "Key": "KubernetesCluster",
-            "Value": "{{.ClusterName}}"
+            "Value": "{{$.ClusterName}}"
           }
         ],
         "VpcId": {{.VPCRef}}
@@ -616,7 +666,7 @@
         "Tags": [
           {
             "Key": "KubernetesCluster",
-            "Value": "{{.ClusterName}}"
+            "Value": "{{$.ClusterName}}"
           }
         ]
       },
@@ -645,10 +695,22 @@
     }
     {{end}}
     {{end}}
-    {{else}}
-    {{if .RouteTableID}}
+
+    {{else}} {{/* else VPC ID set */}}
     {{range $index, $subnet := .Subnets}}
     {{with $subnetLogicalName := printf "Subnet%d" $index}}
+    {{if $subnet.RouteTableID}} {{/* subnet specific route table set */}}
+    ,
+    "{{$subnetLogicalName}}RouteTableAssociation": {
+      "Properties": {
+        "RouteTableId": "{{$subnet.RouteTableID}}",
+        "SubnetId": {
+          "Ref": "{{$subnetLogicalName}}"
+        }
+      },
+      "Type": "AWS::EC2::SubnetRouteTableAssociation"
+    }
+    {{else if $.RouteTableID}} {{/* default route table set */}}
     ,
     "{{$subnetLogicalName}}RouteTableAssociation": {
       "Properties": {

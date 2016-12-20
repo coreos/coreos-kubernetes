@@ -73,10 +73,10 @@ kmsKeyArn: "{{.KMSKeyARN}}"
 # workerSpotPrice: "0.05"
 
 # ID of existing VPC to create subnet in. Leave blank to create a new VPC
-# vpcId:
+# vpcId: vpc-UNIQUEID
 
 # ID of existing route table in existing VPC to attach subnet to. Leave blank to use the VPC's main route table.
-# routeTableId:
+# routeTableId: rtb-UNIQUEID
 
 # CIDR for Kubernetes VPC. If vpcId is specified, must match the CIDR of existing vpc.
 # vpcCIDR: "10.0.0.0/16"
@@ -84,15 +84,26 @@ kmsKeyArn: "{{.KMSKeyARN}}"
 # CIDR for Kubernetes subnet when placing nodes in a single availability zone (not highly-available) Leave commented out for multi availability zone setting and use the below `subnets` section instead.
 # instanceCIDR: "10.0.0.0/24"
 
-# Kubernetes subnets with their CIDRs and availability zones. Differentiating availability zone for 2 or more subnets result in high-availability (failures of a single availability zone won't result in immediate downtimes)
+# Kubernetes subnets with their CIDRs and availability zones. Differentiating availability zone for 2 or more subnets result in high-availability (failures of a single availability zone won't result in immediate downtimes). You may also optionally specify existing route tables within the VPC to use, if not specified drop down to the `routeTableId` above then the VPC's main route table.
 # subnets:
 #   - availabilityZone: us-west-1a
 #     instanceCIDR: "10.0.0.0/24"
+#     routeTableId: rtb-UNIQUEID
 #   - availabilityZone: us-west-1b
 #     instanceCIDR: "10.0.1.0/24"
+#     routeTableId: rtb-UNIQUEID
 
-# IP Address for the controller in Kubernetes subnet. When we have 2 or more subnets, the controller is placed in the first subnet and controllerIP must be included in the instanceCIDR of the first subnet. This convention will change once we have H/A controllers
+# IP Address for the controller in Kubernetes subnet. The controllerIP must be included in the instanceCIDRs of the `controllerSubnets` if specified or if not specifed then the instanceCIDRs of `subnets` if specified. This convention will change once we have H/A controllers
 # controllerIP: 10.0.0.50
+
+# Optionally override the details used for any controller subnets. You may also optionally specify existing route tables within the VPC to use, if not specified drop down to the `routeTableId` above then the VPC's main route table.
+# controllerSubnets:
+#   - availabilityZone: us-west-1a
+#     instanceCIDR: "10.0.2.0/24"
+#     routeTableId: rtb-UNIQUEID
+#   - availabilityZone: us-west-1b
+#     instanceCIDR: "10.0.3.0/24"
+#     routeTableId: rtb-UNIQUEID
 
 # CIDR for all service IP addresses
 # serviceCIDR: "10.3.0.0/24"

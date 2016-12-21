@@ -250,6 +250,7 @@ Start the kubelet, which will start the proxy.
 $ sudo systemctl start flanneld
 $ sudo systemctl start kubelet
 ```
+*Note:* It's vital, that at this point the API server is already up and running, which might not always be the case if Services are started via automated provisioning.
 
 Ensure that the services start on each boot:
 

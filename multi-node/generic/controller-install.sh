@@ -99,6 +99,7 @@ function init_templates {
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
 [Service]
+EnvironmentFile=/etc/environment
 Environment=KUBELET_VERSION=${K8S_VER}
 Environment=KUBELET_ACI=${HYPERKUBE_IMAGE_REPO}
 Environment="RKT_OPTS=--uuid-file-save=${uuid_file} \

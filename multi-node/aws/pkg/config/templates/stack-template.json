@@ -51,7 +51,7 @@
         "LaunchConfigurationName": {
           "Ref": "LaunchConfigurationWorker"
         },
-        "MaxSize": "{{.WorkerCount}}",
+        "MaxSize": "{{.MaxWorkerCount}}",
         "MinSize": "{{.WorkerCount}}",
         "Tags": [
           {

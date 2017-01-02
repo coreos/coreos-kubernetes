@@ -11,15 +11,17 @@ coreos:
         - name: 40-flannel.conf
           content: |
             [Unit]
-            Requires=flanneld.service
-            After=flanneld.service
+            Wants=flanneld.service
             [Service]
             EnvironmentFile=/etc/kubernetes/cni/docker_opts_cni.env
+            ExecStartPre=systemctl is-active flanneld.service
 
     - name: kubelet.service
       command: start
       runtime: true
       content: |
+        [Unit]
+        Wants=docker.service
         [Service]
         Environment=KUBELET_VERSION={{.K8sVer}}
         Environment=KUBELET_ACI={{.HyperkubeImageRepo}}
@@ -34,6 +36,8 @@ coreos:
         --mount volume=stage,target=/tmp \
         --volume var-log,kind=host,source=/var/log \
         --mount volume=var-log,target=/var/log"
+        ExecStartPre=systemctl is-active docker.service
+        ExecStartPre=/opt/bin/decrypt-tls-assets
         ExecStartPre=/usr/bin/mkdir -p /var/log/containers
         ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
         ExecStart=/usr/lib/coreos/kubelet-wrapper \
@@ -77,12 +81,12 @@ coreos:
         [Unit]
         Description=Load rkt stage1 images
         Documentation=http://github.com/coreos/rkt
-        Requires=network-online.target
-        After=network-online.target
+        Wants=network-online.target
         Before=rkt-api.service
         [Service]
         Type=oneshot
         RemainAfterExit=yes
+        ExecStartPre=systemctl is-active network-online.target
         ExecStart=/usr/bin/rkt fetch /usr/lib/rkt/stage1-images/stage1-coreos.aci /usr/lib/rkt/stage1-images/stage1-fly.aci  --insecure-options=image
         [Install]
         RequiredBy=rkt-api.service
@@ -95,8 +99,7 @@ coreos:
       content: |
         [Unit]
         Description=Calico per-host agent
-        Requires=network-online.target
-        After=network-online.target
+        Wants=network-online.target
 
         [Service]
         Slice=machine.slice
@@ -107,6 +110,7 @@ coreos:
         Environment=CALICO_NETWORKING=false
         Environment=NO_DEFAULT_POOLS=true
         Environment=ETCD_ENDPOINTS={{ .ETCDEndpoints }}
+        ExecStartPre=systemctl is-active network-online.target
         ExecStart=/usr/bin/rkt run --inherit-env --stage1-from-dir=stage1-fly.aci \
         --volume=modules,kind=host,source=/lib/modules,readOnly=false \
         --mount=volume=modules,target=/lib/modules \
@@ -120,21 +124,6 @@ coreos:
         [Install]
         WantedBy=multi-user.target
 {{ end }}
-
-    - name: decrypt-tls-assets.service
-      enable: true
-      content: |
-        [Unit]
-        Description=decrypt kubelet tls assets using amazon kms
-        Before=kubelet.service
-
-        [Service]
-        Type=oneshot
-        RemainAfterExit=yes
-        ExecStart=/opt/bin/decrypt-tls-assets
-
-        [Install]
-        RequiredBy=kubelet.service
 
 write_files:
   - path: /etc/kubernetes/cni/docker_opts_cni.env

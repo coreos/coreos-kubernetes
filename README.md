@@ -16,7 +16,6 @@ When designing these guides and tools, the following considerations are made:
 * An individual node can reboot and the cluster will still function
 * Internal cluster DNS is available
 * Service accounts enabled
-* Use a cloud-provider if we can, for instance on AWS
 * Follow Kubernetes guidelines for AdmissionControllers and other suggested configuration
 
 ## Kubernetes Topics
@@ -34,7 +33,6 @@ https://coreos.com/kubernetes/docs/latest/
 - [Step-by-Step for Any Platform](Documentation/getting-started.md)
 - [Single-Node Vagrant Stack](single-node/README.md)
 - [Multi-Node Vagrant Cluster](multi-node/vagrant/README.md)
-- [Multi-Node AWS Cluster](https://github.com/coreos/kube-aws)
 - [Multi-Node Bare Metal Cluster](Documentation/kubernetes-on-baremetal.md)
 
 ## Running Kubernetes Conformance Tests

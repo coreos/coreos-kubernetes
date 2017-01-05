@@ -382,9 +382,9 @@ Second the `DaemonSet` runs on all hosts, including the master node. It performs
 * Connects containers to the flannel overlay network, which enables the "one IP per pod" concept.
 * Enforces network policy created through the Kubernetes policy API, ensuring pods talk to authorized resources only.
 
-The policy controller is the last major piece of the calico.yaml. It monitors the API for changes related to network policy and configures Calico to implement that policy. 
+The policy controller is the last major piece of the calico.yaml. It monitors the API for changes related to network policy and configures Calico to implement that policy.
 
-When creating `/etc/kubernetes/manifests/calico.yaml`:
+When creating `/srv/kubernetes/manifests/calico.yaml`:
 
 * Replace `${ETCD_ENDPOINTS}`
 
@@ -395,7 +395,7 @@ When creating `/etc/kubernetes/manifests/calico.yaml`:
 kind: ConfigMap
 apiVersion: v1
 metadata:
-  name: calico-config 
+  name: calico-config
   namespace: kube-system
 data:
   # Configure this with the location of your etcd cluster.
@@ -425,7 +425,7 @@ data:
 ---
 
 # This manifest installs the calico/node container, as well
-# as the Calico CNI plugins and network config on 
+# as the Calico CNI plugins and network config on
 # each master and worker node in a Kubernetes cluster.
 kind: DaemonSet
 apiVersion: extensions/v1beta1
@@ -450,11 +450,11 @@ spec:
     spec:
       hostNetwork: true
       containers:
-        # Runs calico/node container on each Kubernetes node.  This 
+        # Runs calico/node container on each Kubernetes node.  This
         # container programs network policy and routes on each
         # host.
         - name: calico-node
-          image: quay.io/calico/node:v0.23.0
+          image: quay.io/calico/node:v1.0.0
           env:
             # The location of the Calico etcd cluster.
             - name: ETCD_ENDPOINTS
@@ -462,7 +462,7 @@ spec:
                 configMapKeyRef:
                   name: calico-config
                   key: etcd_endpoints
-            # Choose the backend to use. 
+            # Choose the backend to use.
             - name: CALICO_NETWORKING_BACKEND
               value: "none"
             # Disable file logging so `kubectl logs` works.
@@ -485,7 +485,7 @@ spec:
         # This container installs the Calico CNI binaries
         # and CNI network config file on each node.
         - name: install-cni
-          image: quay.io/calico/cni:v1.5.2
+          image: quay.io/calico/cni:v1.5.5
           imagePullPolicy: Always
           command: ["/install-cni.sh"]
           env:
@@ -533,7 +533,7 @@ spec:
 # This manifest deploys the Calico policy controller on Kubernetes.
 # See https://github.com/projectcalico/k8s-policy
 apiVersion: extensions/v1beta1
-kind: ReplicaSet 
+kind: ReplicaSet
 metadata:
   name: calico-policy-controller
   namespace: kube-system
@@ -559,7 +559,7 @@ spec:
       hostNetwork: true
       containers:
         - name: calico-policy-controller
-          image: calico/kube-policy-controller:v0.4.0
+          image: calico/kube-policy-controller:v0.5.1
           env:
             # The location of the Calico etcd cluster.
             - name: ETCD_ENDPOINTS
@@ -571,7 +571,7 @@ spec:
             # service for API access.
             - name: K8S_API
               value: "https://kubernetes.default:443"
-            # Since we're running in the host namespace and might not have KubeDNS 
+            # Since we're running in the host namespace and might not have KubeDNS
             # access, configure the container's /etc/hosts to resolve
             # kubernetes.default to the correct service clusterIP.
             - name: CONFIGURE_ETC_HOSTS
@@ -666,6 +666,14 @@ kube-scheduler-$node
 kube-apiserver-$node
 kube-controller-$node
 kube-proxy-$node
+```
+
+### Configure Calico
+
+To start Calico services :
+
+```
+docker run --rm --net=host -v /srv/kubernetes/manifests:/host/manifests quay.io/coreos/hyperkube:v1.5.1_coreos.0 /hyperkube kubectl apply -f /host/manifests/calico.yaml
 ```
 
 <div class="co-m-docs-next-step">

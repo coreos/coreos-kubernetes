@@ -371,6 +371,52 @@ spec:
       timeoutSeconds: 15
 ```
 
+### Set Up the kube-addon-manager Pod
+
+The kube-addon-manager is responsible for creating and updating addons.
+
+Addons are manifests located in `/etc/kubernetes/addons/`.
+
+**/etc/kubernetes/manifests/kube-addon-manager.yaml**
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-addon-manager
+  namespace: kube-system
+  labels:
+    component: kube-addon-manager
+spec:
+  hostNetwork: true
+  containers:
+  - name: kube-addon-manager
+    # When updating version also bump it in cluster/images/hyperkube/static-pods/addon-manager.json
+    image: gcr.io/google-containers/kube-addon-manager:v6.1
+    command:
+    - /bin/bash
+    - -c
+    - /opt/kube-addons.sh 1>>/var/log/kube-addon-manager.log 2>&1
+    resources:
+      requests:
+        cpu: 5m
+        memory: 50Mi
+    volumeMounts:
+    - mountPath: /etc/kubernetes/
+      name: addons
+      readOnly: true
+    - mountPath: /var/log
+      name: varlog
+      readOnly: false
+  volumes:
+  - hostPath:
+      path: /etc/kubernetes/
+    name: addons
+  - hostPath:
+      path: /var/log
+    name: varlog
+```
+
 ### Set Up Calico For Network Policy (optional)
 
 This step can be skipped if you do not wish to provide network policy to your cluster using Calico.
@@ -384,7 +430,7 @@ Second the `DaemonSet` runs on all hosts, including the master node. It performs
 
 The policy controller is the last major piece of the calico.yaml. It monitors the API for changes related to network policy and configures Calico to implement that policy.
 
-When creating `/srv/kubernetes/manifests/calico.yaml`:
+When creating `/etc/kubernetes/addons/calico.yaml`:
 
 * Replace `${ETCD_ENDPOINTS}`
 

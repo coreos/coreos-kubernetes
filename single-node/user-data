@@ -383,7 +383,50 @@ spec:
 EOF
     fi
 
-    local TEMPLATE=/srv/kubernetes/manifests/kube-dns-de.yaml
+    local TEMPLATE=/etc/kubernetes/manifests/kube-addons-manager.yaml
+    if [ ! -f $TEMPLATE ]; then
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-addon-manager
+  namespace: kube-system
+  labels:
+    component: kube-addon-manager
+spec:
+  hostNetwork: true
+  containers:
+  - name: kube-addon-manager
+    # When updating version also bump it in cluster/images/hyperkube/static-pods/addon-manager.json
+    image: gcr.io/google-containers/kube-addon-manager:v6.1
+    command:
+    - /bin/bash
+    - -c
+    - /opt/kube-addons.sh 1>>/var/log/kube-addon-manager.log 2>&1
+    resources:
+      requests:
+        cpu: 5m
+        memory: 50Mi
+    volumeMounts:
+    - mountPath: /etc/kubernetes/
+      name: addons
+      readOnly: true
+    - mountPath: /var/log
+      name: varlog
+      readOnly: false
+  volumes:
+  - hostPath:
+      path: /etc/kubernetes/
+    name: addons
+  - hostPath:
+      path: /var/log
+    name: varlog
+EOF
+    fi
+
+    local TEMPLATE=/etc/kubernetes/addons/kube-dns-de.yaml
     if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
@@ -512,7 +555,7 @@ spec:
 EOF
     fi
 
-    local TEMPLATE=/srv/kubernetes/manifests/kube-dns-autoscaler-de.yaml
+    local TEMPLATE=/etc/kubernetes/addons/kube-dns-autoscaler-de.yaml
     if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
@@ -553,7 +596,7 @@ spec:
 EOF
     fi
 
-    local TEMPLATE=/srv/kubernetes/manifests/kube-dns-svc.yaml
+    local TEMPLATE=/etc/kubernetes/addons/kube-dns-svc.yaml
     if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
@@ -581,7 +624,7 @@ spec:
 EOF
     fi
 
-    local TEMPLATE=/srv/kubernetes/manifests/heapster-de.yaml
+    local TEMPLATE=/etc/kubernetes/addons/heapster-de.yaml
     if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
@@ -655,7 +698,7 @@ spec:
 EOF
     fi
 
-    local TEMPLATE=/srv/kubernetes/manifests/heapster-svc.yaml
+    local TEMPLATE=/etc/kubernetes/addons/heapster-svc.yaml
     if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
@@ -677,7 +720,7 @@ spec:
 EOF
     fi
 
-    local TEMPLATE=/srv/kubernetes/manifests/kube-dashboard-de.yaml
+    local TEMPLATE=/etc/kubernetes/addons/kube-dashboard-de.yaml
     if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
@@ -724,7 +767,7 @@ spec:
 EOF
     fi
 
-    local TEMPLATE=/srv/kubernetes/manifests/kube-dashboard-svc.yaml
+    local TEMPLATE=/etc/kubernetes/addons/kube-dashboard-svc.yaml
     if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
@@ -803,7 +846,7 @@ EOF
 }
 EOF
     fi
-    local TEMPLATE=/srv/kubernetes/manifests/calico.yaml
+    local TEMPLATE=/etc/kubernetes/addons/calico.yaml
     if [ "${USE_CALICO}" = "true" ]; then
     echo "TEMPLATE: $TEMPLATE"
     mkdir -p $(dirname $TEMPLATE)
@@ -997,38 +1040,6 @@ EOF
     fi
 }
 
-function start_addons {
-    echo "Waiting for Kubernetes API..."
-    until curl --silent "http://127.0.0.1:8080/version"
-    do
-        sleep 5
-    done
-    echo
-    echo "K8S: DNS addon"
-    curl --silent -H "Content-Type: application/yaml" -XPOST -d"$(cat /srv/kubernetes/manifests/kube-dns-de.yaml)" "http://127.0.0.1:8080/apis/extensions/v1beta1/namespaces/kube-system/deployments" > /dev/null
-    curl --silent -H "Content-Type: application/yaml" -XPOST -d"$(cat /srv/kubernetes/manifests/kube-dns-svc.yaml)" "http://127.0.0.1:8080/api/v1/namespaces/kube-system/services" > /dev/null
-    curl --silent -H "Content-Type: application/yaml" -XPOST -d"$(cat /srv/kubernetes/manifests/kube-dns-autoscaler-de.yaml)" "http://127.0.0.1:8080/apis/extensions/v1beta1/namespaces/kube-system/deployments" > /dev/null
-    echo "K8S: Heapster addon"
-    curl --silent -H "Content-Type: application/yaml" -XPOST -d"$(cat /srv/kubernetes/manifests/heapster-de.yaml)" "http://127.0.0.1:8080/apis/extensions/v1beta1/namespaces/kube-system/deployments" > /dev/null
-    curl --silent -H "Content-Type: application/yaml" -XPOST -d"$(cat /srv/kubernetes/manifests/heapster-svc.yaml)" "http://127.0.0.1:8080/api/v1/namespaces/kube-system/services" > /dev/null
-    echo "K8S: Dashboard addon"
-    curl --silent -H "Content-Type: application/yaml" -XPOST -d"$(cat /srv/kubernetes/manifests/kube-dashboard-de.yaml)" "http://127.0.0.1:8080/apis/extensions/v1beta1/namespaces/kube-system/deployments" > /dev/null
-    curl --silent -H "Content-Type: application/yaml" -XPOST -d"$(cat /srv/kubernetes/manifests/kube-dashboard-svc.yaml)" "http://127.0.0.1:8080/api/v1/namespaces/kube-system/services" > /dev/null
-}
-
-function start_calico {
-    echo "Waiting for Kubernetes API..."
-    # wait for the API
-    until curl --silent "http://127.0.0.1:8080/version/"
-    do
-        sleep 5
-    done
-    echo "Deploying Calico"
-    # Deploy Calico
-    #TODO: change to rkt once this is resolved (https://github.com/coreos/rkt/issues/3181)
-    docker run --rm --net=host -v /srv/kubernetes/manifests:/host/manifests $HYPERKUBE_IMAGE_REPO:$K8S_VER /hyperkube kubectl apply -f /host/manifests/calico.yaml
-}
-
 init_config
 init_templates
 systemctl enable etcd2; systemctl start etcd2
@@ -1049,9 +1060,4 @@ fi
 systemctl enable flanneld; systemctl start flanneld
 systemctl enable kubelet; systemctl start kubelet
 
-if [ $USE_CALICO = "true" ]; then
-        start_calico
-fi
-
-start_addons
 echo "DONE"

@@ -302,7 +302,7 @@ Access the dashboard by port forwarding with `kubectl`.
 
 ```sh
 $ kubectl get pods --namespace=kube-system
-$ kubectl port-forward kubernetes-dashboard-v1.4.1-SOME-ID 9090 --namespace=kube-system
+$ kubectl port-forward kubernetes-dashboard-SOME-ID 9090 --namespace=kube-system
 ```
 
 ## Deploy the Heapster Add-on

@@ -99,6 +99,8 @@ function init_templates {
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
 [Service]
+ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
+ExecStartPre=/usr/bin/mkdir -p /opt/cni/bin
 Environment=KUBELET_VERSION=${K8S_VER}
 Environment=KUBELET_ACI=${HYPERKUBE_IMAGE_REPO}
 Environment="RKT_OPTS=--uuid-file-save=${uuid_file} \
@@ -133,6 +135,7 @@ ExecStart=/usr/lib/coreos/kubelet-wrapper \
 ExecStop=-/usr/bin/rkt stop --uuid-file=${uuid_file}
 Restart=always
 RestartSec=10
+KillMode=process
 
 [Install]
 WantedBy=multi-user.target
@@ -157,7 +160,6 @@ exec nsenter -m -u -i -n -p -t 1 -- /usr/bin/rkt "\$@"
 EOF
     fi
 
-
     local TEMPLATE=/etc/systemd/system/load-rkt-stage1.service
     if [ ${CONTAINER_RUNTIME} = "rkt" ] && [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
@@ -171,8 +173,8 @@ After=network-online.target
 Before=rkt-api.service
 
 [Service]
-RemainAfterExit=yes
 Type=oneshot
+RemainAfterExit=yes
 ExecStart=/usr/bin/rkt fetch /usr/lib/rkt/stage1-images/stage1-coreos.aci /usr/lib/rkt/stage1-images/stage1-fly.aci  --insecure-options=image
 
 [Install]
@@ -509,7 +511,6 @@ spec:
           requests:
             memory: 10Mi
       dnsPolicy: Default
-
 EOF
     fi
 
@@ -804,7 +805,6 @@ EOF
 }
 EOF
     fi
-
     local TEMPLATE=/srv/kubernetes/manifests/calico.yaml
     if [ "${USE_CALICO}" = "true" ]; then
     echo "TEMPLATE: $TEMPLATE"
@@ -1005,7 +1005,6 @@ function start_addons {
     do
         sleep 5
     done
-
     echo
     echo "K8S: DNS addon"
     curl --silent -H "Content-Type: application/yaml" -XPOST -d"$(cat /srv/kubernetes/manifests/kube-dns-de.yaml)" "http://127.0.0.1:8080/apis/extensions/v1beta1/namespaces/kube-system/deployments" > /dev/null
@@ -1049,7 +1048,6 @@ if [ $CONTAINER_RUNTIME = "rkt" ]; then
 fi
 
 systemctl enable flanneld; systemctl start flanneld
-
 systemctl enable kubelet; systemctl start kubelet
 
 if [ $USE_CALICO = "true" ]; then

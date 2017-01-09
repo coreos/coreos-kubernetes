@@ -808,7 +808,7 @@ EOF
 }
 EOF
     fi
-    local TEMPLATE=/etc/kubernetes/manifests/calico.yaml
+    local TEMPLATE=/srv/kubernetes/manifests/calico.yaml
     if [ "${USE_CALICO}" = "true" ]; then
     echo "TEMPLATE: $TEMPLATE"
     mkdir -p $(dirname $TEMPLATE)

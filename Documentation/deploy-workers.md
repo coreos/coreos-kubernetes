@@ -136,7 +136,7 @@ ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=${MASTER_HOST} \
   --cni-conf-dir=/etc/kubernetes/cni/net.d \
-  --network-plugin=cni \
+  --network-plugin=${NETWORK_PLUGIN} \
   --container-runtime=docker \
   --register-node=true \
   --allow-privileged=true \

@@ -20,13 +20,13 @@ See the [Kubernetes networking](kubernetes-networking.md) documentation for more
 
 ## Automated provisioning
 
-Network booting and provisioning CoreOS clusters can be automated using the [coreos-baremetal](https://github.com/coreos/coreos-baremetal) project. It includes:
+Network booting and provisioning CoreOS clusters can be automated using the CoreOS [matchbox][matchbox-gh] project. It includes:
 
-* Guides for configuring an network boot environment with iPXE/GRUB
-* An HTTP/gRPC [service](https://github.com/coreos/coreos-baremetal/blob/master/Documentation/bootcfg.md) for booting and provisioning machines. Match machines by their hardware attributes and serve templated [Ignition](https://coreos.com/ignition/docs/latest/c) configs or cloud-configs.
-* Example clusters including an [etcd cluster](https://github.com/coreos/coreos-baremetal/blob/master/Documentation/getting-started-rkt.md), multi-node [Kubernetes cluster](https://github.com/coreos/coreos-baremetal/blob/master/Documentation/kubernetes.md), and [self-hosted](https://github.com/coreos/coreos-baremetal/blob/master/Documentation/bootkube.md) Kubernetes cluster.
+* Guides for creating network boot environments with iPXE/GRUB
+* The matchbox HTTP/gRPC [service][matchbox-intro-doc] for booting and provisioning bare-metal machines. Match machines by their hardware attributes and serve templated [Ignition][ignition-docs] configs or cloud-configs.
+* Example clusters including an [etcd cluster][etcd-cluster-example], multi-node [Kubernetes cluster][multi-node-example], and [self-hosted][self-hosted-example] Kubernetes cluster.
 
-[Get started](https://github.com/coreos/coreos-baremetal#bootcfg) provisioning your machines into CoreOS clusters.
+[Get started][matchbox-gh] provisioning your machines into CoreOS clusters.
 
 ## Manual provisioning
 
@@ -38,12 +38,18 @@ Install CoreOS using the bare metal installation instructions:
 
 Mixing multiple methods is possible. For example, doing an install to disk for the machines running the etcd cluster and Kubernetes master nodes, but PXE-booting the worker machines.
 
+
 [coreos-ipxe]: https://coreos.com/os/docs/latest/booting-with-ipxe.html
 [coreos-pxe]: https://coreos.com/os/docs/latest/booting-with-pxe.html
 [coreos-ondisk]: https://coreos.com/os/docs/latest/installing-to-disk.html
+[etcd-cluster-example]: https://github.com/coreos/matchbox/blob/master/Documentation/getting-started-rkt.md
+[ignition-docs]: https://coreos.com/ignition/docs/latest/
+[matchbox-gh]: https://github.com/coreos/matchbox
+[matchbox-intro-doc]: https://github.com/coreos/matchbox/blob/master/Documentation/matchbox.md
+[multi-node-example]: https://github.com/coreos/matchbox/blob/master/Documentation/kubernetes.md
+[self-hosted-example]: https://github.com/coreos/matchbox/blob/master/Documentation/bootkube.md
 
 <div class="co-m-docs-next-step">
   <p><strong>Did you install CoreOS on your machines?</strong> An SSH connection to each machine is all that's needed. We'll start the configuration next.</p>
   <a href="getting-started.md" class="btn btn-primary btn-icon-right"  data-category="Getting Started" data-event="Getting Started">I'm ready to get started</a>
 </div>
-

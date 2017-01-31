@@ -18,19 +18,17 @@ See the [Kubernetes networking](kubernetes-networking.md) documentation for more
 [calico-networking]: https://github.com/projectcalico/calico-containers
 [pod-network]: https://github.com/kubernetes/kubernetes/blob/release-1.4/docs/design/networking.md#pod-to-pod
 
-## Automated provisioning
+## Provisioning
 
 Network booting and provisioning CoreOS clusters can be automated using the CoreOS [matchbox][matchbox-gh] project. It includes:
 
 * Guides for creating network boot environments with iPXE/GRUB
-* The matchbox HTTP/gRPC [service][matchbox-intro-doc] for booting and provisioning bare-metal machines. Match machines by their hardware attributes and serve templated [Ignition][ignition-docs] configs or cloud-configs.
+* The matchbox HTTP/gRPC [service][matchbox-intro-doc] for booting and provisioning bare-metal machines. Match machines by their hardware attributes and serve templated [Ignition][ignition-docs] provisioning configurations.
 * Example clusters including an [etcd cluster][etcd-cluster-example], multi-node [Kubernetes cluster][multi-node-example], and [self-hosted][self-hosted-example] Kubernetes cluster.
 
 [Get started][matchbox-gh] provisioning your machines into CoreOS clusters.
 
-## Manual provisioning
-
-Install CoreOS using the bare metal installation instructions:
+The CoreOS bare metal installation documents provide background and deployment options for the boot mechanisms:
 
 * [Booting with iPXE][coreos-ipxe]
 * [Booting with PXE][coreos-pxe]

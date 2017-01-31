@@ -20,7 +20,7 @@ See the [Kubernetes networking](kubernetes-networking.md) documentation for more
 
 ## Automated provisioning
 
-Network booting and provisioning CoreOS clusters can be automated using the [coreos-baremetal](https://github.com/coreos/coreos-baremetal) project. It includes:
+Network booting and provisioning CoreOS clusters can be automated using the [coreos matchbox](https://github.com/coreos/matchbox) project. It includes:
 
 * Guides for configuring an network boot environment with iPXE/GRUB
 * An HTTP/gRPC [service](https://github.com/coreos/coreos-baremetal/blob/master/Documentation/bootcfg.md) for booting and provisioning machines. Match machines by their hardware attributes and serve templated [Ignition](https://coreos.com/ignition/docs/latest/c) configs or cloud-configs.

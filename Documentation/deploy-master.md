@@ -623,11 +623,7 @@ $ sudo systemctl enable kubelet
 Created symlink from /etc/systemd/system/multi-user.target.wants/kubelet.service to /etc/systemd/system/kubelet.service.
 ```
 
-### Create Namespaces
-
-The Kubernetes Pods that make up the control plane will exist in their own namespace. We need to create this namespace so these components are discoverable by other hosts in the cluster.
-
-**Note**: You will only need to do this once per-cluster. If deploying multiple master nodes, this step needs to happen only once.
+### Basic Health Checks
 
 First, we need to make sure the Kubernetes API is available (this could take a few minutes after starting the kubelet.service)
 
@@ -649,11 +645,6 @@ A successful response should look something like:
   "compiler": "gc",
   "platform": "linux/amd64"
 }
-```
-Now we can create the `kube-system` namespace:
-
-```sh
-$ curl -H "Content-Type: application/json" -XPOST -d'{"apiVersion":"v1","kind":"Namespace","metadata":{"name":"kube-system"}}' "http://127.0.0.1:8080/api/v1/namespaces"
 ```
 
 To check the health of the kubelet systemd unit that we created, run `systemctl status kubelet.service`.

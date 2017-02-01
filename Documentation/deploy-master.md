@@ -69,7 +69,7 @@ ExecStartPre=/usr/bin/ln -sf /etc/flannel/options.env /run/flannel/options.env
 
 ### Docker Configuration
 
-In order for flannel to manage the pod network in the cluster, Docker needs to be configured to use it. All we need to do is require that flanneld is running prior to Docker starting.
+In order for flannel to manage the pod network in the cluster, Docker needs to be configured to use it. CoreOS configures Docker to automatically read `/run/flannel/flannel_docker_opts.env` if it exists, so all we need to do is require that flanneld is running prior to Docker starting.
 
 *Note:* If the pod-network is being managed independently, this step can be skipped. See [kubernetes networking](kubernetes-networking.md) for more detail.
 
@@ -81,17 +81,6 @@ Again, we will use a [systemd drop-in][dropins]:
 [Unit]
 Requires=flanneld.service
 After=flanneld.service
-[Service]
-EnvironmentFile=/etc/kubernetes/cni/docker_opts_cni.env
-```
-
-Create the Docker CNI Options file:
-
-**/etc/kubernetes/cni/docker_opts_cni.env**
-
-```yaml
-DOCKER_OPT_BIP=""
-DOCKER_OPT_IPMASQ=""
 ```
 
 If using Flannel for networking, setup the Flannel CNI configuration with below. If you intend to use Calico for networking, setup using [Set Up the CNI config (optional)](#set-up-the-cni-config-optional) instead.

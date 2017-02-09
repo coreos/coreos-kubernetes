@@ -71,17 +71,49 @@ Create `/etc/systemd/system/docker.service.d/40-flannel.conf`
 [Unit]
 Requires=flanneld.service
 After=flanneld.service
+[Service]
+EnvironmentFile=/etc/kubernetes/cni/docker_opts_cni.env
+```
+
+Create the Docker CNI Options file:
+
+**/etc/kubernetes/cni/docker_opts_cni.env**
+
+```yaml
+DOCKER_OPT_BIP=""
+DOCKER_OPT_IPMASQ=""
+```
+
+If using Flannel for networking, setup the Flannel CNI configuration with below. If you intend to use Calico for networking, setup using [Set Up the CNI config (optional)](#set-up-the-cni-config-optional) instead.
+
+**/etc/kubernetes/cni/net.d/10-flannel.conf**
+
+```yaml
+{
+    "name": "podnet",
+    "type": "flannel",
+    "delegate": {
+        "isDefaultGateway": true
+    }
+}
 ```
 
 ### Create the kubelet Unit
 
 Create `/etc/systemd/system/kubelet.service` and substitute the following variables:
 
-* Replace `${MASTER_HOST}`
+* Replace `${MASTER_HOST}` 
 * Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
 * Replace `${DNS_SERVICE_IP}`
-* Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release, e.g. `v1.4.6_coreos.0`.
-* Replace `${NETWORK_PLUGIN}` with `cni` if using Calico. Otherwise just leave it blank.
+* Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release, e.g. `v1.5.2_coreos.0`.
+* If using Calico for network policy
+  - Replace `${NETWORK_PLUGIN}` with `cni`
+  - Add the following to `RKT_OPS=`
+    ```
+    --volume cni-bin,kind=host,source=/opt/cni/bin \
+    --mount volume=cni-bin,target=/opt/cni/bin
+    ```
+  - Add `ExecStartPre=/usr/bin/mkdir -p /opt/cni/bin`
 * Decide if you will use [additional features][rkt-opts-examples] such as:
   - [mounting ephemeral disks][mount-disks]
   - [allow pods to mount RDB][rdb] or [iSCSI volumes][iscsi]
@@ -92,67 +124,35 @@ Create `/etc/systemd/system/kubelet.service` and substitute the following variab
 
 ```yaml
 [Service]
-ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
-ExecStartPre=/usr/bin/mkdir -p /var/log/containers
-
 Environment=KUBELET_VERSION=${K8S_VER}
 Environment="RKT_OPTS=--uuid-file-save=/var/run/kubelet-pod.uuid \
-  --volume var-log,kind=host,source=/var/log \
-  --mount volume=var-log,target=/var/log \
   --volume dns,kind=host,source=/etc/resolv.conf \
-  --mount volume=dns,target=/etc/resolv.conf"
-
+  --mount volume=dns,target=/etc/resolv.conf \
+  --volume var-log,kind=host,source=/var/log \
+  --mount volume=var-log,target=/var/log"
+ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
+ExecStartPre=/usr/bin/mkdir -p /var/log/containers
 ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=https://${MASTER_HOST} \
-  --network-plugin-dir=/etc/kubernetes/cni/net.d \
-  --network-plugin=${NETWORK_PLUGIN} \
+  --cni-conf-dir=/etc/kubernetes/cni/net.d \
+  --network-plugin=cni \
+  --container-runtime=docker \
   --register-node=true \
   --allow-privileged=true \
   --pod-manifest-path=/etc/kubernetes/manifests \
   --hostname-override=${ADVERTISE_IP} \
-  --cluster-dns=${DNS_SERVICE_IP} \
-  --cluster-domain=cluster.local \
+  --cluster_dns=${DNS_SERVICE_IP} \
+  --cluster_domain=cluster.local \
   --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml \
   --tls-cert-file=/etc/kubernetes/ssl/worker.pem \
   --tls-private-key-file=/etc/kubernetes/ssl/worker-key.pem
 ExecStop=-/usr/bin/rkt stop --uuid-file=/var/run/kubelet-pod.uuid
 Restart=always
 RestartSec=10
+
 [Install]
 WantedBy=multi-user.target
-```
-
-### Set Up the CNI config (optional)
-
-The kubelet reads the CNI configuration on startup and uses that to determine which CNI plugin to call. Create the following file which tells the kubelet to call the flannel plugin but to then delegate control to the Calico plugin. Using the flannel plugin ensures that the Calico plugin is called with the IP range for the node that was selected by flannel.
-
-Note that this configuration is different to the one on the master nodes. It includes additional Kubernetes authentication information since the API server isn't available on localhost.
-
-* Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
-* Replace `${ETCD_ENDPOINTS}`
-* Replace `${MASTER_HOST}`
-
-**/etc/kubernetes/cni/net.d/10-calico.conf**
-
-```json
-{
-    "name": "calico",
-    "type": "flannel",
-    "delegate": {
-        "type": "calico",
-        "etcd_endpoints": "${ETCD_ENDPOINTS}",
-        "log_level": "none",
-        "log_level_stderr": "info",
-        "hostname": "${ADVERTISE_IP}",
-        "policy": {
-            "type": "k8s",
-            "k8s_api_root": "https://${MASTER_HOST}:443/api/v1/",
-            "k8s_client_key": "/etc/kubernetes/ssl/worker-key.pem",
-            "k8s_client_certificate": "/etc/kubernetes/ssl/worker.pem"
-        }
-    }
-}
 ```
 
 ### Set Up the kube-proxy Pod
@@ -173,34 +173,33 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-proxy
-    image: quay.io/coreos/hyperkube:v1.4.6_coreos.0
+    image: quay.io/coreos/hyperkube:v1.5.2_coreos.0
     command:
     - /hyperkube
     - proxy
-    - --master=https://${MASTER_HOST}
+    - --master=${MASTER_HOST}
     - --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml
-    - --proxy-mode=iptables
     securityContext:
       privileged: true
     volumeMounts:
-      - mountPath: /etc/ssl/certs
-        name: "ssl-certs"
-      - mountPath: /etc/kubernetes/worker-kubeconfig.yaml
-        name: "kubeconfig"
-        readOnly: true
-      - mountPath: /etc/kubernetes/ssl
-        name: "etc-kube-ssl"
-        readOnly: true
+    - mountPath: /etc/ssl/certs
+      name: "ssl-certs"
+    - mountPath: /etc/kubernetes/worker-kubeconfig.yaml
+      name: "kubeconfig"
+      readOnly: true
+    - mountPath: /etc/kubernetes/ssl
+      name: "etc-kube-ssl"
+      readOnly: true
   volumes:
-    - name: "ssl-certs"
-      hostPath:
-        path: "/usr/share/ca-certificates"
-    - name: "kubeconfig"
-      hostPath:
-        path: "/etc/kubernetes/worker-kubeconfig.yaml"
-    - name: "etc-kube-ssl"
-      hostPath:
-        path: "/etc/kubernetes/ssl"
+  - name: "ssl-certs"
+    hostPath:
+      path: "/usr/share/ca-certificates"
+  - name: "kubeconfig"
+    hostPath:
+      path: "/etc/kubernetes/worker-kubeconfig.yaml"
+  - name: "etc-kube-ssl"
+    hostPath:
+      path: "/etc/kubernetes/ssl"
 ```
 
 ### Set Up kubeconfig
@@ -231,50 +230,6 @@ contexts:
 current-context: kubelet-context
 ```
 
-### Set Up Calico Node Container (optional)
-
-The Calico node container runs on all hosts, including the master node. It performs two functions:
-* Connects containers to the flannel overlay network, which enables the "one IP per pod" concept.
-* Enforces network policy created through the Kubernetes policy API, ensuring pods talk to authorized resources only.
-
-This step can be skipped if not using Calico.
-
-Create `/etc/systemd/system/calico-node.service` and substitute the following variables:
-
-* Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
-* Replace `${ETCD_ENDPOINTS}`
-
-**/etc/systemd/system/calico-node.service**
-
-```yaml
-[Unit]
-Description=Calico node for network policy
-Requires=network-online.target
-After=network-online.target
-
-[Service]
-Slice=machine.slice
-Environment=CALICO_DISABLE_FILE_LOGGING=true
-Environment=HOSTNAME=${ADVERTISE_IP}
-Environment=IP=${ADVERTISE_IP}
-Environment=FELIX_FELIXHOSTNAME=${ADVERTISE_IP}
-Environment=CALICO_NETWORKING=false
-Environment=NO_DEFAULT_POOLS=true
-Environment=ETCD_ENDPOINTS=${ETCD_ENDPOINTS}
-ExecStart=/usr/bin/rkt run --inherit-env --stage1-from-dir=stage1-fly.aci \
---volume=modules,kind=host,source=/lib/modules,readOnly=false \
---mount=volume=modules,target=/lib/modules \
---volume=dns,kind=host,source=/etc/resolv.conf,readOnly=true \
---mount=volume=dns,target=/etc/resolv.conf \
---trust-keys-from-https quay.io/calico/node:v0.19.0
-KillMode=mixed
-Restart=always
-TimeoutStartSec=0
-
-[Install]
-WantedBy=multi-user.target
-```
-
 ## Start Services
 
 Now we can start the Worker services.
@@ -287,14 +242,13 @@ Tell systemd to rescan the units on disk:
 $ sudo systemctl daemon-reload
 ```
 
-### Start kubelet, flannel and Calico Node
+### Start kubelet, and flannel
 
-Start the kubelet, which will start the proxy as well as the Calico node (if required).
+Start the kubelet, which will start the proxy.
 
 ```sh
 $ sudo systemctl start flanneld
 $ sudo systemctl start kubelet
-$ sudo systemctl start calico-node
 ```
 
 Ensure that the services start on each boot:
@@ -304,12 +258,9 @@ $ sudo systemctl enable flanneld
 Created symlink from /etc/systemd/system/multi-user.target.wants/flanneld.service to /etc/systemd/system/flanneld.service.
 $ sudo systemctl enable kubelet
 Created symlink from /etc/systemd/system/multi-user.target.wants/kubelet.service to /etc/systemd/system/kubelet.service.
-$ sudo systemctl enable calico-node
-Created symlink from /etc/systemd/system/multi-user.target.wants/calico-node.service to /etc/systemd/system/calico-node.service.
 ```
 
 To check the health of the kubelet systemd unit that we created, run `systemctl status kubelet.service`.
-To check the health of the calico-node systemd unit that we created, run `systemctl status calico-node.service`.
 
 <div class="co-m-docs-next-step">
   <p><strong>Is the kubelet running?</strong></p>

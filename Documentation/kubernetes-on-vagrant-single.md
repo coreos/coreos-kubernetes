@@ -19,13 +19,13 @@ Navigate to the [Vagrant downloads page][vagrant-downloads] and grab the appropr
 The linux `kubectl` binary can be fetched with a command like:
 
 ```sh
-$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.4.6/bin/linux/amd64/kubectl
+$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.5.2/bin/linux/amd64/kubectl
 ```
 
 On an OS X workstation, replace `linux` in the URL above with `darwin`:
 
 ```sh
-$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.4.6/bin/darwin/amd64/kubectl
+$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.5.2/bin/darwin/amd64/kubectl
 ```
 
 After downloading the binary, ensure it is executable and move it into your PATH:
@@ -49,6 +49,10 @@ $ cd coreos-kubernetes/single-node/
 The runtime defaults to docker. If you wish to use rkt simply edit the user-data and change the line beginning with `export CONTAINER_RUNTIME` to:
 
 `export CONTAINER_RUNTIME=rkt`
+
+## Enable Network Policy (Optional)
+
+To enable network policy edit the user-data file and set `USE_CALICO=true`.
 
 ## Start the Machine
 

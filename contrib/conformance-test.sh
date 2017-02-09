@@ -3,7 +3,7 @@ set -euo pipefail
 
 CHECK_NODE_COUNT=${CHECK_NODE_COUNT:-true}
 CONFORMANCE_REPO=${CONFORMANCE_REPO:-github.com/coreos/kubernetes}
-CONFORMANCE_VERSION=${CONFORMANCE_VERSION:-v1.4.6+coreos.0}
+CONFORMANCE_VERSION=${CONFORMANCE_VERSION:-v1.5.2+coreos.0}
 SSH_OPTS=${SSH_OPTS:-}
 
 usage() {
@@ -38,10 +38,10 @@ ssh ${SSH_OPTS} -i ${ssh_key} -p ${ssh_port} core@${ssh_host} \
 ssh ${SSH_OPTS} -i ${ssh_key} -p ${ssh_port} core@${ssh_host} \
     "[[ -f /home/core/kubeconfig ]] || echo '${kubeconfig}' > /home/core/kubeconfig"
 
-# Init steps necessary to run conformance in docker://golang:1.6.3 container
+# Init steps necessary to run conformance in docker://golang:1.7.4 container
 INIT="apt-get update && apt-get install -y rsync && go get -u github.com/jteeuwen/go-bindata/go-bindata"
 
-TEST_FLAGS="-v --test -check_version_skew=false -check_node_count=${CHECK_NODE_COUNT} --test_args=\"ginkgo.focus='\[Conformance\]'\""
+TEST_FLAGS="-v --test -check_version_skew=false --test_args=\"ginkgo.focus='\[Conformance\]'\""
 
 CONFORMANCE=$(echo \
     "cd /go/src/k8s.io/kubernetes && " \
@@ -57,6 +57,6 @@ RKT_OPTS=$(echo \
     "--mount volume=kc,target=/kubeconfig " \
     "--mount volume=k8s,target=/go/src/k8s.io/kubernetes")
 
-CMD="sudo rkt run --net=host --insecure-options=image ${RKT_OPTS} docker://golang:1.6.3 --exec /bin/bash -- -c \"${INIT} && ${CONFORMANCE}\""
+CMD="sudo rkt run --net=host --insecure-options=image ${RKT_OPTS} docker://golang:1.7.4 --exec /bin/bash -- -c \"${INIT} && ${CONFORMANCE}\""
 
 ssh ${SSH_OPTS} -i ${ssh_key} -p ${ssh_port} core@${ssh_host} "${CMD}"

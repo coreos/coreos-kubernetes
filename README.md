@@ -1,8 +1,8 @@
-# Kubernetes on CoreOS
+# Kubernetes on CoreOS Container Linux
 
-This repo contains tooling and documentation around deploying Kubernetes using CoreOS.
+This repo contains tooling and documentation around deploying Kubernetes using CoreOS Container Linux.
 Initial setup of a Kubernetes cluster is covered, but ongoing maintenance and updates of the cluster is not addressed.
-It is officially maintained by the CoreOS team and meant to be a set of introductory documentation to get a feel for using Kubernetes on CoreOS.
+It is officially maintained by the CoreOS team and meant to be a set of introductory documentation to get a feel for using Kubernetes on Container Linux.
 
 *Notice: kube-aws has moved!*
 
@@ -28,7 +28,7 @@ https://coreos.com/kubernetes/docs/latest/
  - [Intro to Services](https://coreos.com/kubernetes/docs/latest/services.html)
  - [Intro to Replication Controllers](https://coreos.com/kubernetes/docs/latest/replication-controller.html)
 
-## Deploying on CoreOS
+## Deploying on Container Linux
 
 - [Step-by-Step for Any Platform](Documentation/getting-started.md)
 - [Single-Node Vagrant Stack](single-node/README.md)

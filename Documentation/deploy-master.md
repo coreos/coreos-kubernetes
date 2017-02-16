@@ -136,7 +136,6 @@ Note that the kubelet running on a master node may log repeated attempts to post
   - [mounting ephemeral disks][mount-disks]
   - [allow pods to mount RDB][rdb] or [iSCSI volumes][iscsi]
   - [allowing access to insecure container registries][insecure-registry]
-  - [changing your CoreOS auto-update settings][update]
 
 **/etc/systemd/system/kubelet.service**
 
@@ -670,4 +669,3 @@ kube-proxy-$node
 [host-dns]: kubelet-wrapper.md#use-the-hosts-dns-configuration
 [mount-disks]: https://coreos.com/os/docs/latest/mounting-storage.html
 [insecure-registry]: https://coreos.com/os/docs/latest/registry-authentication.html#using-a-registry-without-ssl-configured
-[update]: https://coreos.com/os/docs/latest/switching-channels.html

@@ -138,6 +138,8 @@ Note that the kubelet running on a master node may log repeated attempts to post
   - [allowing access to insecure container registries][insecure-registry]
   - [changing your CoreOS auto-update settings][update]
 
+**Note**: Anyone with access to port 10250 on a node can execute arbitrary code in a pod on the node. Information, including logs and metadata, is also disclosed on port 10255. See [securing the Kubelet API][securing-kubelet-api] for more information.
+
 **/etc/systemd/system/kubelet.service**
 
 ```yaml
@@ -671,3 +673,4 @@ kube-proxy-$node
 [mount-disks]: https://coreos.com/os/docs/latest/mounting-storage.html
 [insecure-registry]: https://coreos.com/os/docs/latest/registry-authentication.html#using-a-registry-without-ssl-configured
 [update]: https://coreos.com/os/docs/latest/switching-channels.html
+[securing-kubelet-api]: kubelet-wrapper.md#Securing-the-Kubelet-API

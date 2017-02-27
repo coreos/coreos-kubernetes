@@ -87,6 +87,17 @@ Environment="RKT_OPTS=--volume modprobe,kind=host,source=/usr/sbin/modprobe \
 
 Note that the kubelet also requires access to the userspace `rbd` tool that is included only in hyperkube images tagged `v1.3.6_coreos.0` or later.
 
+### Securing the Kubelet API
+
+By default, the Kubelet allows unauthenticated access to its [API ports][kubernetes-ports].
+
+In order to secure your Kubernetes cluster, you **must** either:
+
+1. Avoid exposing the Kubelet API to the internet, and trust all software with access to it (including every pod run on your cluster), or
+2. Turn on [Kubelet authentication][kubelet-authn-authz].
+
+The Kubernetes documentation on [Master -> Cluster communication][master-cluster-communication] provides more information and details solutions.
+
 ## Manual deployment
 
 If you wish to use the kubelet-wrapper on a CoreOS version prior to 962.0.0, you can manually place the script on the host. Please note that this requires rkt version 0.15.0+.
@@ -111,3 +122,6 @@ ExecStart=/opt/bin/kubelet-wrapper \
 [#2141]: https://github.com/coreos/rkt/issues/2141
 [kubelet-wrapper]: https://github.com/coreos/coreos-overlay/blob/master/app-admin/kubelet-wrapper/files/kubelet-wrapper
 [rbd-example]: https://github.com/kubernetes/kubernetes/tree/master/examples/volumes/rbd
+[kubernetes-ports]: https://github.com/kubernetes/kubernetes/tree/master/examples/volumes/rbd
+[kubelet-authn-authz]: https://kubernetes.io/docs/admin/kubelet-authentication-authorization/ 
+[master-cluster-communication]: https://kubernetes.io/docs/admin/master-node-communication/#master---cluster

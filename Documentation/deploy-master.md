@@ -113,7 +113,7 @@ If using Flannel for networking, setup the Flannel CNI configuration with below.
 
 ### Create the kubelet Unit
 
-The [kubelet](http://kubernetes.io/docs/admin/kubelet.html) is the agent on each machine that starts and stops Pods and other machine-level tasks. The kubelet communicates with the API server (also running on the master nodes) with the TLS certificates we placed on disk earlier.
+The [kubelet][kubelet-admin] is the agent on each machine that starts and stops Pods and other machine-level tasks. The kubelet communicates with the API server (also running on the master nodes) with the TLS certificates we placed on disk earlier.
 
 On the master node, the kubelet is configured to communicate with the API server, but not register for cluster work, as shown in the `--register-schedulable=false` line in the YAML excerpt below. This prevents user pods being scheduled on the master nodes, and ensures cluster work is routed only to task-specific worker nodes.
 
@@ -674,3 +674,4 @@ kube-proxy-$node
 [insecure-registry]: https://coreos.com/os/docs/latest/registry-authentication.html#using-a-registry-without-ssl-configured
 [update]: https://coreos.com/os/docs/latest/switching-channels.html
 [securing-kubelet-api]: kubelet-wrapper.md#Securing-the-Kubelet-API
+[kubelet-admin]: https://kubernetes.io/docs/admin/kubelet/

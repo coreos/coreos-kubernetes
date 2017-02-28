@@ -15,7 +15,7 @@ The Kubernetes network model outlines three methods of component communication:
 
 See [Kubernetes Networking][kubernetes-network] for more detailed information on the Kubernetes network model and motivation.
 
-[kubernetes-network]: http://kubernetes.io/docs/admin/networking.html
+[kubernetes-network]: https://kubernetes.io/docs/admin/networking/
 
 ## Port allocation
 
@@ -55,7 +55,7 @@ The CoreOS Kubernetes documentation describes a software-defined overlay network
 The following requirements must be met by your existing infrastructure to use Tectonic with a self-managed network.
 
 [coreos-flannel]: https://coreos.com/flannel/docs/latest/flannel-config.html
-[calico]: http://docs.projectcalico.org/en/latest/
+[calico]: http://docs.projectcalico.org/v2.0/getting-started/kubernetes/
 
 ### Pod-to-Pod Communication
 
@@ -80,9 +80,9 @@ The actual allocation of Pod IPs on the host can be achieved by configuring Dock
 
 To achieve this network model, there are various methods that can be used. See the [Kubernetes Networking][how-to-achieve] documentation for more detail.
 
-[how-to-achieve]: http://kubernetes.io/docs/admin/networking.html#how-to-achieve-this
+[how-to-achieve]: https://kubernetes.io/docs/admin/networking/#how-to-achieve-this
 [calico-bgp]: https://github.com/projectcalico/calico-containers/blob/v0.19.0/docs/bgp.md
-[calico-l2]: http://docs.projectcalico.org/en/latest/l2-interconnectFabric.html
+[calico-l2]: http://docs.projectcalico.org/v2.0/reference/private-cloud/l2-interconnect-fabric
 
 ### Pod-to-Service Communication
 

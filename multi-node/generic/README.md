@@ -4,4 +4,4 @@ This guide will setup Kubernetes on CoreOS in a similar way to other tools in th
 
 [Read the documentation to boot a cluster][docs]
 
-[docs]: /Documentation/kubernetes-on-generic-platforms.md
+[docs]: ../../Documentation/kubernetes-on-generic-platforms.md

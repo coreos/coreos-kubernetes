@@ -6,7 +6,7 @@ Add-ons are built on the same Kubernetes components as user-submitted jobs &mdas
 
 First create `dns-addon.yml` on your local machine and replace the variable. There is a lot going on in there, so let's break it down after you create it.
 
-[k8s-dns]: http://kubernetes.io/docs/admin/dns.html
+[k8s-dns]: https://kubernetes.io/docs/admin/dns/
 
 * Replace `${DNS_SERVICE_IP}`
 

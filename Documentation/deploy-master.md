@@ -327,7 +327,6 @@ spec:
     - mountPath: /etc/ssl/certs
       name: ssl-certs-host
       readOnly: true
-  hostNetwork: true
   volumes:
   - hostPath:
       path: /etc/kubernetes/ssl

@@ -110,6 +110,8 @@ Create `/etc/systemd/system/kubelet.service` and substitute the following variab
   - Replace `${NETWORK_PLUGIN}` with `cni`
   - Add the following to `RKT_OPS=`
     ```
+    --volume cni-lib,kind=host,source=/var/lib/cni \
+    --mount volume=cni-lib,target=/var/lib/cni \
     --volume cni-bin,kind=host,source=/opt/cni/bin \
     --mount volume=cni-bin,target=/opt/cni/bin
     ```

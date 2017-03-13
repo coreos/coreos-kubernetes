@@ -10,12 +10,12 @@ The Kubelet runs on both master and worker nodes, and is distributed as a hyperk
 
 To update the image version, modify the kubelet service file on each node (`/etc/systemd/system/kubelet.service`) to reference the new hyperkube image.
 
-For example, modifying the `KUBELET_VERSION` environment variable in the following service file would change the container image version used when launching the kubelet via the [kubelet-wrapper](kubelet-wrapper.md) script.
+For example, modifying the `KUBELET_IMAGE_TAG` environment variable in the following service file would change the container image version used when launching the kubelet via the [kubelet-wrapper](kubelet-wrapper.md) script.
 
 **/etc/systemd/system/kubelet.service**
 
 ```
-Environment=KUBELET_VERSION=v1.5.3_coreos.0
+Environment=KUBELET_IMAGE_TAG=v1.5.3_coreos.0
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=https://master [...]
 ```

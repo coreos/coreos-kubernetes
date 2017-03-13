@@ -70,9 +70,9 @@ function init_templates {
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
 [Service]
-Environment=KUBELET_VERSION=${K8S_VER}
-Environment=KUBELET_ACI=${HYPERKUBE_IMAGE_REPO}
-Environment="RKT_OPTS=--uuid-file-save=${uuid_file} \
+Environment=KUBELET_IMAGE_TAG=${K8S_VER}
+Environment=KUBELET_IMAGE_URL=${HYPERKUBE_IMAGE_REPO}
+Environment="RKT_RUN_ARGS=--uuid-file-save=${uuid_file} \
   --volume dns,kind=host,source=/etc/resolv.conf \
   --mount volume=dns,target=/etc/resolv.conf \
   --volume rkt,kind=host,source=/opt/bin/host-rkt \

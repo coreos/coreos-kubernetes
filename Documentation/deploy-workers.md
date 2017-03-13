@@ -108,7 +108,7 @@ Create `/etc/systemd/system/kubelet.service` and substitute the following variab
 * Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release, e.g. `v1.5.3_coreos.0`.
 * If using Calico for network policy
   - Replace `${NETWORK_PLUGIN}` with `cni`
-  - Add the following to `RKT_OPS=`
+  - Add the following to `RKT_RUN_ARGS=`
     ```
     --volume cni-bin,kind=host,source=/opt/cni/bin \
     --mount volume=cni-bin,target=/opt/cni/bin
@@ -126,8 +126,8 @@ Create `/etc/systemd/system/kubelet.service` and substitute the following variab
 
 ```yaml
 [Service]
-Environment=KUBELET_VERSION=${K8S_VER}
-Environment="RKT_OPTS=--uuid-file-save=/var/run/kubelet-pod.uuid \
+Environment=KUBELET_IMAGE_TAG=${K8S_VER}
+Environment="RKT_RUN_ARGS=--uuid-file-save=/var/run/kubelet-pod.uuid \
   --volume dns,kind=host,source=/etc/resolv.conf \
   --mount volume=dns,target=/etc/resolv.conf \
   --volume var-log,kind=host,source=/var/log \

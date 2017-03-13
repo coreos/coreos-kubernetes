@@ -126,7 +126,7 @@ Note that the kubelet running on a master node may log repeated attempts to post
 * Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release, e.g. `v1.5.3_coreos.0`.
 * If using Calico for network policy
   - Replace `${NETWORK_PLUGIN}` with `cni`
-  - Add the following to `RKT_OPS=`
+  - Add the following to `RKT_RUN_ARGS=`
     ```
     --volume cni-bin,kind=host,source=/opt/cni/bin \
     --mount volume=cni-bin,target=/opt/cni/bin
@@ -144,8 +144,8 @@ Note that the kubelet running on a master node may log repeated attempts to post
 
 ```yaml
 [Service]
-Environment=KUBELET_VERSION=${K8S_VER}
-Environment="RKT_OPTS=--uuid-file-save=/var/run/kubelet-pod.uuid \
+Environment=KUBELET_IMAGE_TAG=${K8S_VER}
+Environment="RKT_RUN_ARGS=--uuid-file-save=/var/run/kubelet-pod.uuid \
   --volume var-log,kind=host,source=/var/log \
   --mount volume=var-log,target=/var/log \
   --volume dns,kind=host,source=/etc/resolv.conf \

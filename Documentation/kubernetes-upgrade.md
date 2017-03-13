@@ -15,7 +15,7 @@ For example, modifying the `KUBELET_IMAGE_TAG` environment variable in the follo
 **/etc/systemd/system/kubelet.service**
 
 ```
-Environment=KUBELET_IMAGE_TAG=v1.5.3_coreos.0
+Environment=KUBELET_IMAGE_TAG=v1.5.4_coreos.0
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api-servers=https://master [...]
 ```

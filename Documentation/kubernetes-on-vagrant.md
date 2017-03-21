@@ -31,7 +31,7 @@ After downloading the binary, ensure it is executable and move it into your PATH
 
 ```sh
 $ chmod +x kubectl
-$ mv kubectl /usr/local/bin/kubectl
+$ sudo mv kubectl /usr/local/bin/kubectl
 ```
 
 ## Clone the Repository

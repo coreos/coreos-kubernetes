@@ -173,11 +173,11 @@ Create `kube-dashboard-rc.yaml` and `kube-dashboard-svc.yaml` on your local mach
 apiVersion: v1
 kind: ReplicationController
 metadata:
-  name: kubernetes-dashboard-v1.4.1
+  name: kubernetes-dashboard-v1.6.0
   namespace: kube-system
   labels:
     k8s-app: kubernetes-dashboard
-    version: v1.4.1
+    version: v1.6.0
     kubernetes.io/cluster-service: "true"
 spec:
   replicas: 1
@@ -187,7 +187,7 @@ spec:
     metadata:
       labels:
         k8s-app: kubernetes-dashboard
-        version: v1.4.1
+        version: v1.6.0
         kubernetes.io/cluster-service: "true"
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
@@ -195,7 +195,7 @@ spec:
     spec:
       containers:
       - name: kubernetes-dashboard
-        image: gcr.io/google_containers/kubernetes-dashboard-amd64:v1.4.1
+        image: gcr.io/google_containers/kubernetes-dashboard-amd64:v1.6.0
         resources:
           limits:
             cpu: 100m
@@ -245,7 +245,7 @@ Access the dashboard by port forwarding with `kubectl`.
 
 ```sh
 $ kubectl get pods --namespace=kube-system
-$ kubectl port-forward kubernetes-dashboard-v1.4.1-SOME-ID 9090 --namespace=kube-system
+$ kubectl port-forward kubernetes-dashboard-v1.6.0-SOME-ID 9090 --namespace=kube-system
 ```
 
 Then visit [http://127.0.0.1:9090](http://127.0.0.1:9090/) in your browser.

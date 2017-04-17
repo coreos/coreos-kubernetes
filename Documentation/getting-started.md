@@ -1,14 +1,16 @@
 # CoreOS &#43; Kubernetes Step By Step
 
-This guide will walk you through a deployment of a single-master/multi-worker Kubernetes cluster on CoreOS. We're going to:
+This guide walks through deploying a Kubernetes cluster of CoreOS nodes, with a single controller and multiple workers. This guide enumerates the multiple steps and stages of a Kubernetes deployment. To quickly deploy a Kubernetes cluster without engaging component-level details, check out the [free tier of the CoreOS Tectonic][tectonic-free] Kubernetes distribution, or the [open-source Tectonic Installer][tectonic-installer] that drives Tectonic's automation of cluster deployments.
 
-- configure an etcd cluster for Kubernetes to use
-- generate the required certificates for communication between Kubernetes components
-- deploy a master node
-- deploy worker nodes
-- configure `kubectl` to work with our cluster
-- deploy the DNS add-on
-- deploy the network policy add-on
+The primary goals of this guide are:
+
+- Configure an etcd cluster for Kubernetes to use
+- Generate the required certificates for communication between Kubernetes components
+- Deploy a master node
+- Deploy worker nodes
+- Configure `kubectl` to work with our cluster
+- Deploy the DNS add-on
+- Deploy the network policy add-on
 
 Working through this guide may take you a few hours, but it will give you good understanding of the moving pieces of your cluster and set you up for success in the long run. For a shortcut, you can utilize [these generic user-data scripts][generic-userdata]. Let's get started.
 
@@ -142,3 +144,5 @@ admin-key.pem
 </div>
 
 [generic-userdata]: kubernetes-on-generic-platforms.md
+[tectonic-free]: https://coreos.com/tectonic/
+[tectonic-installer]: https://github.com/coreos/tectonic-installer

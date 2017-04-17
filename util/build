@@ -1,0 +1,5 @@
+#!/bin/bash -e
+
+echo "Building vgt..."
+GOPATH=${PWD}/Godeps/_workspace:${GOPATH} CGO_ENABLED=0 go build -o bin/vgt github.com/coreos/coreos-kubernetes/util/vgt
+echo "done"

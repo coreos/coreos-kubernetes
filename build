@@ -1,0 +1,15 @@
+#!/bin/bash -e
+
+cd $(dirname $0)
+
+source ./env
+
+if [[ $# -eq 0 ]]; then
+	set -- cmd/*
+fi
+
+for cmd in "$@"; do
+	cmd=$(basename "${cmd}")
+	echo "Building ${cmd}..."
+	go build -o "bin/${cmd}" "${REPO_PATH}/cmd/${cmd}"
+done

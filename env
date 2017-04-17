@@ -1,0 +1,18 @@
+#!/bin/bash -e
+
+export GO15VENDOREXPERIMENT=1
+
+ORG_PATH="github.com/coreos"
+PROJ="coreos-kubernetes"
+REPO_PATH="${ORG_PATH}/${PROJ}"
+
+export GOBIN=${PWD}/bin
+export GOPATH=${PWD}/gopath
+
+eval $(go env)
+
+if [ ! -h gopath/src/${REPO_PATH} ]; then
+	mkdir -p gopath/src/${ORG_PATH}
+	ln -s ../../../.. gopath/src/${REPO_PATH} || exit 255
+fi
+

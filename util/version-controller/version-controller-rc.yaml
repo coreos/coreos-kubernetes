@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: version-controller-v0
+  namespace: default
+  labels:
+    version: v0
+spec:
+  replicas: 1
+  selector:
+    app: version-controller
+    version: v0
+  template:
+    metadata:
+      labels:
+        app: version-controller
+        version: v0
+    spec:
+      containers:
+      - name: version-controller
+        image: quay.io/aaron_levy/version-controller:v0.0.0
+        command:
+        - /version-controller
+        - --max-updates=1
+        - --max-not-ready=1

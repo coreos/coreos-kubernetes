@@ -1,0 +1,28 @@
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "annotations": {
+      "prometheus.io/scrape": "true"
+    },
+    "labels": {
+      "app": "node-exporter",
+      "name": "prometheus-node-exporter"
+    },
+    "name": "prometheus-node-exporter"
+  },
+  "spec": {
+    "clusterIP": "None",
+    "ports": [
+      {
+        "name": "scrape",
+        "port": 9100,
+        "protocol": "TCP"
+      }
+    ],
+    "selector": {
+      "app": "node-exporter"
+    },
+    "type": "ClusterIP"
+  }
+}

@@ -161,6 +161,7 @@ Vagrant.configure("2") do |config|
 
       controller.vm.provision :file, :source => CONTROLLER_CLOUD_CONFIG_PATH, :destination => "/tmp/vagrantfile-user-data"
       controller.vm.provision :shell, :inline => "mv /tmp/vagrantfile-user-data /var/lib/coreos-vagrant/", :privileged => true
+      controller.vm.provision :shell, :inline => "iptables -A INPUT -m state --state NEW -m tcp -p tcp --dport 443", :privileged => true
     end
   end
 

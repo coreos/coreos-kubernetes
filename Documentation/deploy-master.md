@@ -45,7 +45,7 @@ Networking is provided by Flannel and Calico.
 We will configure flannel to source its local configuration in `/etc/flannel/options.env` and cluster-level configuration in etcd. Create this file and edit the contents:
 
 * Replace `${ADVERTISE_IP}` with this machine's publicly routable IP.
-* Replace `${ETCD_ENDPOINTS}`
+* Replace `${ETCD_ENDPOINTS}` with the list of etcd servers (http://ip:port), comma separated. If you're running a cluster of 5 machines, list them all here. Please note for etcd2 port is 2379 for etcd is 4001
 
 **/etc/flannel/options.env**
 

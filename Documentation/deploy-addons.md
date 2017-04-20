@@ -2,11 +2,11 @@
 
 The DNS add-on allows your services to have a DNS name in addition to an IP address. This is helpful for simplified service discovery between applications. More info can be found in the [Kubernetes DNS documentation][k8s-dns].
 
-Add-ons are built on the same Kubernetes components as user-submitted jobs &mdash; Pods, Replication Controllers and Services. We're going to install the DNS add-on with `kubectl`.
+Add-ons are built on the same Kubernetes components as user-submitted jobs &mdash; Pods, Deployments and Services. We're going to install the DNS add-on with `kubectl`.
 
 First create `dns-addon.yml` on your local machine and replace the variable. There is a lot going on in there, so let's break it down after you create it.
 
-[k8s-dns]: https://kubernetes.io/docs/admin/dns/
+[k8s-dns]: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/
 
 * Replace `${DNS_SERVICE_IP}`
 
@@ -21,6 +21,7 @@ metadata:
   labels:
     k8s-app: kube-dns
     kubernetes.io/cluster-service: "true"
+    addonmanager.kubernetes.io/mode: Reconcile
     kubernetes.io/name: "KubeDNS"
 spec:
   selector:
@@ -34,37 +35,73 @@ spec:
     port: 53
     protocol: TCP
 
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kube-dns
+  namespace: kube-system
+  labels:
+    kubernetes.io/cluster-service: "true"
+    addonmanager.kubernetes.io/mode: Reconcile
 
 ---
 
-
 apiVersion: v1
-kind: ReplicationController
+kind: ConfigMap
 metadata:
-  name: kube-dns-v20
+  name: kube-dns
+  namespace: kube-system
+  labels:
+    addonmanager.kubernetes.io/mode: EnsureExists
+
+---
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: kube-dns
   namespace: kube-system
   labels:
     k8s-app: kube-dns
-    version: v20
     kubernetes.io/cluster-service: "true"
+    addonmanager.kubernetes.io/mode: Reconcile
 spec:
-  replicas: 1
+  # replicas: not specified here:
+  # 1. In order to make Addon Manager do not reconcile this replicas parameter.
+  # 2. Default is 1.
+  # 3. Will be tuned in real time if DNS horizontal auto-scaling is turned on.
+  strategy:
+    rollingUpdate:
+      maxSurge: 10%
+      maxUnavailable: 0
   selector:
-    k8s-app: kube-dns
-    version: v20
+    matchLabels:
+      k8s-app: kube-dns
   template:
     metadata:
       labels:
         k8s-app: kube-dns
-        version: v20
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
-        scheduler.alpha.kubernetes.io/tolerations: '[{"key":"CriticalAddonsOnly", "operator":"Exists"}]'
     spec:
+      tolerations:
+      - key: "CriticalAddonsOnly"
+        operator: "Exists"
+      volumes:
+      - name: kube-dns-config
+        configMap:
+          name: kube-dns
+          optional: true
       containers:
       - name: kubedns
-        image: gcr.io/google_containers/kubedns-amd64:1.8
+        image: gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.1
         resources:
+          # TODO: Set memory limits when we've profiled the container for large
+          # clusters, then set request = limit to keep this container in
+          # guaranteed class. Currently, this container falls into the
+          # "burstable" category so the kubelet doesn't backoff from restarting it.
           limits:
             memory: 170Mi
           requests:
@@ -72,8 +109,8 @@ spec:
             memory: 70Mi
         livenessProbe:
           httpGet:
-            path: /healthz-kubedns
-            port: 8080
+            path: /healthcheck/kubedns
+            port: 10054
             scheme: HTTP
           initialDelaySeconds: 60
           timeoutSeconds: 5
@@ -84,11 +121,18 @@ spec:
             path: /readiness
             port: 8081
             scheme: HTTP
+          # we poll on pod startup for the Kubernetes master service and
+          # only setup the /readiness HTTP server once that's available.
           initialDelaySeconds: 3
           timeoutSeconds: 5
         args:
         - --domain=cluster.local.
         - --dns-port=10053
+        - --config-dir=/kube-dns-config
+        - --v=2
+        env:
+        - name: PROMETHEUS_PORT
+          value: "10055"
         ports:
         - containerPort: 10053
           name: dns-local
@@ -96,22 +140,35 @@ spec:
         - containerPort: 10053
           name: dns-tcp-local
           protocol: TCP
+        - containerPort: 10055
+          name: metrics
+          protocol: TCP
+        volumeMounts:
+        - name: kube-dns-config
+          mountPath: /kube-dns-config
       - name: dnsmasq
-        image: gcr.io/google_containers/kube-dnsmasq-amd64:1.4
+        image: gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.1
         livenessProbe:
           httpGet:
-            path: /healthz-dnsmasq
-            port: 8080
+            path: /healthcheck/dnsmasq
+            port: 10054
             scheme: HTTP
           initialDelaySeconds: 60
           timeoutSeconds: 5
           successThreshold: 1
           failureThreshold: 5
         args:
+        - -v=2
+        - -logtostderr
+        - -configDir=/etc/k8s/dns/dnsmasq-nanny
+        - -restartDnsmasq=true
+        - --
+        - -k
         - --cache-size=1000
-        - --no-resolv
-        - --server=127.0.0.1#10053
         - --log-facility=-
+        - --server=/cluster.local/127.0.0.1#10053
+        - --server=/in-addr.arpa/127.0.0.1#10053
+        - --server=/ip6.arpa/127.0.0.1#10053
         ports:
         - containerPort: 53
           name: dns
@@ -119,84 +176,100 @@ spec:
         - containerPort: 53
           name: dns-tcp
           protocol: TCP
-      - name: healthz
-        image: gcr.io/google_containers/exechealthz-amd64:1.2
+        # see: https://github.com/kubernetes/kubernetes/issues/29055 for details
         resources:
-          limits:
-            memory: 50Mi
           requests:
-            cpu: 10m
-            memory: 50Mi
+            cpu: 150m
+            memory: 20Mi
+        volumeMounts:
+        - name: kube-dns-config
+          mountPath: /etc/k8s/dns/dnsmasq-nanny
+      - name: sidecar
+        image: gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.1
+        livenessProbe:
+          httpGet:
+            path: /metrics
+            port: 10054
+            scheme: HTTP
+          initialDelaySeconds: 60
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 5
         args:
-        - --cmd=nslookup kubernetes.default.svc.cluster.local 127.0.0.1 >/dev/null
-        - --url=/healthz-dnsmasq
-        - --cmd=nslookup kubernetes.default.svc.cluster.local 127.0.0.1:10053 >/dev/null
-        - --url=/healthz-kubedns
-        - --port=8080
-        - --quiet
+        - --v=2
+        - --logtostderr
+        - --probe=kubedns,127.0.0.1:10053,kubernetes.default.svc.cluster.local,5,A
+        - --probe=dnsmasq,127.0.0.1:53,kubernetes.default.svc.cluster.local,5,A
         ports:
-        - containerPort: 8080
+        - containerPort: 10054
+          name: metrics
           protocol: TCP
-      dnsPolicy: Default
+        resources:
+          requests:
+            memory: 20Mi
+            cpu: 10m
+      dnsPolicy: Default  # Don't use cluster DNS.
+      serviceAccountName: kube-dns
 ```
 
-*Note:* The above YAML definition is based on the upstream DNS addon in the [Kubernetes addon folder][k8s-dns-addon].
+*Note:* The above YAML definition corresponds to [the upstream Kubernetes DNS addon][k8s-dns-addon].
 
-[k8s-dns-addon]: https://github.com/kubernetes/kubernetes/tree/v1.5.2/cluster/addons/dns
+[k8s-dns-addon]: https://github.com/kubernetes/kubernetes/tree/release-1.6/cluster/addons/dns
 
-This single YAML file is actually creating 2 different Kubernetes objects, separated by `---`.
+This single YAML file is actually creating four different Kubernetes objects, separated by `---`.
 
 The first object is a service that provides DNS lookups over port 53 for any service that requires it.
 
-The second object is a Replication Controller, which consists of several different containers that work together to provide DNS lookups. There's too much going on to explain it all, but it's using health checks, resource limits, and intra-pod networking over multiple ports.
+The second object is a [ServiceAccount](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/), which configures a service account within the cluster for in-pod processes to identify themselves through.
+
+The third object is a [ConfigMap](https://kubernetes.io/docs/tasks/configure-pod-container/configmap/), which is a resource that holds key-value pairs of configuration data within the cluster.
+
+The fourth object is a [Deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/), which consists of several different containers that work together to provide DNS lookups. There's too much going on to explain it all, but it's using health checks, resource limits, and intra-pod networking over multiple ports.
 
 Next, start the DNS add-on:
 
 ```sh
-$ kubectl create -f dns-addon.yml
+$ kubectl apply -f dns-addon.yml
 ```
 
-And check for `kube-dns-v20-*` pod up and running:
+And check that the `kube-dns-*` pod is up and running:
 
 ```sh
-$ kubectl get pods --namespace=kube-system | grep kube-dns-v20
+$ kubectl get pods --namespace=kube-system | grep kube-dns
 ```
 
 ## Deploy the kube Dashboard Add-on
 
-Create `kube-dashboard-rc.yaml` and `kube-dashboard-svc.yaml` on your local machine.
+Create `kube-dashboard-addon.yml` on your local machine.
 
-**kube-dashboard-rc.yaml**
-
+**kube-dashboard-addon.yml**
 
 ```yaml
-apiVersion: v1
-kind: ReplicationController
+apiVersion: extensions/v1beta1
+kind: Deployment
 metadata:
-  name: kubernetes-dashboard-v1.4.1
+  name: kubernetes-dashboard
   namespace: kube-system
   labels:
     k8s-app: kubernetes-dashboard
-    version: v1.4.1
     kubernetes.io/cluster-service: "true"
+    addonmanager.kubernetes.io/mode: Reconcile
 spec:
-  replicas: 1
   selector:
-    k8s-app: kubernetes-dashboard
+    matchLabels:
+      k8s-app: kubernetes-dashboard
   template:
     metadata:
       labels:
         k8s-app: kubernetes-dashboard
-        version: v1.4.1
-        kubernetes.io/cluster-service: "true"
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
-        scheduler.alpha.kubernetes.io/tolerations: '[{"key":"CriticalAddonsOnly", "operator":"Exists"}]'
     spec:
       containers:
       - name: kubernetes-dashboard
-        image: gcr.io/google_containers/kubernetes-dashboard-amd64:v1.4.1
+        image: gcr.io/google_containers/kubernetes-dashboard-amd64:v1.6.0
         resources:
+          # keep request = limit to keep this container in guaranteed class
           limits:
             cpu: 100m
             memory: 50Mi
@@ -211,12 +284,12 @@ spec:
             port: 9090
           initialDelaySeconds: 30
           timeoutSeconds: 30
-```
+      tolerations:
+      - key: "CriticalAddonsOnly"
+        operator: "Exists"
 
-**kube-dashboard-svc.yaml**
+---
 
-
-```yaml
 apiVersion: v1
 kind: Service
 metadata:
@@ -225,6 +298,7 @@ metadata:
   labels:
     k8s-app: kubernetes-dashboard
     kubernetes.io/cluster-service: "true"
+    addonmanager.kubernetes.io/mode: Reconcile
 spec:
   selector:
     k8s-app: kubernetes-dashboard
@@ -233,19 +307,17 @@ spec:
     targetPort: 9090
 ```
 
-Create the Replication Controller and Service.
+Install the addon:
 
 ```sh
-$ kubectl create -f kube-dashboard-rc.yaml
-$ kubectl create -f kube-dashboard-svc.yaml
+$ kubectl apply -f kube-dashboard-addon.yaml
 ```
 
-Access the dashboard by port forwarding with `kubectl`.
-
+Access the dashboard by port forwarding with `kubectl`:
 
 ```sh
 $ kubectl get pods --namespace=kube-system
-$ kubectl port-forward kubernetes-dashboard-v1.4.1-SOME-ID 9090 --namespace=kube-system
+$ kubectl port-forward kubernetes-dashboard-SOME-ID 9090 --namespace=kube-system
 ```
 
 Then visit [http://127.0.0.1:9090](http://127.0.0.1:9090/) in your browser.

@@ -1,0 +1,16 @@
+{
+  "CN": "my-k8s-cluster",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "SG",
+      "L": "Singapore",
+      "ST": "Singapore",
+      "O": "Unicorn Inc",
+      "OU": "Awesome Dept"
+    }
+  ]
+}

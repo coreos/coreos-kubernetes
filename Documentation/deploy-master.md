@@ -132,6 +132,7 @@ Note that the kubelet running on a master node may log repeated attempts to post
     --mount volume=cni-bin,target=/opt/cni/bin
     ```
   - Add `ExecStartPre=/usr/bin/mkdir -p /opt/cni/bin`
+* If you are not using Calico for network policy you can keep `--network-plugin` blank
 * Decide if you will use [additional features][rkt-opts-examples] such as:
   - [mounting ephemeral disks][mount-disks]
   - [allow pods to mount RDB][rdb] or [iSCSI volumes][iscsi]

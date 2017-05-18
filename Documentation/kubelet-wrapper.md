@@ -9,8 +9,6 @@ CoreOS ships a wrapper script, `/usr/lib/coreos/kubelet-wrapper`, which makes it
 1. Future releases of CoreOS can tweak the system-related parameters of the kubelet, such as mounting in /etc/ssl/certs.
 1. Allows user-specified flags and the desired version of the kubelet to be passed to rkt. This gives each cluster admin control to enable newer API features and easily tweak settings, independent of CoreOS releases.
 
-This script is currently shipping in CoreOS 962.0.0+ and will be included in all channels in the near future.
-
 ## Using the kubelet-wrapper
 
 An example systemd kubelet.service file which takes advantage of the kubelet-wrapper script:
@@ -98,29 +96,7 @@ In order to secure your Kubernetes cluster, you **must** either:
 
 The Kubernetes documentation on [Master -> Cluster communication][master-cluster-communication] provides more information and details solutions.
 
-## Manual deployment
-
-If you wish to use the kubelet-wrapper on a CoreOS version prior to 962.0.0, you can manually place the script on the host. Please note that this requires rkt version 0.15.0+.
-
-For example:
-
-- Retrieve a copy of the [kubelet-wrapper script][kubelet-wrapper]
-- Place on the host: `/opt/bin/kubelet-wrapper`
-- Make the script executable: `chmod +x /opt/bin/kubelet-wrapper`
-- Reference from your kubelet service file:
-
-```ini
-[Service]
-Environment=KUBELET_IMAGE_TAG=v1.5.4_coreos.0
-...
-ExecStart=/opt/bin/kubelet-wrapper \
-  --api-servers=http://127.0.0.1:8080 \
-  --pod-manifest-path=/etc/kubernetes/manifests
-...
-```
-
 [#2141]: https://github.com/coreos/rkt/issues/2141
-[kubelet-wrapper]: https://github.com/coreos/coreos-overlay/blob/master/app-admin/kubelet-wrapper/files/kubelet-wrapper
 [rbd-example]: https://github.com/kubernetes/kubernetes/tree/master/examples/volumes/rbd
 [kubernetes-ports]: https://github.com/kubernetes/kubernetes/tree/master/examples/volumes/rbd
 [kubelet-authn-authz]: https://kubernetes.io/docs/admin/kubelet-authentication-authorization/ 

@@ -4,10 +4,6 @@ This guide walks a deployer through launching a multi-node Kubernetes cluster on
 
 ## Deployment requirements
 
-### CoreOS version
-
-All Kubernetes controllers and nodes must use CoreOS version 962.0.0 or greater for the `kubelet-wrapper` script to be present in the image. If you wish to use an earlier version (e.g. from the 'stable' channel) see [kubelet-wrapper](kubelet-wrapper.md) for more information.
-
 ### Kubernetes pod network
 
 This configuration uses the [flannel][coreos-flannel] overlay network to manage the [pod network][pod-network]. Many bare metal configurations may instead have an existing self-managed network. In this scenario, it is common to use [Calico][calico-networking] to manage pod network policy while omitting the overlay network, and interoperating with existing physical network gear over BGP.

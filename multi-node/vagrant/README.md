@@ -1,4 +1,4 @@
-# Kubernetes Cluster with Vagrant on CoreOS
+# Kubernetes Cluster with Vagrant on CoreOS Container Linux
 
 View the full instructions at https://coreos.com/kubernetes/docs/latest/kubernetes-on-vagrant.html
 

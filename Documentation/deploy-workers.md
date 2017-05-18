@@ -1,6 +1,6 @@
 # Deploy Kubernetes Worker Node(s)
 
-Boot one or more CoreOS nodes which will be used as Kubernetes Workers. See the [CoreOS Documentation](https://coreos.com/os/docs/latest/) for guides on launching nodes on supported platforms.
+Boot one or more CoreOS Container Linux nodes which will be used as Kubernetes Workers. See the [Container Linux Documentation](https://coreos.com/os/docs/latest/) for guides on launching nodes on supported platforms.
 
 ## Configure Service Components
 
@@ -116,7 +116,7 @@ Create `/etc/systemd/system/kubelet.service` and substitute the following variab
   - [mounting ephemeral disks][mount-disks]
   - [allow pods to mount RDB][rdb] or [iSCSI volumes][iscsi]
   - [allowing access to insecure container registries][insecure-registry]
-  - [changing your CoreOS auto-update settings][update]
+  - [changing your Container Linux auto-update settings][update]
 
 **Note**: Anyone with access to port 10250 on a node can execute arbitrary code in a pod on the node. Information, including logs and metadata, is also disclosed on port 10255. See [securing the Kubelet API][securing-kubelet-api] for more information.
 

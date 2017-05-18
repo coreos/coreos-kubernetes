@@ -1,7 +1,7 @@
-# Single-Node Kubernetes Installation with Vagrant &amp; CoreOS
+# Single-Node Kubernetes Installation with Vagrant &amp; CoreOS Container Linux
 
 While Kubernetes is designed to run across large clusters, it can be useful to have Kubernetes available on a single machine.
-This guide walks a deployer through this process using Vagrant and CoreOS.
+This guide walks a deployer through this process using Vagrant and CoreOS Container Linux.
 After completing this guide, a deployer will be able to interact with the Kubernetes API from their workstation using the kubectl CLI tool.
 
 ## Install Prerequisites
@@ -37,7 +37,7 @@ $ mv kubectl /usr/local/bin/kubectl
 
 ## Clone the Repository
 
-The following commands will clone a repository that contains a "Vagrantfile", which describes the set of virtual machines that will run Kubernetes on top of CoreOS.
+The following commands will clone a repository that contains a "Vagrantfile", which describes the set of virtual machines that will run Kubernetes on top of Container Linux.
 
 ```sh
 $ git clone https://github.com/coreos/coreos-kubernetes.git
@@ -56,7 +56,7 @@ To enable network policy edit the user-data file and set `USE_CALICO=true`.
 
 ## Start the Machine
 
-Ensure the latest CoreOS vagrant image will be used by running `vagrant box update`.
+Ensure the latest Container Linux vagrant image will be used by running `vagrant box update`.
 
 Simply run `vagrant up` and wait for the command to succeed.
 Once Vagrant is finished booting and provisioning your machine, your cluster is good to go.

@@ -1,6 +1,6 @@
-# Kubernetes Installation on Bare Metal &amp; CoreOS
+# Kubernetes Installation on Bare Metal &amp; CoreOS Container Linux
 
-This guide walks a deployer through launching a multi-node Kubernetes cluster on bare metal servers running CoreOS. After completing this guide, a deployer will be able to interact with the Kubernetes API from their workstation using the `kubectl` CLI tool.
+This guide walks a deployer through launching a multi-node Kubernetes cluster on bare metal servers running CoreOS Container Linux. After completing this guide, a deployer will be able to interact with the Kubernetes API from their workstation using the `kubectl` CLI tool.
 
 ## Deployment requirements
 
@@ -44,6 +44,6 @@ Mixing multiple methods is possible. For example, doing an install to disk for t
 [kubernetes-cluster-example]: https://coreos.com/matchbox/docs/latest/terraform/bootkube-install/README.html
 
 <div class="co-m-docs-next-step">
-  <p><strong>Did you install CoreOS on your machines?</strong> An SSH connection to each machine is all that's needed. We'll start the configuration next.</p>
+  <p><strong>Did you install Container Linux on your machines?</strong> An SSH connection to each machine is all that's needed. We'll start the configuration next.</p>
   <a href="getting-started.md" class="btn btn-primary btn-icon-right"  data-category="Getting Started" data-event="Getting Started">I'm ready to get started</a>
 </div>

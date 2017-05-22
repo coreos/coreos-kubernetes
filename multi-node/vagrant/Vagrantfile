@@ -49,16 +49,26 @@ etcdIPs = [*1..$etcd_count].map{ |i| etcdIP(i) }
 initial_etcd_cluster = etcdIPs.map.with_index{ |ip, i| "e#{i+1}=http://#{ip}:2380" }.join(",")
 etcd_endpoints = etcdIPs.map.with_index{ |ip, i| "http://#{ip}:2379" }.join(",")
 
+def exec(s)
+  tmpFile = "bashScript"
+  File.open(tmpFile, 'w') { |file|
+    file.write(s)
+  }
+  p s
+  return `bash #{tmpFile} 2>&1`
+end
+
 # Generate root CA
-system("mkdir -p ssl && ./../../lib/init-ssl-ca ssl") or abort ("failed generating SSL artifacts")
+p exec "mkdir -p ssl 2>&1"
+(p exec "#{File.expand_path("../../lib/init-ssl-ca")} ssl") or abort ("failed generating SSL artifacts")
 
 # Generate admin key/cert
-system("./../../lib/init-ssl ssl admin kube-admin") or abort("failed generating admin SSL artifacts")
+(p exec "#{File.expand_path("../../lib/init-ssl")} ssl admin kube-admin") or abort("failed generating admin SSL artifacts")
 
 def provisionMachineSSL(machine,certBaseName,cn,ipAddrs)
   tarFile = "ssl/#{cn}.tar"
   ipString = ipAddrs.map.with_index { |ip, i| "IP.#{i+1}=#{ip}"}.join(",")
-  system("./../../lib/init-ssl ssl #{certBaseName} #{cn} #{ipString}") or abort("failed generating #{cn} SSL artifacts")
+  (p exec "#{File.expand_path("../../lib/init-ssl")} ssl #{certBaseName} #{cn} #{ipString}") or abort("failed generating #{cn} SSL artifacts")
   machine.vm.provision :file, :source => tarFile, :destination => "/tmp/ssl.tar"
   machine.vm.provision :shell, :inline => "mkdir -p /etc/kubernetes/ssl && tar -C /etc/kubernetes/ssl -xf /tmp/ssl.tar", :privileged => true
 end

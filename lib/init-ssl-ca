@@ -30,6 +30,6 @@ fi
 
 # establish cluster CA and self-sign a cert
 openssl genrsa -out "$OUTDIR/ca-key.pem" 2048
-openssl req -x509 -new -nodes -key "$OUTDIR/ca-key.pem" -days 10000 -out "$OUTFILE" -subj "/CN=kube-ca"
+openssl req -x509 -new -nodes -key "$OUTDIR/ca-key.pem" -days 10000 -out "$OUTFILE" -subj "//CN=kube-ca"
 
 

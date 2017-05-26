@@ -20,15 +20,16 @@ See the [Kubernetes networking](kubernetes-networking.md) documentation for more
 
 ## Provisioning
 
-Network booting and provisioning CoreOS clusters can be automated using the CoreOS [matchbox][matchbox-gh] project. It includes:
+The CoreOS [Matchbox][matchbox-gh] project can automate network booting and provisioning Container Linux clusters. It provides:
 
+* The Matchbox HTTP/gRPC service matches machines to configs, by hardware attributes, and can be installed as a binary, RPM, container image, or deployed on Kubernetes itself.
 * Guides for creating network boot environments with iPXE/GRUB
-* The matchbox HTTP/gRPC [service][matchbox-intro-doc] for booting and provisioning bare-metal machines. Match machines by their hardware attributes and serve templated [Ignition][ignition-docs] provisioning configurations.
-* Example clusters including an [etcd cluster][etcd-cluster-example], multi-node [Kubernetes cluster][multi-node-example], and [self-hosted][self-hosted-example] Kubernetes cluster.
+* Support for Terraform to allow teams to manage and version bare-metal resources
+* Example clusters including an [etcd cluster][etcd-cluster-example] and multi-node [Kubernetes cluster][kubernetes-cluster-example].
 
-[Get started][matchbox-gh] provisioning your machines into CoreOS clusters.
+[Get started][matchbox-intro-doc] provisioning machines into clusters or read the [docs][matchbox-docs].
 
-The CoreOS bare metal installation documents provide background and deployment options for the boot mechanisms:
+Container Linux bare metal installation documents provide low level background details about the boot mechanisms:
 
 * [Booting with iPXE][coreos-ipxe]
 * [Booting with PXE][coreos-pxe]
@@ -36,16 +37,15 @@ The CoreOS bare metal installation documents provide background and deployment o
 
 Mixing multiple methods is possible. For example, doing an install to disk for the machines running the etcd cluster and Kubernetes master nodes, but PXE-booting the worker machines.
 
-
 [coreos-ipxe]: https://coreos.com/os/docs/latest/booting-with-ipxe.html
 [coreos-pxe]: https://coreos.com/os/docs/latest/booting-with-pxe.html
 [coreos-ondisk]: https://coreos.com/os/docs/latest/installing-to-disk.html
-[etcd-cluster-example]: https://github.com/coreos/matchbox/blob/master/Documentation/getting-started-rkt.md
 [ignition-docs]: https://coreos.com/ignition/docs/latest/
-[matchbox-gh]: https://github.com/coreos/matchbox
-[matchbox-intro-doc]: https://github.com/coreos/matchbox/blob/master/Documentation/matchbox.md
-[multi-node-example]: https://github.com/coreos/matchbox/blob/master/Documentation/kubernetes.md
-[self-hosted-example]: https://github.com/coreos/matchbox/blob/master/Documentation/bootkube.md
+[matchbox-gh]: https://github.com/coreos/matchbox 
+[matchbox-docs]: https://coreos.com/matchbox/docs/latest/ 
+[matchbox-intro-doc]: https://coreos.com/matchbox/docs/latest/getting-started.html
+[etcd-cluster-example]: https://github.com/coreos/matchbox/blob/master/Documentation/getting-started-rkt.md
+[kubernetes-cluster-example]: https://coreos.com/matchbox/docs/latest/terraform/bootkube-install/README.html
 
 <div class="co-m-docs-next-step">
   <p><strong>Did you install CoreOS on your machines?</strong> An SSH connection to each machine is all that's needed. We'll start the configuration next.</p>

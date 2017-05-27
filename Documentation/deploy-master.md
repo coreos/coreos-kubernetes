@@ -162,8 +162,8 @@ ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --allow-privileged=true \
   --pod-manifest-path=/etc/kubernetes/manifests \
   --hostname-override=${ADVERTISE_IP} \
-  --cluster_dns=${DNS_SERVICE_IP} \
-  --cluster_domain=cluster.local
+  --cluster-dns=${DNS_SERVICE_IP} \
+  --cluster-domain=cluster.local
 ExecStop=-/usr/bin/rkt stop --uuid-file=/var/run/kubelet-pod.uuid
 Restart=always
 RestartSec=10

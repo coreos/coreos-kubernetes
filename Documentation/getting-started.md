@@ -60,38 +60,14 @@ The VIP (Virtual IP) address of the cluster DNS service. This IP must be in the 
 
 Kubernetes uses etcd for data storage and for cluster consensus between different software components. Your etcd cluster will be heavily utilized since all objects storing within and every scheduling decision is recorded. It's recommended that you run a multi-machine cluster on dedicated hardware (with fast disks) to gain maximum performance and reliability of this important part of your cluster. For development environments, a single etcd is ok.
 
-### Single-Node/Development
+**Note** that Container Linux comes with an etcd v2 binary, you should not use this for two reasons:
 
-You can simply start etcd via [cloud-config][cloud-config-etcd] when you create your CoreOS machine or start it manually.
+1. This version of etcd is [not compatible with the default for Kubernetes 1.6.2+][etcd-k8s-1.6.2-issue]
+2. The etcd2 binary is slated to be removed from Container Linux.
 
-If you are starting etcd manually, we need to first configure it to listen on all interfaces:
+Instead of using the etcd2 binary, please either use Container Linux configs, ignition, or the `etcd-member` systemd service to manage etcd on Container Linux.
 
-* Replace `${PUBLIC_IP}` with the etcd machines publicly routable IP address.
-
-**/etc/systemd/system/etcd2.service.d/40-listen-address.conf**
-
-```
-[Service]
-Environment=ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
-Environment=ETCD_ADVERTISE_CLIENT_URLS=http://${PUBLIC_IP}:2379
-```
-
-Use the value of `ETCD_ADVERTISE_CLIENT_URLS` as the value of `ETCD_ENDPOINTS` in the rest of this guide.
-
-Next, start etcd
-
-```
-$ sudo systemctl start etcd2
-```
-
-To ensure etcd starts after a reboot, enable it too:
-
-```sh
-$ sudo systemctl enable etcd2
-Created symlink from /etc/systemd/system/multi-user.target.wants/etcd2.service to /usr/lib64/systemd/system/etcd2.service.
-```
-
-[cloud-config-etcd]: https://coreos.com/os/docs/latest/cloud-config.html#etcd2
+For more information about setting up etcd, please read the [etcd on Container Linux guide][etcd-on-cl].
 
 ### Multi-Node/Production
 

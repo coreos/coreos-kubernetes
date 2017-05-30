@@ -69,19 +69,19 @@ You can choose from one of the two following options.
 
 1. **Use a custom KUBECONFIG path**
 
-   ```sh
-   $ export KUBECONFIG="${KUBECONFIG}:$(pwd)/kubeconfig"
-   $ kubectl config use-context vagrant-single
-   ```
+```sh
+$ export KUBECONFIG="${KUBECONFIG}:$(pwd)/kubeconfig"
+$ kubectl config use-context vagrant-single
+```
 
-1. **Update the local-user kubeconfig**
+2\. **Update the local-user kubeconfig**
 
-   ```sh
-   $ kubectl config set-cluster vagrant-single-cluster --server=https://172.17.4.99:443 --certificate-authority=${PWD}/ssl/ca.pem
-   $ kubectl config set-credentials vagrant-single-admin --certificate-authority=${PWD}/ssl/ca.pem --client-key=${PWD}/ssl/admin-key.pem --client-certificate=${PWD}/ssl/admin.pem
-   $ kubectl config set-context vagrant-single --cluster=vagrant-single-cluster --user=vagrant-single-admin
-   $ kubectl config use-context vagrant-single
-   ```
+```sh
+$ kubectl config set-cluster vagrant-single-cluster --server=https://172.17.4.99:443 --certificate-authority=${PWD}/ssl/ca.pem
+$ kubectl config set-credentials vagrant-single-admin --certificate-authority=${PWD}/ssl/ca.pem --client-key=${PWD}/ssl/admin-key.pem --client-certificate=${PWD}/ssl/admin.pem
+$ kubectl config set-context vagrant-single --cluster=vagrant-single-cluster --user=vagrant-single-admin
+$ kubectl config use-context vagrant-single
+```
 
 Check that your client is configured properly by using `kubectl` to inspect your cluster:
 

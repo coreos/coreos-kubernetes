@@ -183,6 +183,7 @@ If this is your first time looking at a Pod manifest, don't worry, they aren't a
 * Replace `${ETCD_ENDPOINTS}`
 * Replace `${SERVICE_IP_RANGE}`
 * Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
+* Replace `${NUM_MASTERS}` with the number of master nodes this cluster will have.
 
 **/etc/kubernetes/manifests/kube-apiserver.yaml**
 
@@ -213,6 +214,7 @@ spec:
     - --service-account-key-file=/etc/kubernetes/ssl/apiserver-key.pem
     - --runtime-config=extensions/v1beta1/networkpolicies=true
     - --anonymous-auth=false
+    - --apiserver-count=${NUM_MASTERS}
     livenessProbe:
       httpGet:
         host: 127.0.0.1

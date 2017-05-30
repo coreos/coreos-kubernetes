@@ -128,10 +128,13 @@ Note that the kubelet running on a master node may log repeated attempts to post
   - Replace `${NETWORK_PLUGIN}` with `cni`
   - Add the following to `RKT_RUN_ARGS=`
     ```
+    --volume cni-lib,kind=host,source=/var/lib/cni \
+    --mount volume=cni-lib,target=/var/lib/cni \
     --volume cni-bin,kind=host,source=/opt/cni/bin \
     --mount volume=cni-bin,target=/opt/cni/bin
     ```
   - Add `ExecStartPre=/usr/bin/mkdir -p /opt/cni/bin`
+  - Add `ExecStartPre=/usr/bin/mkdir -p /var/lib/cni`
 * Decide if you will use [additional features][rkt-opts-examples] such as:
   - [mounting ephemeral disks][mount-disks]
   - [allow pods to mount RDB][rdb] or [iSCSI volumes][iscsi]

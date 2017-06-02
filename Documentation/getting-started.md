@@ -1,6 +1,6 @@
-# CoreOS &#43; Kubernetes Step By Step
+# CoreOS Container Linux &#43; Kubernetes Step By Step
 
-This guide walks through deploying a Kubernetes cluster of CoreOS nodes, with a single controller and multiple workers. This guide enumerates the multiple steps and stages of a Kubernetes deployment. To quickly deploy a Kubernetes cluster without engaging component-level details, check out the [free tier of the CoreOS Tectonic][tectonic-free] Kubernetes distribution, or the [open-source Tectonic Installer][tectonic-installer] that drives Tectonic's automation of cluster deployments.
+This guide walks through deploying a Kubernetes cluster of CoreOS Container Linux nodes, with a single controller and multiple workers. This guide enumerates the multiple steps and stages of a Kubernetes deployment. To quickly deploy a Kubernetes cluster without engaging component-level details, check out the [free tier of the CoreOS Tectonic][tectonic-free] Kubernetes distribution, or the [open-source Tectonic Installer][tectonic-installer] that drives Tectonic's automation of cluster deployments.
 
 The primary goals of this guide are:
 
@@ -62,7 +62,7 @@ Kubernetes uses etcd for data storage and for cluster consensus between differen
 
 ### Single-Node/Development
 
-You can simply start etcd via [cloud-config][cloud-config-etcd] when you create your CoreOS machine or start it manually.
+You can simply start etcd via [cloud-config][cloud-config-etcd] when you create your Container Linux machine or start it manually.
 
 If you are starting etcd manually, we need to first configure it to listen on all interfaces:
 

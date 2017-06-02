@@ -1,8 +1,6 @@
 # Deploy Kubernetes Master Node(s)
 
-Boot a single CoreOS machine which will be used as the Kubernetes master node. You must use a CoreOS version 962.0.0+ for the `/usr/lib/coreos/kubelet-wrapper` script to be present in the image. See [kubelet-wrapper](kubelet-wrapper.md) for more information.
-
-See the [CoreOS Documentation](https://coreos.com/os/docs/latest/) for guides on launching nodes on supported platforms.
+Boot a single CoreOS Container Linux machine which will be used as the Kubernetes master node. See the [Container Linux Documentation](https://coreos.com/os/docs/latest/) for guides on launching nodes on supported platforms.
 
 Manual configuration of the required master node services is explained below, but most of the configuration could also be done with cloud-config, aside from placing the TLS assets on disk. For security reasons, these secrets should not be stored in cloud-config.
 
@@ -136,7 +134,7 @@ Note that the kubelet running on a master node may log repeated attempts to post
   - [mounting ephemeral disks][mount-disks]
   - [allow pods to mount RDB][rdb] or [iSCSI volumes][iscsi]
   - [allowing access to insecure container registries][insecure-registry]
-  - [changing your CoreOS auto-update settings][update]
+  - [changing your Container Linux auto-update settings][update]
 
 **Note**: Anyone with access to port 10250 on a node can execute arbitrary code in a pod on the node. Information, including logs and metadata, is also disclosed on port 10255. See [securing the Kubelet API][securing-kubelet-api] for more information.
 

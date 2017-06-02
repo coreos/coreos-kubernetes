@@ -1,6 +1,6 @@
 # Kubernetes on CoreOS with Generic Install Scripts
 
-This guide will setup Kubernetes on CoreOS in a similar way to other tools in the repo. The main goal of these scripts is to be generic and work on many different cloud providers or platforms. The notable difference is that these scripts are intended to be platform agnostic and thus don't automatically setup the TLS assets on each host beforehand.
+This guide will setup Kubernetes on CoreOS Container Linux in a similar way to other tools in the repo. The main goal of these scripts is to be generic and work on many different cloud providers or platforms. The notable difference is that these scripts are intended to be platform agnostic and thus don't automatically setup the TLS assets on each host beforehand.
 
 While we provide these scripts and test them through the multi-node Vagrant setup, we recommend using a platform specific install method if available. If you are installing to bare-metal, you might find our [baremetal repo](https://github.com/coreos/coreos-baremetal) more appropriate.
 
@@ -47,7 +47,7 @@ You may modify the kubelet's unit file to use [additional features][rkt-opts-exa
 - [allowing access to insecure container registries][insecure-registry]
 - [use host DNS configuration instead of a public DNS server][host-dns]
 - [enable the cluster logging add-on][cluster-logging]
-- [changing your CoreOS auto-update settings][update]
+- [changing your Container Linux auto-update settings][update]
 
 ## Boot etcd Cluster
 
@@ -59,7 +59,7 @@ Use the [official etcd clustering guide](https://coreos.com/etcd/docs/latest/doc
 
 Follow these instructions for each controller you wish to boot:
 
-1. Boot CoreOS
+1. Boot Container Linux
 1. [Download][controller-script] and copy `controller-install.sh` onto disk.
 1. Copy TLS assets onto disk.
 1. Execute `controller-install.sh` with environment variables set.
@@ -69,7 +69,7 @@ Follow these instructions for each controller you wish to boot:
 
 Follow these instructions for each worker you wish to boot:
 
-1. Boot CoreOS
+1. Boot Container Linux
 1. [Download][worker-script] and copy `worker-install.sh` onto disk.
 1. Copy TLS assets onto disk.
 1. Execute `worker-install.sh` with environment variables set.

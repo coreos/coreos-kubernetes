@@ -1,6 +1,6 @@
-# Kubernetes Installation with Vagrant &amp; CoreOS
+# Kubernetes Installation with Vagrant &amp; CoreOS Container Linux
 
-This guide walks a deployer through launching a multi-node Kubernetes cluster using Vagrant and CoreOS.
+This guide walks a deployer through launching a multi-node Kubernetes cluster using Vagrant and CoreOS Container Linux.
 After completing this guide, a deployer will be able to interact with the Kubernetes API from their workstation using the kubectl CLI tool.
 
 ## Install Prerequisites
@@ -36,7 +36,7 @@ $ sudo mv kubectl /usr/local/bin/kubectl
 
 ## Clone the Repository
 
-The following commands will clone a repository that contains a "Vagrantfile", which describes the set of virtual machines that will run Kubernetes on top of CoreOS.
+The following commands will clone a repository that contains a "Vagrantfile", which describes the set of virtual machines that will run Kubernetes on top of Container Linux.
 
 ```sh
 $ git clone https://github.com/coreos/coreos-kubernetes.git
@@ -84,7 +84,7 @@ The default cluster configuration is to start a virtual machine for each role &m
 #$etcd_vm_memory=512
 ```
 
-Ensure the latest CoreOS vagrant image will be used by running `vagrant box update`.
+Ensure the latest Container Linux vagrant image will be used by running `vagrant box update`.
 
 Then run `vagrant up` and wait for Vagrant to provision and boot the virtual machines.
 

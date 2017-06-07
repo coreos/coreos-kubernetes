@@ -202,6 +202,7 @@ spec:
     - apiserver
     - --bind-address=0.0.0.0
     - --etcd-servers=${ETCD_ENDPOINTS}
+    - --storage-backend=etcd2
     - --allow-privileged=true
     - --service-cluster-ip-range=${SERVICE_IP_RANGE}
     - --secure-port=443

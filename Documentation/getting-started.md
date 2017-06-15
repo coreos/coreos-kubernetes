@@ -1,5 +1,7 @@
 # CoreOS &#43; Kubernetes Step By Step
 
+{% include docs-k8s-on-tectonic.html %}
+
 This guide walks through deploying a Kubernetes cluster of CoreOS nodes, with a single controller and multiple workers. This guide enumerates the multiple steps and stages of a Kubernetes deployment. To quickly deploy a Kubernetes cluster without engaging component-level details, check out the [free tier of the CoreOS Tectonic][tectonic-free] Kubernetes distribution, or the [open-source Tectonic Installer][tectonic-installer] that drives Tectonic's automation of cluster deployments.
 
 The primary goals of this guide are:

@@ -72,7 +72,7 @@ Create `/etc/systemd/system/docker.service.d/40-flannel.conf`
 Requires=flanneld.service
 After=flanneld.service
 [Service]
-EnvironmentFile=/etc/kubernetes/cni/docker_opts_cni.env
+EnvironmentFile=/run/flannel/flannel_docker_opts.env
 ```
 
 Create the Docker CNI Options file:

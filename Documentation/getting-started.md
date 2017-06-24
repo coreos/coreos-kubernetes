@@ -64,7 +64,7 @@ Kubernetes uses etcd for data storage and for cluster consensus between differen
 
 You can simply start etcd via [cloud-config][cloud-config-etcd] when you create your CoreOS machine or start it manually.
 
-If you are starting etcd manually, we need to first configure it to listen on all interfaces:
+If you are starting etcd manually, we need to first create and configure its local configuration in `/etc/systemd/system/etcd2.service.d/40-listen-address.conf` to listen on all interfaces:
 
 * Replace `${PUBLIC_IP}` with the etcd machines publicly routable IP address.
 

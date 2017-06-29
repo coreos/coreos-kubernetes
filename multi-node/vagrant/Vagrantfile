@@ -5,6 +5,7 @@ require 'fileutils'
 require 'open-uri'
 require 'tempfile'
 require 'yaml'
+require 'open3'
 
 Vagrant.require_version ">= 1.6.0"
 
@@ -49,16 +50,42 @@ etcdIPs = [*1..$etcd_count].map{ |i| etcdIP(i) }
 initial_etcd_cluster = etcdIPs.map.with_index{ |ip, i| "e#{i+1}=http://#{ip}:2380" }.join(",")
 etcd_endpoints = etcdIPs.map.with_index{ |ip, i| "http://#{ip}:2379" }.join(",")
 
+Open3.popen3("mkdir -p ssl") do |i, o, e, w|
+  i.close;
+  if w.value.exitstatus != 0 then
+    e.each do |line| p line end
+    abort ("failed to create dir")
+  end
+end
+
 # Generate root CA
-system("mkdir -p ssl && ./../../lib/init-ssl-ca ssl") or abort ("failed generating SSL artifacts")
+Open3.popen3("bash ./../../lib/init-ssl-ca ssl") do |i, o, e, w|
+  i.close;
+  if w.value.exitstatus != 0 then
+    e.each do |line| p line end
+    abort ("failed generating SL artifacts")
+  end
+end
 
 # Generate admin key/cert
-system("./../../lib/init-ssl ssl admin kube-admin") or abort("failed generating admin SSL artifacts")
+Open3.popen3("bash ./../../lib/init-ssl ssl admin kube-admin") do |i, o, e, w|
+  i.close;
+  if w.value.exitstatus != 0 then
+    e.each do |line| p line end
+    abort ("failed generating admin SSL artifacts")
+  end
+end
 
 def provisionMachineSSL(machine,certBaseName,cn,ipAddrs)
   tarFile = "ssl/#{cn}.tar"
   ipString = ipAddrs.map.with_index { |ip, i| "IP.#{i+1}=#{ip}"}.join(",")
-  system("./../../lib/init-ssl ssl #{certBaseName} #{cn} #{ipString}") or abort("failed generating #{cn} SSL artifacts")
+  Open3.popen3("bash ./../../lib/init-ssl ssl #{certBaseName} #{cn} #{ipString}") do |i, o, e, w|
+    i.close;
+    if w.value.exitstatus != 0 then
+      e.each do |line| p line end
+      abort ("failed generating #{cn} SSL artifacts")
+    end
+  end
   machine.vm.provision :file, :source => tarFile, :destination => "/tmp/ssl.tar"
   machine.vm.provision :shell, :inline => "mkdir -p /etc/kubernetes/ssl && tar -C /etc/kubernetes/ssl -xf /tmp/ssl.tar", :privileged => true
 end

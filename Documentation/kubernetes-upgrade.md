@@ -24,7 +24,7 @@ ExecStart=/usr/lib/coreos/kubelet-wrapper \
 
 The Calico agent runs on both master and worker nodes, and is distributed as a container image. It runs self hosted under Kubernetes.
 
-To upgrade Calico, follow the documentation [here](http://docs.projectcalico.org/v2.0/getting-started/kubernetes/upgrade)
+To upgrade Calico, follow the documentation [here](http://docs.projectcalico.org/latest/getting-started/kubernetes/upgrade)
 
 **Note:** If you are running Calico as a systemd service, you will first need to change to a self-hosted install by following [this guide](https://coreos.com/kubernetes/docs/latest/deploy-master.html)
 

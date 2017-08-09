@@ -1,63 +1,46 @@
 # Setting up kubectl
 
-`kubectl` is a command-line program for interacting with the Kubernetes API. The following steps should be done from a local workstation to configure `kubectl` to work with a new cluster.
+Use kubectl to interact with the Kubernetes API and with the cluster’s shared state. Download kubectl from the [Tectonic Console][tectonic-kubectl], or from the Kubernetes release artifact site with the cURL tool.
 
-To quickly launch a cluster, follow these guides for [AWS][kube-aws], [Vagrant][vagrant-multi] or [full step-by-step][manual] instructions.
+Use `curl` to fetch the Linux kubectl binary:
 
-[kube-aws]: https://github.com/coreos/kube-aws/blob/master/README.md
-[vagrant-multi]: kubernetes-on-vagrant-single.md
-[manual]: getting-started.md
-
-## Download the kubectl Executable
-
-Download `kubectl` from the Kubernetes release artifact site with the `curl` tool.
-
-The linux `kubectl` binary can be fetched with a command like:
-
-```sh
-$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.5.4/bin/linux/amd64/kubectl
+```
+$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.7.5/bin/linux/amd64/kubectl
 ```
 
-On an OS X workstation, replace `linux` in the URL above with `darwin`:
+Or, to fetch the macOS binary:
 
-```sh
-$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.5.4/bin/darwin/amd64/kubectl
+```
+$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.7.5/bin/darwin/amd64/kubectl
 ```
 
-After downloading the binary, ensure it is executable and move it into your `PATH`:
+After downloading the binary, ensure it is executable and move it into your PATH:
 
-```sh
+```
 $ chmod +x kubectl
-$ mv kubectl /usr/local/bin/kubectl
+$ sudo mv kubectl /usr/local/bin/kubectl
 ```
 
-## Configure kubectl
+Terraform generated a set of files, including a `kubeconfig`, which specifies the credentials for your cluster. Once logged in to the Tectonic Console, other users can download their own pre-generated kubeconfigs.
 
-Configure `kubectl` to connect to the target cluster using the following commands, replacing several values as indicated:
+As the first admin, you have a special “root” kubeconfig. Configure `kubectl` to use this file:
 
-* Replace `${MASTER_HOST}` with the master node address or name used in previous steps
-* Replace `${CA_CERT}` with the absolute path to the `ca.pem` created in previous steps
-* Replace `${ADMIN_KEY}` with the absolute path to the `admin-key.pem` created in previous steps
-* Replace `${ADMIN_CERT}` with the absolute path to the `admin.pem` created in previous steps
-
-```sh
-$ kubectl config set-cluster default-cluster --server=https://${MASTER_HOST} --certificate-authority=${CA_CERT}
-$ kubectl config set-credentials default-admin --certificate-authority=${CA_CERT} --client-key=${ADMIN_KEY} --client-certificate=${ADMIN_CERT}
-$ kubectl config set-context default-system --cluster=default-cluster --user=default-admin
-$ kubectl config use-context default-system
+```
+$ export KUBECONFIG=/path/to/installer/generated/auth/kubeconfig
 ```
 
-## Verify kubectl Configuration and Connection
+Test that it works by getting cluster info:
 
-Check that the client is configured properly by using `kubectl` to inspect the cluster:
-
-```sh
-$ kubectl get nodes
-NAME          LABELS                               STATUS
-X.X.X.X       kubernetes.io/hostname=X.X.X.X       Ready
+```
+$ kubectl cluster-info
 ```
 
-<div class="co-m-docs-next-step">
-  <p><strong>Is kubectl working from your local machine?</strong> We're going to install an add-on with it next.</p>
-  <a href="deploy-addons.md" class="btn btn-primary btn-icon-right" data-category="Docs Next" data-event="Kubernetes: Addons">Yes, ready to deploy add-ons</a>
-</div>
+You should see output about the addresses of Kubernetes master, Heapster, and KubeDNS. This proves that the API is running and healthy.
+
+Any connection errors will indicate that your cluster is not yet done bootstrapping.
+
+For more information on troubleshooting cluster errors, see [triaging a cluster][triaging-cluster].
+
+
+[triaging-cluster]: https://coreos.com/tectonic/docs/latest/troubleshooting/troubleshooting.html
+[tectonic-kubectl]: https://coreos.com/tectonic/docs/latest/tutorials/aws/first-app.html#configuring-credentials

@@ -1,676 +1,88 @@
-# Deploy Kubernetes Master Node(s)
+# Inspect the control plane
 
-Boot a single CoreOS machine which will be used as the Kubernetes master node. You must use a CoreOS version 962.0.0+ for the `/usr/lib/coreos/kubelet-wrapper` script to be present in the image. See [kubelet-wrapper](kubelet-wrapper.md) for more information.
+Once the cluster is fully booted, use kubectl or Tectonic Console to inspect the assets started by the bootstrap process, .
 
-See the [CoreOS Documentation](https://coreos.com/os/docs/latest/) for guides on launching nodes on supported platforms.
+In the Console, click the Pods section and browse the `kube-system` namespace using the blue bar at the top of the screen. This will show you all of the pods that make up the Kubernetes control plane.
 
-Manual configuration of the required master node services is explained below, but most of the configuration could also be done with cloud-config, aside from placing the TLS assets on disk. For security reasons, these secrets should not be stored in cloud-config.
-
-The instructions below configure the required master node components using manifests stored in `/etc/kubernetes/manifests`. The kubelet will watch this location for new or modified manifests and run them automatically.
-
-High-availability is achieved by repeating these instructions for each master node. Each of the master components is safe to run on multiple nodes.
-
-The apiserver is stateless, but handles recording the results of leader elections to etcd on behalf of other master components. The controller-manager and scheduler use the leader election mechanism to ensure only one of each is active, leaving the inactive master components ready to assume responsibility in case of failure.
-
-## Configure Service Components
-
-### TLS Assets
-
-Create the required directory and place the keys generated previously in the following locations:
-
-```sh
-$ sudo mkdir -p /etc/kubernetes/ssl
-```
-
-* File: `/etc/kubernetes/ssl/ca.pem`
-* File: `/etc/kubernetes/ssl/apiserver.pem`
-* File: `/etc/kubernetes/ssl/apiserver-key.pem`
-
-And make sure you've set proper permission for private key:
-
-```sh
-$ sudo chmod 600 /etc/kubernetes/ssl/*-key.pem
-$ sudo chown root:root /etc/kubernetes/ssl/*-key.pem
-```
-
-### Network Configuration
-
-Networking is provided by Flannel and Calico.
-
-* [flannel][flannel-docs] provides a software-defined overlay network for routing traffic to/from the [pods][pod-overview]
-* [Calico][calico-docs] secures the overlay network by restricting traffic to/from the pods based on fine-grained network policy.
-
-*Note:* If the pod-network is being managed independently of flannel, then the flannel parts of this guide can be skipped. In this case, Calico may still be used for providing network policy. See [Kubernetes networking](kubernetes-networking.md) for more detail.
-
-We will configure flannel to source its local configuration in `/etc/flannel/options.env` and cluster-level configuration in etcd. Create this file and edit the contents:
-
-* Replace `${ADVERTISE_IP}` with this machine's publicly routable IP.
-* Replace `${ETCD_ENDPOINTS}`
-
-**/etc/flannel/options.env**
-
-```sh
-FLANNELD_IFACE=${ADVERTISE_IP}
-FLANNELD_ETCD_ENDPOINTS=${ETCD_ENDPOINTS}
-```
-Next create a [systemd drop-in][dropins], which is a method for appending or overriding parameters of a systemd unit. In this case we're appending two dependency rules. Create the following drop-in, which will use the above configuration when flannel starts:
-
-**/etc/systemd/system/flanneld.service.d/40-ExecStartPre-symlink.conf**
-
-```yaml
-[Service]
-ExecStartPre=/usr/bin/ln -sf /etc/flannel/options.env /run/flannel/options.env
-```
-
-[calico-docs]: http://docs.projectcalico.org/v2.0/getting-started/kubernetes/
-[flannel-docs]: https://coreos.com/flannel/docs/latest/
-[pod-overview]: https://coreos.com/kubernetes/docs/latest/pods.html
-[service-overview]: https://coreos.com/kubernetes/docs/latest/services.html
-
-### Docker Configuration
-
-In order for flannel to manage the pod network in the cluster, Docker needs to be configured to use it. All we need to do is require that flanneld is running prior to Docker starting.
-
-*Note:* If the pod-network is being managed independently, this step can be skipped. See [kubernetes networking](kubernetes-networking.md) for more detail.
-
-Again, we will use a [systemd drop-in][dropins]:
-
-**/etc/systemd/system/docker.service.d/40-flannel.conf**
-
-```yaml
-[Unit]
-Requires=flanneld.service
-After=flanneld.service
-[Service]
-EnvironmentFile=/etc/kubernetes/cni/docker_opts_cni.env
-```
-
-Create the Docker CNI Options file:
-
-**/etc/kubernetes/cni/docker_opts_cni.env**
-
-```yaml
-DOCKER_OPT_BIP=""
-DOCKER_OPT_IPMASQ=""
-```
-
-If using Flannel for networking, setup the Flannel CNI configuration with below. If you intend to use Calico for networking, follow the guide to [Set Up Calico For Network Policy](#set-up-calico-for-network-policy-optional) instead.
-
-**/etc/kubernetes/cni/net.d/10-flannel.conf**
-
-```yaml
-{
-    "name": "podnet",
-    "type": "flannel",
-    "delegate": {
-        "isDefaultGateway": true
-    }
-}
+Or, use kubectl to list all pods in the namespace:
 
 ```
-
-[dropins]: https://coreos.com/os/docs/latest/using-systemd-drop-in-units.html
-
-### Create the kubelet Unit
-
-The [kubelet][kubelet-admin] is the agent on each machine that starts and stops Pods and other machine-level tasks. The kubelet communicates with the API server (also running on the master nodes) with the TLS certificates we placed on disk earlier.
-
-On the master node, the kubelet is configured to communicate with the API server, but not register for cluster work, as shown in the `--register-schedulable=false` line in the YAML excerpt below. This prevents user pods being scheduled on the master nodes, and ensures cluster work is routed only to task-specific worker nodes.
-
-When using Calico, the kubelet is configured to use the Container Networking Interface (CNI) standard for networking. This makes Calico aware of each pod that is created and allows it to network the pods into the flannel overlay. Both flannel and Calico communicate via CNI interfaces to ensure the correct IP range (managed by flannel) is used for each node.
-
-Note that the kubelet running on a master node may log repeated attempts to post its status to the API server. These warnings are expected behavior and can be ignored. Future Kubernetes releases plan to [handle this common deployment consideration more gracefully](https://github.com/kubernetes/kubernetes/issues/14140#issuecomment-142126864).
-
-* Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
-* Replace `${DNS_SERVICE_IP}`
-* Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release, e.g. `v1.5.4_coreos.0`.
-* If using Calico for network policy
-  - Replace `${NETWORK_PLUGIN}` with `cni`
-  - Add the following to `RKT_RUN_ARGS=`
-    ```
-    --volume cni-bin,kind=host,source=/opt/cni/bin \
-    --mount volume=cni-bin,target=/opt/cni/bin
-    ```
-  - Add `ExecStartPre=/usr/bin/mkdir -p /opt/cni/bin`
-* Decide if you will use [additional features][rkt-opts-examples] such as:
-  - [mounting ephemeral disks][mount-disks]
-  - [allow pods to mount RDB][rdb] or [iSCSI volumes][iscsi]
-  - [allowing access to insecure container registries][insecure-registry]
-  - [changing your CoreOS auto-update settings][update]
-
-**Note**: Anyone with access to port 10250 on a node can execute arbitrary code in a pod on the node. Information, including logs and metadata, is also disclosed on port 10255. See [securing the Kubelet API][securing-kubelet-api] for more information.
-
-**/etc/systemd/system/kubelet.service**
-
-```yaml
-[Service]
-Environment=KUBELET_IMAGE_TAG=${K8S_VER}
-Environment="RKT_RUN_ARGS=--uuid-file-save=/var/run/kubelet-pod.uuid \
-  --volume var-log,kind=host,source=/var/log \
-  --mount volume=var-log,target=/var/log \
-  --volume dns,kind=host,source=/etc/resolv.conf \
-  --mount volume=dns,target=/etc/resolv.conf"
-ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
-ExecStartPre=/usr/bin/mkdir -p /var/log/containers
-ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
-ExecStart=/usr/lib/coreos/kubelet-wrapper \
-  --api-servers=http://127.0.0.1:8080 \
-  --register-schedulable=false \
-  --cni-conf-dir=/etc/kubernetes/cni/net.d \
-  --network-plugin=${NETWORK_PLUGIN} \
-  --container-runtime=docker \
-  --allow-privileged=true \
-  --pod-manifest-path=/etc/kubernetes/manifests \
-  --hostname-override=${ADVERTISE_IP} \
-  --cluster_dns=${DNS_SERVICE_IP} \
-  --cluster_domain=cluster.local
-ExecStop=-/usr/bin/rkt stop --uuid-file=/var/run/kubelet-pod.uuid
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
+$ kubectl --namespace=kube-system get deployments
 ```
 
-### Set Up the kube-apiserver Pod
+Both techniques will display a number of components running on the cluster. It may seem like a lot, but many use a small amount of resources, and you can consider this a testament to how easy it is to software this way.
 
-The API server is where most of the magic happens. It is stateless by design and takes in API requests, processes them and stores the result in etcd if needed, and then returns the result of the request.
+At the cluster level, two types of Kubernetes objects, Deployments and DaemonSets allow us to scale these components across machines for higher availability. These two objects function very closely and use the same underlying concept, a [Pod][pod].
 
-We're going to use a unique feature of the kubelet to launch a Pod that runs the API server. Above we configured the kubelet to watch a local directory for pods to run with the `--pod-manifest-path=/etc/kubernetes/manifests` flag. All we need to do is place our Pod manifest in that location, and the kubelet will make sure it stays running, just as if the Pod was submitted via the API. The cool trick here is that we don't have an API running yet, but the Pod will function the exact same way, which simplifies troubleshooting later on.
+**Deployments** are used to run multiple copies of a Pod _anywhere_ in the cluster. The cluster will decide where these can best run based on available resources and other factors.
 
-If this is your first time looking at a Pod manifest, don't worry, they aren't all this complicated. But, this shows off the power and flexibility of the Pod concept. Create `/etc/kubernetes/manifests/kube-apiserver.yaml` with the following settings:
+**DaemonSets** are used to run copies of a Pod on _every_ node, or on a subset of nodes that match a label query. As the number of matched nodes changes, the number of Pods stay in sync.
 
-* Replace `${ETCD_ENDPOINTS}`
-* Replace `${SERVICE_IP_RANGE}`
-* Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
+Components like the Kubernetes Scheduler, Controller Manager, and DNS server must run in a highly available fashion _anywhere_ in the cluster. Thus, Deployments exist for each of these. Use the Deployments section of the Console, or `kubectl --namespace=kube-system get deployments` to review your Deployments.
 
-**/etc/kubernetes/manifests/kube-apiserver.yaml**
+The Kubernetes proxy and flannel are run with a DaemonSet because they must run on every node. Earlier we saw that masters and workers differ in their Kubelet flags, most notably in the `--node-labels` flag. These flags will be used in conjunction with a “node selector” to run the API server on nodes labeled “node-role.kubernetes.io/master”. Since the API server is critical to the cluster, this allows for easy scale out and simplifies networking, as the masters autoscaling group can be placed directly behind a load balancer. The address of the load balancer was shown earlier when you ran `kubectl cluster-info`.
 
-```yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: kube-apiserver
-  namespace: kube-system
-spec:
-  hostNetwork: true
-  containers:
-  - name: kube-apiserver
-    image: quay.io/coreos/hyperkube:v1.5.4_coreos.0
-    command:
-    - /hyperkube
-    - apiserver
-    - --bind-address=0.0.0.0
-    - --etcd-servers=${ETCD_ENDPOINTS}
-    - --allow-privileged=true
-    - --service-cluster-ip-range=${SERVICE_IP_RANGE}
-    - --secure-port=443
-    - --advertise-address=${ADVERTISE_IP}
-    - --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota
-    - --tls-cert-file=/etc/kubernetes/ssl/apiserver.pem
-    - --tls-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
-    - --client-ca-file=/etc/kubernetes/ssl/ca.pem
-    - --service-account-key-file=/etc/kubernetes/ssl/apiserver-key.pem
-    - --runtime-config=extensions/v1beta1/networkpolicies=true
-    - --anonymous-auth=false
-    livenessProbe:
-      httpGet:
-        host: 127.0.0.1
-        port: 8080
-        path: /healthz
-      initialDelaySeconds: 15
-      timeoutSeconds: 15
-    ports:
-    - containerPort: 443
-      hostPort: 443
-      name: https
-    - containerPort: 8080
-      hostPort: 8080
-      name: local
-    volumeMounts:
-    - mountPath: /etc/kubernetes/ssl
-      name: ssl-certs-kubernetes
-      readOnly: true
-    - mountPath: /etc/ssl/certs
-      name: ssl-certs-host
-      readOnly: true
-  volumes:
-  - hostPath:
-      path: /etc/kubernetes/ssl
-    name: ssl-certs-kubernetes
-  - hostPath:
-      path: /usr/share/ca-certificates
-    name: ssl-certs-host
-```
+Both the Kubernetes proxy and flannel objects build off the Pod, which is why you see so many Pods running in the namespace. **Reconciliation loops**  are utilized by both objects to ensure the correct Pods are running at all times.
 
-### Set Up the kube-proxy Pod
+## Inspect the deployed node locally
 
-We're going to run the proxy just like we did the API server. The proxy is responsible for directing traffic destined for specific services and pods to the correct location. The proxy communicates with the API server periodically to keep up to date.
+With the cluster up and kubectl working, explore the cluster to see its components..
 
-Both the master and worker nodes in your cluster will run the proxy.
-
-All you have to do is create `/etc/kubernetes/manifests/kube-proxy.yaml`, there are no settings that need to be configured.
-
-**/etc/kubernetes/manifests/kube-proxy.yaml**
-
-```yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: kube-proxy
-  namespace: kube-system
-spec:
-  hostNetwork: true
-  containers:
-  - name: kube-proxy
-    image: quay.io/coreos/hyperkube:v1.5.4_coreos.0
-    command:
-    - /hyperkube
-    - proxy
-    - --master=http://127.0.0.1:8080
-    securityContext:
-      privileged: true
-    volumeMounts:
-    - mountPath: /etc/ssl/certs
-      name: ssl-certs-host
-      readOnly: true
-  volumes:
-  - hostPath:
-      path: /usr/share/ca-certificates
-    name: ssl-certs-host
-```
-
-### Set Up the kube-controller-manager Pod
-
-The controller manager is responsible for reconciling any required actions based on changes to [Replication Controllers][rc-overview].
-
-For example, if you increased the replica count, the controller manager would generate a scale up event, which would cause a new Pod to get scheduled in the cluster. The controller manager communicates with the API to submit these events.
-
-Create `/etc/kubernetes/manifests/kube-controller-manager.yaml`. It will use the TLS certificate placed on disk earlier.
-
-[rc-overview]: https://coreos.com/kubernetes/docs/latest/replication-controller.html
-
-**/etc/kubernetes/manifests/kube-controller-manager.yaml**
-
-```yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: kube-controller-manager
-  namespace: kube-system
-spec:
-  hostNetwork: true
-  containers:
-  - name: kube-controller-manager
-    image: quay.io/coreos/hyperkube:v1.5.4_coreos.0
-    command:
-    - /hyperkube
-    - controller-manager
-    - --master=http://127.0.0.1:8080
-    - --leader-elect=true
-    - --service-account-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
-    - --root-ca-file=/etc/kubernetes/ssl/ca.pem
-    resources:
-      requests:
-        cpu: 200m
-    livenessProbe:
-      httpGet:
-        host: 127.0.0.1
-        path: /healthz
-        port: 10252
-      initialDelaySeconds: 15
-      timeoutSeconds: 15
-    volumeMounts:
-    - mountPath: /etc/kubernetes/ssl
-      name: ssl-certs-kubernetes
-      readOnly: true
-    - mountPath: /etc/ssl/certs
-      name: ssl-certs-host
-      readOnly: true
-  volumes:
-  - hostPath:
-      path: /etc/kubernetes/ssl
-    name: ssl-certs-kubernetes
-  - hostPath:
-      path: /usr/share/ca-certificates
-    name: ssl-certs-host
-```
-
-### Set Up the kube-scheduler Pod
-
-The scheduler monitors the API for unscheduled pods, finds them a machine to run on, and communicates the decision back to the API.
-
-Create File `/etc/kubernetes/manifests/kube-scheduler.yaml`:
-
-**/etc/kubernetes/manifests/kube-scheduler.yaml**
-
-```yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: kube-scheduler
-  namespace: kube-system
-spec:
-  hostNetwork: true
-  containers:
-  - name: kube-scheduler
-    image: quay.io/coreos/hyperkube:v1.5.4_coreos.0
-    command:
-    - /hyperkube
-    - scheduler
-    - --master=http://127.0.0.1:8080
-    - --leader-elect=true
-    resources:
-      requests:
-        cpu: 100m
-    livenessProbe:
-      httpGet:
-        host: 127.0.0.1
-        path: /healthz
-        port: 10251
-      initialDelaySeconds: 15
-      timeoutSeconds: 15
-```
-
-### Set Up Calico For Network Policy (optional)
-
-This step can be skipped if you do not wish to provide network policy to your cluster using Calico.
-
-Several things happen here.  First the `ConfigMap` will create some configuration needed for Calico and the kubelet.
-
-Second the `DaemonSet` runs on all hosts, including the master node. It performs several functions:
-* The `install-cni` container drops in the necessary CNI binaries to `/opt/cni/bin/` that was setup in the kubelet step
-* Connects containers to the flannel overlay network, which enables the "one IP per pod" concept.
-* Enforces network policy created through the Kubernetes policy API, ensuring pods talk to authorized resources only.
-
-The policy controller is the last major piece of the calico.yaml. It monitors the API for changes related to network policy and configures Calico to implement that policy. 
-
-When creating `/etc/kubernetes/manifests/calico.yaml`:
-
-* Replace `${ETCD_ENDPOINTS}`
-
-**/etc/kubernetes/manifests/calico.yaml**
-
-```yaml
-# This ConfigMap is used to configure a self-hosted Calico installation.
-kind: ConfigMap
-apiVersion: v1
-metadata:
-  name: calico-config 
-  namespace: kube-system
-data:
-  # Configure this with the location of your etcd cluster.
-  etcd_endpoints: "${ETCD_ENDPOINTS}"
-
-  # The CNI network configuration to install on each node.  The special
-  # values in this config will be automatically populated.
-  cni_network_config: |-
-    {
-        "name": "calico",
-        "type": "flannel",
-        "delegate": {
-          "type": "calico",
-          "etcd_endpoints": "__ETCD_ENDPOINTS__",
-          "log_level": "info",
-          "policy": {
-              "type": "k8s",
-              "k8s_api_root": "https://__KUBERNETES_SERVICE_HOST__:__KUBERNETES_SERVICE_PORT__",
-              "k8s_auth_token": "__SERVICEACCOUNT_TOKEN__"
-          },
-          "kubernetes": {
-              "kubeconfig": "/etc/kubernetes/cni/net.d/__KUBECONFIG_FILENAME__"
-          }
-        }
-    }
-
----
-
-# This manifest installs the calico/node container, as well
-# as the Calico CNI plugins and network config on 
-# each master and worker node in a Kubernetes cluster.
-kind: DaemonSet
-apiVersion: extensions/v1beta1
-metadata:
-  name: calico-node
-  namespace: kube-system
-  labels:
-    k8s-app: calico-node
-spec:
-  selector:
-    matchLabels:
-      k8s-app: calico-node
-  template:
-    metadata:
-      labels:
-        k8s-app: calico-node
-      annotations:
-        scheduler.alpha.kubernetes.io/critical-pod: ''
-        scheduler.alpha.kubernetes.io/tolerations: |
-          [{"key": "dedicated", "value": "master", "effect": "NoSchedule" },
-           {"key":"CriticalAddonsOnly", "operator":"Exists"}]
-    spec:
-      hostNetwork: true
-      containers:
-        # Runs calico/node container on each Kubernetes node.  This 
-        # container programs network policy and routes on each
-        # host.
-        - name: calico-node
-          image: quay.io/calico/node:v0.23.0
-          env:
-            # The location of the Calico etcd cluster.
-            - name: ETCD_ENDPOINTS
-              valueFrom:
-                configMapKeyRef:
-                  name: calico-config
-                  key: etcd_endpoints
-            # Choose the backend to use. 
-            - name: CALICO_NETWORKING_BACKEND
-              value: "none"
-            # Disable file logging so `kubectl logs` works.
-            - name: CALICO_DISABLE_FILE_LOGGING
-              value: "true"
-            - name: NO_DEFAULT_POOLS
-              value: "true"
-          securityContext:
-            privileged: true
-          volumeMounts:
-            - mountPath: /lib/modules
-              name: lib-modules
-              readOnly: false
-            - mountPath: /var/run/calico
-              name: var-run-calico
-              readOnly: false
-            - mountPath: /etc/resolv.conf
-              name: dns
-              readOnly: true
-        # This container installs the Calico CNI binaries
-        # and CNI network config file on each node.
-        - name: install-cni
-          image: quay.io/calico/cni:v1.5.2
-          imagePullPolicy: Always
-          command: ["/install-cni.sh"]
-          env:
-            # CNI configuration filename
-            - name: CNI_CONF_NAME
-              value: "10-calico.conf"
-            # The location of the Calico etcd cluster.
-            - name: ETCD_ENDPOINTS
-              valueFrom:
-                configMapKeyRef:
-                  name: calico-config
-                  key: etcd_endpoints
-            # The CNI network config to install on each node.
-            - name: CNI_NETWORK_CONFIG
-              valueFrom:
-                configMapKeyRef:
-                  name: calico-config
-                  key: cni_network_config
-          volumeMounts:
-            - mountPath: /host/opt/cni/bin
-              name: cni-bin-dir
-            - mountPath: /host/etc/cni/net.d
-              name: cni-net-dir
-      volumes:
-        # Used by calico/node.
-        - name: lib-modules
-          hostPath:
-            path: /lib/modules
-        - name: var-run-calico
-          hostPath:
-            path: /var/run/calico
-        # Used to install CNI.
-        - name: cni-bin-dir
-          hostPath:
-            path: /opt/cni/bin
-        - name: cni-net-dir
-          hostPath:
-            path: /etc/kubernetes/cni/net.d
-        - name: dns
-          hostPath:
-            path: /etc/resolv.conf
-
----
-
-# This manifest deploys the Calico policy controller on Kubernetes.
-# See https://github.com/projectcalico/k8s-policy
-apiVersion: extensions/v1beta1
-kind: ReplicaSet 
-metadata:
-  name: calico-policy-controller
-  namespace: kube-system
-  labels:
-    k8s-app: calico-policy
-spec:
-  # The policy controller can only have a single active instance.
-  replicas: 1
-  template:
-    metadata:
-      name: calico-policy-controller
-      namespace: kube-system
-      labels:
-        k8s-app: calico-policy
-      annotations:
-        scheduler.alpha.kubernetes.io/critical-pod: ''
-        scheduler.alpha.kubernetes.io/tolerations: |
-          [{"key": "dedicated", "value": "master", "effect": "NoSchedule" },
-           {"key":"CriticalAddonsOnly", "operator":"Exists"}]
-    spec:
-      # The policy controller must run in the host network namespace so that
-      # it isn't governed by policy that would prevent it from working.
-      hostNetwork: true
-      containers:
-        - name: calico-policy-controller
-          image: calico/kube-policy-controller:v0.4.0
-          env:
-            # The location of the Calico etcd cluster.
-            - name: ETCD_ENDPOINTS
-              valueFrom:
-                configMapKeyRef:
-                  name: calico-config
-                  key: etcd_endpoints
-            # The location of the Kubernetes API.  Use the default Kubernetes
-            # service for API access.
-            - name: K8S_API
-              value: "https://kubernetes.default:443"
-            # Since we're running in the host namespace and might not have KubeDNS 
-            # access, configure the container's /etc/hosts to resolve
-            # kubernetes.default to the correct service clusterIP.
-            - name: CONFIGURE_ETC_HOSTS
-              value: "true"
-```
-
-## Start Services
-
-Now that we've defined all of our units and written our TLS certificates to disk, we're ready to start the master components.
-
-### Load Changed Units
-
-First, we need to tell systemd that we've changed units on disk and it needs to rescan everything:
-
-```sh
-$ sudo systemctl daemon-reload
-```
-
-### Configure flannel Network
-
-Earlier it was mentioned that flannel stores cluster-level configuration in etcd. We need to configure our Pod network IP range now. Since etcd was started earlier, we can set this now. If you don't have etcd running, start it now.
-
-* Replace `$POD_NETWORK`
-* Replace `$ETCD_SERVER` with one url (`http://ip:port`) from `$ETCD_ENDPOINTS`
-
-```sh
-$ curl -X PUT -d "value={\"Network\":\"$POD_NETWORK\",\"Backend\":{\"Type\":\"vxlan\"}}" "$ETCD_SERVER/v2/keys/coreos.com/network/config"
-```
-
-After configuring flannel, we should restart it for our changes to take effect. Note that this will also restart the docker daemon and could impact running containers.
-
-```sh
-$ sudo systemctl start flanneld
-$ sudo systemctl enable flanneld
-```
-
-### Start kubelet
-
-Now that everything is configured, we can start the kubelet, which will also start the Pod manifests for the API server, the controller manager, proxy and scheduler.
-
-```sh
-$ sudo systemctl start kubelet
-```
-
-Ensure that the kubelet will start after a reboot:
-
-```sh
-$ sudo systemctl enable kubelet
-Created symlink from /etc/systemd/system/multi-user.target.wants/kubelet.service to /etc/systemd/system/kubelet.service.
-```
-
-### Basic Health Checks
-
-First, we need to make sure the Kubernetes API is available (this could take a few minutes after starting the kubelet.service)
-
-```sh
-$ curl http://127.0.0.1:8080/version
-```
-
-A successful response should look something like:
+First, use kubectl to list the Kubernetes's Node Resources; Nodes are the name Kubernetes gives any machine or virtual machine in a Kubernetes cluster.
 
 ```
-{
-  "major": "1",
-  "minor": "4",
-  "gitVersion": "v1.5.2+coreos.0",
-  "gitCommit": "ec2b52fabadf824a42b66b6729fe4cff2c62af8c",
-  "gitTreeState": "clean",
-  "buildDate": "2016-11-14T19:42:00Z",
-  "goVersion": "go1.6.3",
-  "compiler": "gc",
-  "platform": "linux/amd64"
-}
+$ kubectl get nodes
+NAME                                        STATUS    AGE
+ip-10-0-19-110.us-west-2.compute.internal   Ready     2d
+ip-10-0-2-146.us-west-2.compute.internal    Ready     2d
+ip-10-0-36-204.us-west-2.compute.internal   Ready     2d
+ip-10-0-77-101.us-west-2.compute.internal   Ready     2d
 ```
 
-To check the health of the kubelet systemd unit that we created, run `systemctl status kubelet.service`.
+This command returns the list of running nodes, with internal AWS hostnames.
 
-Our Pods should now be starting up and downloading their containers. Once the kubelet has started, you can check it's creating its pods via the metadata api:
+Use `kubectl get nodes -o wide` to create a table displaying internal and external IPs for every node in the cluster. Use the ‘external’ column to find external IPs.
 
-```sh
-$ curl -s localhost:10255/pods | jq -r '.items[].metadata.name'
-kube-scheduler-$node
-kube-apiserver-$node
-kube-controller-$node
-kube-proxy-$node
+```
+$ kubectl get nodes -o wide
+i-0e475be181f7e1973 10.0.19.110 52.35.157.146
+i-03d1bc5e86b7e8741 10.0.2.146 34.209.11.147
+i-038ea56416abdd140 10.0.36.204 34.210.154.200
+i-024d0aa51334a068b 10.0.77.101
 ```
 
-<div class="co-m-docs-next-step">
-  <p><strong>Did the containers start downloading?</strong> As long as the kubelet knows about them, everything is working properly.</p>
-  <a href="deploy-workers.md" class="btn btn-primary btn-icon-right" data-category="Docs Next" data-event="Kubernetes: Workers">Yes, ready to deploy the Workers</a>
-</div>
+By default only the master Nodes, the machines running the Kubernetes API server, will have external IPs. Choose one of the public IPs from the third column and login.
 
-[rkt-opts-examples]: kubelet-wrapper.md#customizing-rkt-options
-[rdb]: kubelet-wrapper.md#allow-pods-to-use-rbd-volumes
-[iscsi]: kubelet-wrapper.md#allow-pods-to-use-iscsi-mounts
-[host-dns]: kubelet-wrapper.md#use-the-hosts-dns-configuration
-[mount-disks]: https://coreos.com/os/docs/latest/mounting-storage.html
-[insecure-registry]: https://coreos.com/os/docs/latest/registry-authentication.html#using-a-registry-without-ssl-configured
-[update]: https://coreos.com/os/docs/latest/switching-channels.html
-[securing-kubelet-api]: kubelet-wrapper.md#Securing-the-Kubelet-API
-[kubelet-admin]: https://kubernetes.io/docs/admin/kubelet/
+```
+ssh -A core@34.209.11.147
+```
+
+The important piece of software running is the Kubernetes machine agent, called the kubelet. The  kubelet talks to the Kubernetes API server to:
+* receive tasks to start/stop
+* report back node health, resource usage and metadata
+* Stream back real-time data like logs from applications
+
+```
+$ systemctl cat kubelet
+```
+
+A few configuration flags determine important parts of the configuration:
+
+|Flag   	|Description   	|
+|---	|---	|
+|--kubeconfig   	|A path to a kubeconfig file on disk. This is the same format that was configured above for kubectl, but with different permissions. This is placed on disk by the Tectonic installer.   	|
+|--node-labels   	|A piece of metadata about the machine, which is useful for customizing where workloads run. For example, this node is labeled with `node-role.kubernetes.io/master` in order to run special master workloads on it.   	|
+|--client-ca-file   	|Another credential that was placed on disk by the Tectonic installer.   	|
+|--cloud-provider   	|Provides hooks into a cloud provider, for creating load balancers or disk automatically.   	|
+
+Inspect the other assets placed on disk:
+
+```
+$ ls /etc/kubernetes/
+```
+
+The kubelet systemd unit and the files placed on disk by the Tectonic Installer make up the bulk of our machine customization. This reflects the goal to have the “smarts” live in the cluster, and have each node be dumb and replaceable. It is simple to add new capacity, or replace a failed node.
+
+Later, we will intentionally break the kubelet on both a master and a worker to explore failure scenarios.
+
+[pod]: https://coreos.com/kubernetes/docs/latest/pods.html

@@ -1,63 +1,39 @@
 # Setting up kubectl
 
-`kubectl` is a command-line program for interacting with the Kubernetes API. The following steps should be done from a local workstation to configure `kubectl` to work with a new cluster.
+kubectl is the main program for interacting with the Kubernetes API and interacting with the cluster’s shared state. Download kubectl from the Kubernetes release artifact site with the curl tool.
 
-To quickly launch a cluster, follow these guides for [AWS][kube-aws], [Vagrant][vagrant-multi] or [full step-by-step][manual] instructions.
+Use curl to fetch the Linux kubectl binary:
 
-[kube-aws]: https://github.com/coreos/kube-aws/blob/master/README.md
-[vagrant-multi]: kubernetes-on-vagrant-single.md
-[manual]: getting-started.md
-
-## Download the kubectl Executable
-
-Download `kubectl` from the Kubernetes release artifact site with the `curl` tool.
-
-The linux `kubectl` binary can be fetched with a command like:
-
-```sh
-$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.5.4/bin/linux/amd64/kubectl
+```
+$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.6.1/bin/linux/amd64/kubectl
 ```
 
-On an OS X workstation, replace `linux` in the URL above with `darwin`:
+Or, to fetch the macOS binary:
 
-```sh
-$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.5.4/bin/darwin/amd64/kubectl
+```
+$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.6.1/bin/darwin/amd64/kubectl
 ```
 
-After downloading the binary, ensure it is executable and move it into your `PATH`:
+After downloading the binary, ensure it is executable and move it into your PATH:
 
-```sh
+```
 $ chmod +x kubectl
-$ mv kubectl /usr/local/bin/kubectl
+$ sudo mv kubectl /usr/local/bin/kubectl
 ```
 
-## Configure kubectl
+Terraform generated a set of files, including a `kubeconfig`, which specifies the credentials for your cluster. Once logged in to the Tectonic Console, other users can download their own pre-generated kubeconfigs.
 
-Configure `kubectl` to connect to the target cluster using the following commands, replacing several values as indicated:
+As the first admin, you have a special “root” kubeconfig. Configure `kubectl` to use this file:
 
-* Replace `${MASTER_HOST}` with the master node address or name used in previous steps
-* Replace `${CA_CERT}` with the absolute path to the `ca.pem` created in previous steps
-* Replace `${ADMIN_KEY}` with the absolute path to the `admin-key.pem` created in previous steps
-* Replace `${ADMIN_CERT}` with the absolute path to the `admin.pem` created in previous steps
+```
+$ export KUBECONFIG=/path/to/installer/generated/auth/kubeconfig
+````
+Test that it works by getting cluster info:
 
-```sh
-$ kubectl config set-cluster default-cluster --server=https://${MASTER_HOST} --certificate-authority=${CA_CERT}
-$ kubectl config set-credentials default-admin --certificate-authority=${CA_CERT} --client-key=${ADMIN_KEY} --client-certificate=${ADMIN_CERT}
-$ kubectl config set-context default-system --cluster=default-cluster --user=default-admin
-$ kubectl config use-context default-system
+```
+$ kubectl cluster-info
 ```
 
-## Verify kubectl Configuration and Connection
+You should see output about the addresses of Kubernetes master, Heapster, and KubeDNS. This proves that the API is running and healthy.
 
-Check that the client is configured properly by using `kubectl` to inspect the cluster:
-
-```sh
-$ kubectl get nodes
-NAME          LABELS                               STATUS
-X.X.X.X       kubernetes.io/hostname=X.X.X.X       Ready
-```
-
-<div class="co-m-docs-next-step">
-  <p><strong>Is kubectl working from your local machine?</strong> We're going to install an add-on with it next.</p>
-  <a href="deploy-addons.md" class="btn btn-primary btn-icon-right" data-category="Docs Next" data-event="Kubernetes: Addons">Yes, ready to deploy add-ons</a>
-</div>
+Any connection errors will indicate that your cluster is not yet done bootstrapping (more on this below). If you think you are running into an issue, review the [triaging a cluster] guide.

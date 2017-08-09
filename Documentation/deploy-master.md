@@ -62,7 +62,7 @@ Next create a [systemd drop-in][dropins], which is a method for appending or ove
 ExecStartPre=/usr/bin/ln -sf /etc/flannel/options.env /run/flannel/options.env
 ```
 
-[calico-docs]: http://docs.projectcalico.org/v2.0/getting-started/kubernetes/
+[calico-docs]: http://docs.projectcalico.org/latest/getting-started/kubernetes/
 [flannel-docs]: https://coreos.com/flannel/docs/latest/
 [pod-overview]: https://coreos.com/kubernetes/docs/latest/pods.html
 [service-overview]: https://coreos.com/kubernetes/docs/latest/services.html
@@ -94,7 +94,7 @@ DOCKER_OPT_BIP=""
 DOCKER_OPT_IPMASQ=""
 ```
 
-If using Flannel for networking, setup the Flannel CNI configuration with below. If you intend to use Calico for networking, follow the guide to [Set Up Calico For Network Policy](#set-up-calico-for-network-policy-optional) instead.
+If using Flannel for networking, setup the Flannel CNI configuration with below. If you intend to use Calico for network policy, follow the guide to [Set Up Calico For Network Policy](#set-up-calico-for-network-policy-optional) instead.
 
 **/etc/kubernetes/cni/net.d/10-flannel.conf**
 
@@ -455,7 +455,7 @@ spec:
         # container programs network policy and routes on each
         # host.
         - name: calico-node
-          image: quay.io/calico/node:v0.23.0
+          image: quay.io/calico/node:v2.4.1
           env:
             # The location of the Calico etcd cluster.
             - name: ETCD_ENDPOINTS
@@ -466,6 +466,9 @@ spec:
             # Choose the backend to use. 
             - name: CALICO_NETWORKING_BACKEND
               value: "none"
+            # Cluster type to identify the deployment type
+            - name: CLUSTER_TYPE
+              value: "k8s,canal"
             # Disable file logging so `kubectl logs` works.
             - name: CALICO_DISABLE_FILE_LOGGING
               value: "true"
@@ -486,7 +489,7 @@ spec:
         # This container installs the Calico CNI binaries
         # and CNI network config file on each node.
         - name: install-cni
-          image: quay.io/calico/cni:v1.5.2
+          image: quay.io/calico/cni:v1.10.0
           imagePullPolicy: Always
           command: ["/install-cni.sh"]
           env:
@@ -560,7 +563,7 @@ spec:
       hostNetwork: true
       containers:
         - name: calico-policy-controller
-          image: calico/kube-policy-controller:v0.4.0
+          image: calico/kube-policy-controller:v0.7.0
           env:
             # The location of the Calico etcd cluster.
             - name: ETCD_ENDPOINTS

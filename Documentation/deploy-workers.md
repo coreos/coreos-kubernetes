@@ -84,7 +84,7 @@ DOCKER_OPT_BIP=""
 DOCKER_OPT_IPMASQ=""
 ```
 
-If using Flannel for networking, setup the Flannel CNI configuration with below. If you intend to use Calico for networking, setup using [Set Up the CNI config (optional)](#set-up-the-cni-config-optional) instead.
+If using Flannel for networking, setup the Flannel CNI configuration with below. If you intend to use Calico for network policy, setup using [Set Up Calico for Network Policy (optional)](deploy-master.md#set-up-calico-for-network-policy-optional) instead.
 
 **/etc/kubernetes/cni/net.d/10-flannel.conf**
 

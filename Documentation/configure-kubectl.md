@@ -1,6 +1,6 @@
 # Setting up kubectl
 
-kubectl is the main program for interacting with the Kubernetes API and interacting with the cluster’s shared state. Download kubectl from the Kubernetes release artifact site with the curl tool.
+Use kubectl to interact with the Kubernetes API and with the cluster’s shared state. Download kubectl from the Kubernetes release artifact site with the curl tool.
 
 Use curl to fetch the Linux kubectl binary:
 

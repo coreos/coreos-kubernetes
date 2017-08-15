@@ -4,6 +4,13 @@ Once the cluster is fully booted, use kubectl or Tectonic Console to inspect the
 
 In the Console, click the Pods section and select *Namespace: kube-system* from the pulldown menu at the top of the page. This will show you all the pods that make up the Kubernetes control plane.
 
+<div class="row">
+  <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1 col-sm-12 col-xs-12">
+    <img src="/img/PodNamespaceMenu.png">
+    <div class="co-m-screenshot-caption">Namespace pulldown menu</div>
+  </div>
+</div>
+
 Or, use kubectl to list all pods in the namespace:
 
 ```

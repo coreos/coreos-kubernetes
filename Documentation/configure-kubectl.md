@@ -36,4 +36,7 @@ $ kubectl cluster-info
 
 You should see output about the addresses of Kubernetes master, Heapster, and KubeDNS. This proves that the API is running and healthy.
 
-Any connection errors will indicate that your cluster is not yet done bootstrapping (more on this below). If you think you are running into an issue, review the [triaging a cluster] guide.
+Any connection errors will indicate that your cluster is not yet done bootstrapping (more on this below). If you think you are running into an issue, review the [triaging a cluster][triaging-cluster] guide.
+
+
+[triaging-cluster]: https://coreos.com/tectonic/docs/latest/troubleshooting/troubleshooting.html

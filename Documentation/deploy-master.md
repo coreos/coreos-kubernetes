@@ -1,8 +1,8 @@
 # Inspect the control plane
 
-Once the cluster is fully booted, use kubectl or Tectonic Console to inspect the assets started by the bootstrap process, .
+Once the cluster is fully booted, use kubectl or Tectonic Console to inspect the assets started by the bootstrap process.
 
-In the Console, click the Pods section and browse the `kube-system` namespace using the blue bar at the top of the screen. This will show you all of the pods that make up the Kubernetes control plane.
+In the Console, click the Pods section and select *Namespace: kube-system* from the pulldown menu at the top of the page. This will show you all the pods that make up the Kubernetes control plane.
 
 Or, use kubectl to list all pods in the namespace:
 
@@ -10,7 +10,7 @@ Or, use kubectl to list all pods in the namespace:
 $ kubectl --namespace=kube-system get deployments
 ```
 
-Both techniques will display a number of components running on the cluster. It may seem like a lot, but many use a small amount of resources, and you can consider this a testament to how easy it is to software this way.
+Both techniques will display a number of components running on the cluster. Most of these components use only a small amount of available resources. The number and complexity of the components spun up demonstrate how easy it is to deploy a cluster using Kubernetes.
 
 At the cluster level, two types of Kubernetes objects, Deployments and DaemonSets allow us to scale these components across machines for higher availability. These two objects function very closely and use the same underlying concept, a [Pod][pod].
 
@@ -18,15 +18,15 @@ At the cluster level, two types of Kubernetes objects, Deployments and DaemonSet
 
 **DaemonSets** are used to run copies of a Pod on _every_ node, or on a subset of nodes that match a label query. As the number of matched nodes changes, the number of Pods stay in sync.
 
-Components like the Kubernetes Scheduler, Controller Manager, and DNS server must run in a highly available fashion _anywhere_ in the cluster. Thus, Deployments exist for each of these. Use the Deployments section of the Console, or `kubectl --namespace=kube-system get deployments` to review your Deployments.
+Deployments exist for components like the Kubernetes Scheduler, Controller Manager, and DNS server to enable them to run in a highly available fashion _anywhere_ in the cluster. Use the Deployments page in Tectonic Console or `kubectl --namespace=kube-system get deployments` to review your Deployments.
 
-The Kubernetes proxy and flannel are run with a DaemonSet because they must run on every node. Earlier we saw that masters and workers differ in their Kubelet flags, most notably in the `--node-labels` flag. These flags will be used in conjunction with a “node selector” to run the API server on nodes labeled “node-role.kubernetes.io/master”. Since the API server is critical to the cluster, this allows for easy scale out and simplifies networking, as the masters autoscaling group can be placed directly behind a load balancer. The address of the load balancer was shown earlier when you ran `kubectl cluster-info`.
+DaemonSets exist for the Kubernetes proxy and flannel to ensure that they run on every node. Kubernetes masters and workers differ in their Kubelet flags, most notably in the `--node-labels` flag. These flags will be used in conjunction with a “node selector” to run the API server on nodes labeled `node-role.kubernetes.io/master`. Since the API server is critical to the cluster, this allows for easy scale out and simplifies networking, as the master's autoscaling group can be placed directly behind a load balancer. The address of the load balancer was shown earlier when you ran `kubectl cluster-info`.
 
 Both the Kubernetes proxy and flannel objects build off the Pod, which is why you see so many Pods running in the namespace. **Reconciliation loops**  are utilized by both objects to ensure the correct Pods are running at all times.
 
 ## Inspect the deployed node locally
 
-With the cluster up and kubectl working, explore the cluster to see its components..
+With the cluster up and kubectl working, explore the cluster to see its components.
 
 First, use kubectl to list the Kubernetes's Node Resources; Nodes are the name Kubernetes gives any machine or virtual machine in a Kubernetes cluster.
 
@@ -70,10 +70,10 @@ A few configuration flags determine important parts of the configuration:
 
 |Flag   	|Description   	|
 |---	|---	|
-|--kubeconfig   	|A path to a kubeconfig file on disk. This is the same format that was configured above for kubectl, but with different permissions. This is placed on disk by the Tectonic installer.   	|
-|--node-labels   	|A piece of metadata about the machine, which is useful for customizing where workloads run. For example, this node is labeled with `node-role.kubernetes.io/master` in order to run special master workloads on it.   	|
-|--client-ca-file   	|Another credential that was placed on disk by the Tectonic installer.   	|
-|--cloud-provider   	|Provides hooks into a cloud provider, for creating load balancers or disk automatically.   	|
+|``--kubeconfig`   	|A path to a kubeconfig file on disk. This is the same format that was configured above for kubectl, but with different permissions. This is placed on disk by the Tectonic installer.   	|
+|``--node-labels`   	|A piece of metadata about the machine, which is useful for customizing where workloads run. For example, this node is labeled with `node-role.kubernetes.io/master` in order to run special master workloads on it.   	|
+|``--client-ca-file`   	|Another credential that was placed on disk by the Tectonic installer.   	|
+|``--cloud-provider`   	|Provides hooks into a cloud provider, for creating load balancers or disk automatically.   	|
 
 Inspect the other assets placed on disk:
 

@@ -10,7 +10,7 @@ export ETCD_ENDPOINTS=
 export CONTROLLER_ENDPOINT=
 
 # Specify the version (vX.Y.Z) of Kubernetes assets to deploy
-export K8S_VER=v1.7.3_coreos.0
+export K8S_VER=v1.7.4_coreos.0
 
 # Hyperkube image repository to use.
 export HYPERKUBE_IMAGE_REPO=quay.io/coreos/hyperkube
@@ -18,7 +18,7 @@ export HYPERKUBE_IMAGE_REPO=quay.io/coreos/hyperkube
 # The CIDR network to use for pod IPs.
 # Each pod launched in the cluster will be assigned an IP out of this range.
 # Each node will be configured such that these IPs will be routable using the flannel overlay network.
-export POD_NETWORK=192.168.0.0/16
+export POD_NETWORK=10.2.0.0/16
 
 # The IP address of the cluster DNS service.
 # This must be the same DNS_SERVICE_IP used when configuring the controller nodes.

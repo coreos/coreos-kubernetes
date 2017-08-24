@@ -5,7 +5,7 @@ set -e
 export ETCD_ENDPOINTS=
 
 # Specify the version (vX.Y.Z) of Kubernetes assets to deploy
-export K8S_VER=v1.7.3_coreos.0
+export K8S_VER=v1.7.4_coreos.0
 
 # Hyperkube image repository to use.
 export HYPERKUBE_IMAGE_REPO=quay.io/coreos/hyperkube
@@ -13,7 +13,7 @@ export HYPERKUBE_IMAGE_REPO=quay.io/coreos/hyperkube
 # The CIDR network to use for pod IPs.
 # Each pod launched in the cluster will be assigned an IP out of this range.
 # Each node will be configured such that these IPs will be routable using the flannel overlay network.
-export POD_NETWORK=192.168.0.0/16
+export POD_NETWORK=10.2.0.0/16
 
 # The CIDR network to use for service cluster IPs.
 # Each service will be assigned a cluster IP out of this range.
@@ -936,10 +936,10 @@ EOF
     echo "TEMPLATE: $TEMPLATE"
     mkdir -p $(dirname $TEMPLATE)
     cat << EOF > $TEMPLATE
-# Calico Version v2.4.1
-# https://docs.projectcalico.org/v2.4/releases#v2.4.1
+# Calico Version v2.5.0
+# https://docs.projectcalico.org/v2.4/releases#v2.5.0
 # This manifest includes the following component versions:
-#   calico/node:v2.4.1
+#   calico/node:v2.5.0
 #   calico/cni:v1.10.0
 #   calico/kube-policy-controller:v0.7.0
 apiVersion: v1
@@ -1054,7 +1054,7 @@ spec:
         # container programs network policy and routes on each
         # host.
         - name: calico-node
-          image: quay.io/calico/node:v2.4.1
+          image: quay.io/calico/node:v2.5.0
           env:
             # The location of the Calico etcd cluster.
             - name: ETCD_ENDPOINTS

@@ -29,13 +29,19 @@ Deployments exist for components like the Kubernetes Scheduler, Controller Manag
 
 DaemonSets exist for the Kubernetes proxy and flannel to ensure that they run on every node. Kubernetes masters and workers differ in their Kubelet flags, most notably in the `--node-labels` flag. These flags will be used in conjunction with a “node selector” to run the API server on nodes labeled `node-role.kubernetes.io/master`. Since the API server is critical to the cluster, this allows for easy scale out and simplifies networking, as the master's autoscaling group can be placed directly behind a load balancer. The address of the load balancer was shown earlier when you ran `kubectl cluster-info`.
 
-Both the Kubernetes proxy and flannel objects build off the Pod, which is why you see so many Pods running in the namespace. **Reconciliation loops**  are utilized by both objects to ensure the correct Pods are running at all times.
+Both the Kubernetes proxy and flannel objects build off the Pod, which is why you see so many Pods running in the namespace. **Reconciliation loops** are used by both objects to ensure the correct Pods are running at all times.
+
+Kubernetes is built on **reconciliation loops** to recover from failures. These loops enable developers to define the desired state of a system through replication controllers, and then allow the Kubelet to manage the state of the cluster. Because reconciliation loops are infinite, the Kubelet will continue to try to bring the system up as defined, until the current state is reconciled with the desired state.
+
+Each replication controller has a desired state that is managed by the application deployer. When a change is made to the desired state, a reconciliation loop detects this and attempts to mutate the existing state in order to match the desired state. For example, if the desired instance count is increased from 3 to 4, the replication controller would see that one new instance must be created and launch it somewhere on the cluster. This reconciliation process applies to any modified property of the Pod template.
+
+For more information, see [Overview of a Replication Controller][replication-controller].
 
 ## Inspect the deployed node locally
 
 With the cluster up and kubectl working, explore the cluster to see its components.
 
-First, use kubectl to list the Kubernetes's Node Resources; Nodes are the name Kubernetes gives any machine or virtual machine in a Kubernetes cluster.
+First, use `kubectl` to list the Kubernetes's Node Resources. Nodes are the name Kubernetes gives any machine or virtual machine in a Kubernetes cluster.
 
 ```
 $ kubectl get nodes
@@ -93,3 +99,4 @@ The kubelet systemd unit and the files placed on disk by the Tectonic Installer 
 Later, we will intentionally break the kubelet on both a master and a worker to explore failure scenarios.
 
 [pod]: https://coreos.com/kubernetes/docs/latest/pods.html
+[replication-controller]: https://coreos.com/kubernetes/docs/latest/replication-controller.html

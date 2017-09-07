@@ -12,13 +12,13 @@ Container Linux by CoreOS
 $ ssh core@<worker>
 ```
 
-Inspect the kubelet service to spot the few differences:
+Inspect the kubelet service to spot the differences:
 
 ```
 $ systemctl cat kubelet
 ```
 
-Only the node label will differ. The rest of the configuration will be the same.
+As you can see, only the node label is different, but the rest of the configuration is exactly the same. This cluster configuration defines multiple nodes which act as replicas of one another. These nodes are replaceable and interchangeable. Creating worker nodes in this manner allows you to use Kubernetes APIs to control the nodes, rather than having to directly manipulate config files on disk. This also allows you to take advantage of integral Kubernetes features, like RBAC and audit logging, without incurring additional developer debt.
 
 
 [ssh-agent]: https://developer.github.com/v3/guides/using-ssh-agent-forwarding/

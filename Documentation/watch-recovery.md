@@ -92,14 +92,23 @@ $ systemctl enable kubelet
 $ ps aux | grep kube
 ```
 
-## More testing opportunities
+## More learning opportunities
 
-This guide barely scratched the surface for the sophistication built into Tectonic. Suggested topics:
-* performance and load testing
-* scale out your apps with Horizontal Pod Autoscalers
-* using resources limits and namespace quotas
+This guide served as a basic introduction to Kubernetes, and the power of Tectonic to manage your clusters. To dig more deeply into the sophistication of these systems, browse both the [Kubernetes][k8s-doc] and the [Tectonic][tectonic-doc] documentation.
+
+Suggested topics:
+* [Using Tectonic Sandbox to launch and evaluate a Kubernetes cluster locally][using-sandbox]
+* [Managing resources for containers][managing-resources]
+* [Managing memory requests for namespaces][managing-memory]
+* [Autoscaling the number of Pods][autoscaling-pods]
 
 
+[autoscaling-pods]: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale
 [first-app]: https://coreos.com/tectonic/docs/latest/tutorials/sandbox/first-app.html
 [hardway]: https://github.com/kelseyhightower/kubernetes-the-hard-way
+[k8s-doc]: https://kubernetes.io/docs/home
 [pods]: https://coreos.com/kubernetes/docs/latest/pods.html
+[managing-resources]: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container
+[managing-memory]: https://kubernetes.io/docs/tasks/administer-cluster/memory-default-namespace
+[tectonic-doc]: https://coreos.com/tectonic/docs/latest
+[using-sandbox]: https://coreos.com/tectonic/sandbox

@@ -56,6 +56,18 @@ The VIP (Virtual IP) address of the Kubernetes API Service. If the `SERVICE_IP_R
 
 The VIP (Virtual IP) address of the cluster DNS service. This IP must be in the range of the `SERVICE_IP_RANGE` and cannot be the first IP in the range. This same IP must be configured on all worker nodes to enable DNS service discovery.
 
+<hr/>
+
+**ADVERTISE_IP**=_no default_
+
+This node's publicly routable IP.
+
+<hr/>
+
+**K8S_VER**=_no default_
+
+This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release, e.g. `v1.7.5_coreos.0`. Check [quay.io/coreos/hyperkube](https://quay.io/coreos/hyperkube) for the different versions available.
+
 ## Deploy etcd Cluster
 
 Kubernetes uses etcd for data storage and for cluster consensus between different software components. Your etcd cluster will be heavily utilized since all objects storing within and every scheduling decision is recorded. It's recommended that you run a multi-machine cluster on dedicated hardware (with fast disks) to gain maximum performance and reliability of this important part of your cluster. For development environments, a single etcd is ok.

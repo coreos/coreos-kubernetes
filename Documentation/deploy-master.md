@@ -83,10 +83,10 @@ A few configuration flags determine important parts of the configuration:
 
 |Flag   	|Description   	|
 |---	|---	|
-|``--kubeconfig`   	|A path to a kubeconfig file on disk. This is the same format that was configured above for kubectl, but with different permissions. This is placed on disk by the Tectonic installer.   	|
-|``--node-labels`   	|A piece of metadata about the machine, which is useful for customizing where workloads run. For example, this node is labeled with `node-role.kubernetes.io/master` in order to run special master workloads on it.   	|
-|``--client-ca-file`   	|Another credential that was placed on disk by the Tectonic installer.   	|
-|``--cloud-provider`   	|Provides hooks into a cloud provider, for creating load balancers or disk automatically.   	|
+|`--kubeconfig`   	|A path to a kubeconfig file on disk. This is the same format that was configured above for kubectl, but with different permissions. This is placed on disk by the Tectonic installer.   	|
+|`--node-labels`   	|A piece of metadata about the machine, which is useful for customizing where workloads run. For example, this node is labeled with `node-role.kubernetes.io/master` in order to run special master workloads on it.   	|
+|`--client-ca-file`   	|Another credential that was placed on disk by the Tectonic installer.   	|
+|`--cloud-provider`   	|Provides hooks into a cloud provider, for creating load balancers or disk automatically.   	|
 
 Inspect the other assets placed on disk:
 
@@ -96,7 +96,7 @@ $ ls /etc/kubernetes/
 
 The kubelet systemd unit and the files placed on disk by the Tectonic Installer make up the bulk of our machine customization. This reflects the goal to have the “smarts” live in the cluster, and have each node be dumb and replaceable. It is simple to add new capacity, or replace a failed node.
 
-Later, we will intentionally break the kubelet on both a master and a worker to explore failure scenarios.
+Later, we will intentionally break the kubelet on both a master and a worker node to explore failure scenarios.
 
 [pod]: https://coreos.com/kubernetes/docs/latest/pods.html
 [replication-controller]: https://coreos.com/kubernetes/docs/latest/replication-controller.html

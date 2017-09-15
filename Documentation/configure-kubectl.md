@@ -1,17 +1,17 @@
 # Setting up kubectl
 
-Use kubectl to interact with the Kubernetes API and with the cluster’s shared state. Download kubectl from the Kubernetes release artifact site with the curl tool.
+Use kubectl to interact with the Kubernetes API and with the cluster’s shared state. Download kubectl from the [Tectonic Console][tectonic-kubectl], or from the Kubernetes release artifact site with the cURL tool.
 
-Use curl to fetch the Linux kubectl binary:
+Use `curl` to fetch the Linux kubectl binary:
 
 ```
-$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.6.1/bin/linux/amd64/kubectl
+$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.7.5/bin/linux/amd64/kubectl
 ```
 
 Or, to fetch the macOS binary:
 
 ```
-$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.6.1/bin/darwin/amd64/kubectl
+$ curl -O https://storage.googleapis.com/kubernetes-release/release/v1.7.5/bin/darwin/amd64/kubectl
 ```
 
 After downloading the binary, ensure it is executable and move it into your PATH:
@@ -21,13 +21,27 @@ $ chmod +x kubectl
 $ sudo mv kubectl /usr/local/bin/kubectl
 ```
 
-Terraform generated a set of files, including a `kubeconfig`, which specifies the credentials for your cluster. Once logged in to the Tectonic Console, other users can download their own pre-generated kubeconfigs.
+## Working with kubeconfig
 
-As the first admin, you have a special “root” kubeconfig. Configure `kubectl` to use this file:
+While installing Tectonic, Terraform generated a set of files, including a `kubeconfig` which specifies the credentials for your cluster. Once logged in to Tectonic Console, other users can download their own pre-generated kubeconfigs.
+
+kubeconfig may be used to manage clusters temporarily by terminal session, or permanently by moving it to ~/kube/config. When setting up clusters for the first time, it's often recommended that kubeconfig be managed by terminal session. When managing multiple clusters simultaneously, include the customized kubeconfig within the cluster's repo.
+
+As the first admin, you have a special “root” kubeconfig. Configure `kubectl` to use this file.
+
+To access kubeconfig by terminal session, export it to your installer path:
 
 ```
 $ export KUBECONFIG=/path/to/installer/generated/auth/kubeconfig
-````
+```
+
+To access kubeconfig by cluster location, export it to the cluster's ~/kube/config repo:
+
+```
+sample code
+
+```
+
 Test that it works by getting cluster info:
 
 ```
@@ -36,7 +50,10 @@ $ kubectl cluster-info
 
 You should see output about the addresses of Kubernetes master, Heapster, and KubeDNS. This proves that the API is running and healthy.
 
-Any connection errors will indicate that your cluster is not yet done bootstrapping (more on this below). If you think you are running into an issue, review the [triaging a cluster][triaging-cluster] guide.
+Any connection errors will indicate that your cluster is not yet done bootstrapping.
+
+For more information on troubleshooting cluster errors, see [triaging a cluster][triaging-cluster].
 
 
 [triaging-cluster]: https://coreos.com/tectonic/docs/latest/troubleshooting/troubleshooting.html
+[tectonic-kubectl]: https://coreos.com/tectonic/docs/latest/tutorials/aws/first-app.html#configuring-credentials

@@ -815,7 +815,8 @@ EOF
     "name": "podnet",
     "type": "flannel",
     "delegate": {
-        "isDefaultGateway": true
+        "isDefaultGateway": true,
+        "hairpinMode": true
     }
 }
 EOF

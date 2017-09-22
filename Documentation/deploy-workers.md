@@ -1,5 +1,11 @@
 # Deploy Kubernetes Worker Node(s)
 
+<div class="k8s-on-tectonic">
+<p class="k8s-on-tectonic-description">This repo is not in alignment with current versions of Kubernetes, and will not be active in the future. The CoreOS Kubernetes documentation has been moved to the [tectonic-docs repo](https://github.com/coreos/tectonic-docs/tree/master/Documentation), where it will be published and updated.</p>
+
+<p class="k8s-on-tectonic-description">For tested, maintained, and production-ready Kubernetes instructions, see our [Tectonic Installer documentation](https://coreos.com/tectonic/docs/latest/install/aws/index.html). The Tectonic Installer provides a Terraform-based Kubernetes installation. It is open source, uses upstream Kubernetes and can be easily customized.</p>
+</div>
+
 Boot one or more CoreOS nodes which will be used as Kubernetes Workers. You must use a CoreOS version 962.0.0+ for the `/usr/lib/coreos/kubelet-wrapper` script to be present in the image. See [kubelet-wrapper](kubelet-wrapper.md) for more information.
 
 See the [CoreOS Documentation](https://coreos.com/os/docs/latest/) for guides on launching nodes on supported platforms.
@@ -102,7 +108,7 @@ If using Flannel for networking, setup the Flannel CNI configuration with below.
 
 Create `/etc/systemd/system/kubelet.service` and substitute the following variables:
 
-* Replace `${MASTER_HOST}` 
+* Replace `${MASTER_HOST}`
 * Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
 * Replace `${DNS_SERVICE_IP}`
 * Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release, e.g. `v1.5.4_coreos.0`.

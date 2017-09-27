@@ -109,7 +109,8 @@ If using Flannel for networking, setup the Flannel CNI configuration with below.
     "name": "podnet",
     "type": "flannel",
     "delegate": {
-        "isDefaultGateway": true
+        "isDefaultGateway": true,
+        "hairpinMode": true
     }
 }
 

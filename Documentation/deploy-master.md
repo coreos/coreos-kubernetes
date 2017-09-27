@@ -127,9 +127,9 @@ When using Calico, the kubelet is configured to use the Container Networking Int
 
 Note that the kubelet running on a master node may log repeated attempts to post its status to the API server. These warnings are expected behavior and can be ignored. Future Kubernetes releases plan to [handle this common deployment consideration more gracefully](https://github.com/kubernetes/kubernetes/issues/14140#issuecomment-142126864).
 
-* Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
+* Replace `${ADVERTISE_IP}`
 * Replace `${DNS_SERVICE_IP}`
-* Replace `${K8S_VER}` This will map to: `quay.io/coreos/hyperkube:${K8S_VER}` release, e.g. `v1.5.4_coreos.0`.
+* Replace `${K8S_VER}`
 * If using Calico for network policy
   - Replace `${NETWORK_PLUGIN}` with `cni`
   - Add the following to `RKT_RUN_ARGS=`
@@ -186,9 +186,10 @@ We're going to use a unique feature of the kubelet to launch a Pod that runs the
 
 If this is your first time looking at a Pod manifest, don't worry, they aren't all this complicated. But, this shows off the power and flexibility of the Pod concept. Create `/etc/kubernetes/manifests/kube-apiserver.yaml` with the following settings:
 
-* Replace `${ETCD_ENDPOINTS}`
-* Replace `${SERVICE_IP_RANGE}`
 * Replace `${ADVERTISE_IP}` with this node's publicly routable IP.
+* Replace `${ETCD_ENDPOINTS}`
+* Replace `${K8S_VER}`
+* Replace `${SERVICE_IP_RANGE}`
 
 **/etc/kubernetes/manifests/kube-apiserver.yaml**
 
@@ -202,7 +203,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-apiserver
-    image: quay.io/coreos/hyperkube:v1.5.4_coreos.0
+    image: quay.io/coreos/hyperkube:${K8S_VER}
     command:
     - /hyperkube
     - apiserver
@@ -257,6 +258,8 @@ Both the master and worker nodes in your cluster will run the proxy.
 
 All you have to do is create `/etc/kubernetes/manifests/kube-proxy.yaml`, there are no settings that need to be configured.
 
+* Replace `${K8S_VER}`
+
 **/etc/kubernetes/manifests/kube-proxy.yaml**
 
 ```yaml
@@ -269,7 +272,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-proxy
-    image: quay.io/coreos/hyperkube:v1.5.4_coreos.0
+    image: quay.io/coreos/hyperkube:${K8S_VER}
     command:
     - /hyperkube
     - proxy
@@ -296,6 +299,8 @@ Create `/etc/kubernetes/manifests/kube-controller-manager.yaml`. It will use the
 
 [rc-overview]: https://coreos.com/kubernetes/docs/latest/replication-controller.html
 
+* Replace `${K8S_VER}`
+
 **/etc/kubernetes/manifests/kube-controller-manager.yaml**
 
 ```yaml
@@ -308,7 +313,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-controller-manager
-    image: quay.io/coreos/hyperkube:v1.5.4_coreos.0
+    image: quay.io/coreos/hyperkube:${K8S_VER}
     command:
     - /hyperkube
     - controller-manager
@@ -348,6 +353,8 @@ The scheduler monitors the API for unscheduled pods, finds them a machine to run
 
 Create File `/etc/kubernetes/manifests/kube-scheduler.yaml`:
 
+* Replace `${K8S_VER}`
+
 **/etc/kubernetes/manifests/kube-scheduler.yaml**
 
 ```yaml
@@ -360,7 +367,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-scheduler
-    image: quay.io/coreos/hyperkube:v1.5.4_coreos.0
+    image: quay.io/coreos/hyperkube:${K8S_VER}
     command:
     - /hyperkube
     - scheduler

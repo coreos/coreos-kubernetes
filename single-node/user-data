@@ -107,6 +107,10 @@ Environment="RKT_RUN_ARGS=--uuid-file-save=${uuid_file} \
   --mount volume=stage,target=/tmp \
   --volume var-log,kind=host,source=/var/log \
   --mount volume=var-log,target=/var/log \
+  --volume modprobe,kind=host,source=/usr/sbin/modprobe \
+  --mount volume=modprobe,target=/usr/sbin/modprobe \
+  --volume lib-modules,kind=host,source=/lib/modules \
+  --mount volume=lib-modules,target=/lib/modules \
   ${CALICO_OPTS}"
 ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
 ExecStartPre=/usr/bin/mkdir -p /var/log/containers

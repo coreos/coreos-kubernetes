@@ -36,6 +36,13 @@ export USE_CALICO=false
 # Determines the container runtime for kubernetes to use. Accepts 'docker' or 'rkt'.
 export CONTAINER_RUNTIME=docker
 
+# Exposes docker on all interfaces, i.e. for development.
+export EXPOSE_DOCKER=false
+
+# Installs kubectl on host.
+export INSTALL_KUBECTL_ON_HOST=false
+export KUBECTL_HOST_VERSION=v1.4.6
+
 # We need to overwrite this for a hosted Calico install
 if [ "${USE_CALICO}" = "true" ]; then
     export CALICO_OPTS="--volume cni-bin,kind=host,source=/opt/cni/bin \
@@ -47,7 +54,7 @@ fi
 # -------------
 
 function init_config {
-    local REQUIRED=('ADVERTISE_IP' 'POD_NETWORK' 'ETCD_ENDPOINTS' 'SERVICE_IP_RANGE' 'K8S_SERVICE_IP' 'DNS_SERVICE_IP' 'K8S_VER' 'USE_CALICO')
+    local REQUIRED=('ADVERTISE_IP' 'POD_NETWORK' 'ETCD_ENDPOINTS' 'SERVICE_IP_RANGE' 'K8S_SERVICE_IP' 'DNS_SERVICE_IP' 'K8S_VER' 'USE_CALICO', 'EXPOSE_DOCKER', 'INSTALL_KUBECTL_ON_HOST', 'KUBECTL_HOST_VERSION')
 
     if [ -z $ADVERTISE_IP ]; then
         export ADVERTISE_IP=$(awk -F= '/COREOS_PUBLIC_IPV4/ {print $2}' /etc/environment)
@@ -1032,7 +1039,54 @@ function enable_calico {
     docker run --rm --net=host -v /srv/kubernetes/manifests:/host/manifests $HYPERKUBE_IMAGE_REPO:$K8S_VER /hyperkube kubectl apply -f /host/manifests/calico.yaml
 }
 
+function expose_docker {
+    echo "Installing Docker TCP Socket Unit"
+    cat << EOF > /etc/systemd/system/docker-tcp.socket
+[Unit]
+Description=Docker Socket for the API
+
+[Socket]
+ListenStream=2375
+BindIPv6Only=both
+Service=docker.service
+
+[Install]
+WantedBy=sockets.target
+EOF
+
+    systemctl enable docker-tcp.socket
+    systemctl stop docker
+    systemctl start docker-tcp.socket
+    systemctl start docker
+    echo "Docker Restarted after installing TCP Socket Unit"
+}
+
+function install_kubectl {
+    echo "Installing kubectl on host system"
+    curl -O https://storage.googleapis.com/kubernetes-release/release/${KUBECTL_HOST_VERSION}/bin/linux/amd64/kubectl
+    mv kubectl /opt/bin
+    chmod +x /opt/bin/kubectl
+    export MASTER_HOST=kubernetes
+    export CA_CERT=/root/ssl/ca.pem
+    export ADMIN_KEY=/root/ssl/admin-key.pem
+    export ADMIN_CERT=/root/ssl/admin.pem
+    echo 127.0.1.1 kubernetes >> /etc/hosts
+    kubectl config set-cluster default-cluster --server=https://${MASTER_HOST} --certificate-authority=${CA_CERT}
+    kubectl config set-credentials default-admin --certificate-authority=${CA_CERT} --client-key=${ADMIN_KEY} --client-certificate=${ADMIN_CERT}
+    kubectl config set-context default-system --cluster=default-cluster --user=default-admin
+    kubectl config use-context default-system
+    echo "Testing local kubectl installation"
+    kubectl cluster-info
+    echo "You can now use kubectl, e.g. to forward to an installed docker registry."
+    echo "example: kubectl port-forward --namespace kube-system kube-registry-v0-9586x 5000:5000"
+}
+
 init_config
+
+if [ "${EXPOSE_DOCKER}" = "true" ]; then
+    expose_docker
+fi
+
 init_templates
 systemctl enable etcd2; systemctl start etcd2
 
@@ -1057,4 +1111,8 @@ if [ $USE_CALICO = "true" ]; then
 fi
 
 start_addons
+
+if [ "${INSTALL_KUBECTL_ON_HOST}" = "true" ]; then
+    install_kubectl
+fi
 echo "DONE"

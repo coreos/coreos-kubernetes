@@ -1,5 +1,11 @@
 # Deploy Kubernetes Master Node(s)
 
+<div class="k8s-on-tectonic">
+<p class="k8s-on-tectonic-description">This repo is not in alignment with current versions of Kubernetes, and will not be active in the future. The CoreOS Kubernetes documentation has been moved to the <a href="https://github.com/coreos/tectonic-docs/tree/master/Documentation">tectonic-docs repo</a>, where it will be published and updated.</p>
+
+<p class="k8s-on-tectonic-description">For tested, maintained, and production-ready Kubernetes instructions, see our <a href="https://coreos.com/tectonic/docs/latest/install/aws/index.html">Tectonic Installer documentation</a>. The Tectonic Installer provides a Terraform-based Kubernetes installation. It is open source, uses upstream Kubernetes and can be easily customized.</p>
+</div>
+
 Boot a single CoreOS machine which will be used as the Kubernetes master node. You must use a CoreOS version 962.0.0+ for the `/usr/lib/coreos/kubelet-wrapper` script to be present in the image. See [kubelet-wrapper](kubelet-wrapper.md) for more information.
 
 See the [CoreOS Documentation](https://coreos.com/os/docs/latest/) for guides on launching nodes on supported platforms.
@@ -383,7 +389,7 @@ Second the `DaemonSet` runs on all hosts, including the master node. It performs
 * Connects containers to the flannel overlay network, which enables the "one IP per pod" concept.
 * Enforces network policy created through the Kubernetes policy API, ensuring pods talk to authorized resources only.
 
-The policy controller is the last major piece of the calico.yaml. It monitors the API for changes related to network policy and configures Calico to implement that policy. 
+The policy controller is the last major piece of the calico.yaml. It monitors the API for changes related to network policy and configures Calico to implement that policy.
 
 When creating `/etc/kubernetes/manifests/calico.yaml`:
 
@@ -396,7 +402,7 @@ When creating `/etc/kubernetes/manifests/calico.yaml`:
 kind: ConfigMap
 apiVersion: v1
 metadata:
-  name: calico-config 
+  name: calico-config
   namespace: kube-system
 data:
   # Configure this with the location of your etcd cluster.
@@ -426,7 +432,7 @@ data:
 ---
 
 # This manifest installs the calico/node container, as well
-# as the Calico CNI plugins and network config on 
+# as the Calico CNI plugins and network config on
 # each master and worker node in a Kubernetes cluster.
 kind: DaemonSet
 apiVersion: extensions/v1beta1
@@ -451,7 +457,7 @@ spec:
     spec:
       hostNetwork: true
       containers:
-        # Runs calico/node container on each Kubernetes node.  This 
+        # Runs calico/node container on each Kubernetes node.  This
         # container programs network policy and routes on each
         # host.
         - name: calico-node
@@ -463,7 +469,7 @@ spec:
                 configMapKeyRef:
                   name: calico-config
                   key: etcd_endpoints
-            # Choose the backend to use. 
+            # Choose the backend to use.
             - name: CALICO_NETWORKING_BACKEND
               value: "none"
             # Disable file logging so `kubectl logs` works.
@@ -534,7 +540,7 @@ spec:
 # This manifest deploys the Calico policy controller on Kubernetes.
 # See https://github.com/projectcalico/k8s-policy
 apiVersion: extensions/v1beta1
-kind: ReplicaSet 
+kind: ReplicaSet
 metadata:
   name: calico-policy-controller
   namespace: kube-system
@@ -572,7 +578,7 @@ spec:
             # service for API access.
             - name: K8S_API
               value: "https://kubernetes.default:443"
-            # Since we're running in the host namespace and might not have KubeDNS 
+            # Since we're running in the host namespace and might not have KubeDNS
             # access, configure the container's /etc/hosts to resolve
             # kubernetes.default to the correct service clusterIP.
             - name: CONFIGURE_ETC_HOSTS

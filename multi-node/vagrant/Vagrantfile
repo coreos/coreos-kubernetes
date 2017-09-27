@@ -77,6 +77,10 @@ Vagrant.configure("2") do |config|
     end
   end
 
+  config.vm.provider :parallels do |v, override|
+    override.vm.box_url = "http://%s.release.core-os.net/amd64-usr/current/coreos_production_vagrant_parallels.json" % $update_channel
+  end
+
   config.vm.provider :virtualbox do |v|
     # On VirtualBox, we don't have guest additions or a functional vboxsf
     # in CoreOS, so tell Vagrant that so it can be smarter.
@@ -123,6 +127,10 @@ Vagrant.configure("2") do |config|
         vb.memory = $etcd_vm_memory
       end
 
+      etcd.vm.provider :parallels do |vb|
+        vb.memory = $etcd_vm_memory
+      end
+
       etcd.vm.network :private_network, ip: etcdIP(i)
 
       etcd.vm.provision :file, :source => etcd_config_file.path, :destination => "/tmp/vagrantfile-user-data"
@@ -147,6 +155,10 @@ Vagrant.configure("2") do |config|
       end
 
       controller.vm.provider :virtualbox do |vb|
+        vb.memory = $controller_vm_memory
+      end
+
+      controller.vm.provider :parallels do |vb|
         vb.memory = $controller_vm_memory
       end
 
@@ -180,6 +192,10 @@ Vagrant.configure("2") do |config|
       end
 
       worker.vm.provider :virtualbox do |vb|
+        vb.memory = $worker_vm_memory
+      end
+
+      worker.vm.provider :parallels do |vb|
         vb.memory = $worker_vm_memory
       end
 

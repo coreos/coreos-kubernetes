@@ -36,6 +36,11 @@ def etcdIP(num)
   return "172.17.4.#{num+50}"
 end
 
+# create external service IP's
+def serviceIP(num)
+  return "172.17.4.#{num+150}"
+end
+
 def controllerIP(num)
   return "172.17.4.#{num+100}"
 end
@@ -185,6 +190,9 @@ Vagrant.configure("2") do |config|
 
       workerIP = workerIP(i)
       worker.vm.network :private_network, ip: workerIP
+
+      serviceIP = serviceIP(i)
+      worker.vm.network :private_network, ip: serviceIP
 
       provisionMachineSSL(worker,"worker","kube-worker-#{workerIP}",[workerIP])
 

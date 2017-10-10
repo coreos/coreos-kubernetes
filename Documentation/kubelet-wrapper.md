@@ -1,5 +1,11 @@
 # Kubelet Wrapper Script
 
+<div class="k8s-on-tectonic">
+<p class="k8s-on-tectonic-description">This repo is not in alignment with current versions of Kubernetes, and will not be active in the future. The CoreOS Kubernetes documentation has been moved to the <a href="https://github.com/coreos/tectonic-docs/tree/master/Documentation">tectonic-docs repo</a>, where it will be published and updated.</p>
+
+<p class="k8s-on-tectonic-description">For tested, maintained, and production-ready Kubernetes instructions, see our <a href="https://coreos.com/tectonic/docs/latest/install/aws/index.html">Tectonic Installer documentation</a>. The Tectonic Installer provides a Terraform-based Kubernetes installation. It is open source, uses upstream Kubernetes and can be easily customized.</p>
+</div>
+
 The kubelet is the orchestrator of containers on each host in the Kubernetes cluster — it starts and stops containers, configures pod mounts, and other low-level, essential tasks. In order to accomplish these tasks, the kubelet requires special permissions on the host.
 
 CoreOS recommends running the kubelet using the rkt container engine, because it has the correct set of features to enable these special permissions, while taking advantage of all that container packaging has to offer: image discovery, signing/verification, and simplified management.
@@ -123,5 +129,5 @@ ExecStart=/opt/bin/kubelet-wrapper \
 [kubelet-wrapper]: https://github.com/coreos/coreos-overlay/blob/master/app-admin/kubelet-wrapper/files/kubelet-wrapper
 [rbd-example]: https://github.com/kubernetes/kubernetes/tree/master/examples/volumes/rbd
 [kubernetes-ports]: https://github.com/kubernetes/kubernetes/tree/master/examples/volumes/rbd
-[kubelet-authn-authz]: https://kubernetes.io/docs/admin/kubelet-authentication-authorization/ 
+[kubelet-authn-authz]: https://kubernetes.io/docs/admin/kubelet-authentication-authorization/
 [master-cluster-communication]: https://kubernetes.io/docs/admin/master-node-communication/#master---cluster

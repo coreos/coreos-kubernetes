@@ -1,5 +1,11 @@
 # Kubernetes Networking
 
+<div class="k8s-on-tectonic">
+<p class="k8s-on-tectonic-description">This repo is not in alignment with current versions of Kubernetes, and will not be active in the future. The CoreOS Kubernetes documentation has been moved to the <a href="https://github.com/coreos/tectonic-docs/tree/master/Documentation">tectonic-docs repo</a>, where it will be published and updated.</p>
+
+<p class="k8s-on-tectonic-description">For tested, maintained, and production-ready Kubernetes instructions, see our <a href="https://coreos.com/tectonic/docs/latest/install/aws/index.html">Tectonic Installer documentation</a>. The Tectonic Installer provides a Terraform-based Kubernetes installation. It is open source, uses upstream Kubernetes and can be easily customized.</p>
+</div>
+
 ## Network Model
 
 The Kubernetes network model outlines three methods of component communication:
@@ -100,4 +106,3 @@ In a manually configured network, it may be necessary to open a range of ports t
 
 [calico-external]: https://github.com/projectcalico/calico-containers/blob/v0.19.0/docs/ExternalConnectivity.md
 [kube-service]: http://kubernetes.io/docs/user-guide/services/#publishing-services---service-types
-

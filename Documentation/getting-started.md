@@ -1,5 +1,11 @@
 # CoreOS &#43; Kubernetes Step By Step
 
+<div class="k8s-on-tectonic">
+<p class="k8s-on-tectonic-description">This repo is not in alignment with current versions of Kubernetes, and will not be active in the future. The CoreOS Kubernetes documentation has been moved to the <a href="https://github.com/coreos/tectonic-docs/tree/master/Documentation">tectonic-docs repo</a>, where it will be published and updated.</p>
+
+<p class="k8s-on-tectonic-description">For tested, maintained, and production-ready Kubernetes instructions, see our <a href="https://coreos.com/tectonic/docs/latest/install/aws/index.html">Tectonic Installer documentation</a>. The Tectonic Installer provides a Terraform-based Kubernetes installation. It is open source, uses upstream Kubernetes and can be easily customized.</p>
+</div>
+
 This guide walks through deploying a Kubernetes cluster of CoreOS nodes, with a single controller and multiple workers. This guide enumerates the multiple steps and stages of a Kubernetes deployment. To quickly deploy a Kubernetes cluster without engaging component-level details, check out the [free tier of the CoreOS Tectonic][tectonic-free] Kubernetes distribution, or the [open-source Tectonic Installer][tectonic-installer] that drives Tectonic's automation of cluster deployments.
 
 The primary goals of this guide are:

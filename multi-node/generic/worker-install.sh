@@ -10,7 +10,7 @@ export ETCD_ENDPOINTS=
 export CONTROLLER_ENDPOINT=
 
 # Specify the version (vX.Y.Z) of Kubernetes assets to deploy
-export K8S_VER=v1.5.4_coreos.0
+export K8S_VER=v1.7.4_coreos.0
 
 # Hyperkube image repository to use.
 export HYPERKUBE_IMAGE_REPO=quay.io/coreos/hyperkube
@@ -25,7 +25,7 @@ export POD_NETWORK=10.2.0.0/16
 export DNS_SERVICE_IP=10.3.0.10
 
 # Whether to use Calico for Kubernetes network policy.
-export USE_CALICO=false
+export USE_CALICO=true
 
 # Determines the container runtime for kubernetes to use. Accepts 'docker' or 'rkt'.
 export CONTAINER_RUNTIME=docker
@@ -67,6 +67,7 @@ function init_templates {
     local uuid_file="/var/run/kubelet-pod.uuid"
     if [ ! -f $TEMPLATE ]; then
         echo "TEMPLATE: $TEMPLATE"
+        mkdir -p /etc/kubernetes/cni/net.d
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
 [Service]
@@ -81,6 +82,8 @@ Environment="RKT_RUN_ARGS=--uuid-file-save=${uuid_file} \
   --mount volume=var-lib-rkt,target=/var/lib/rkt \
   --volume stage,kind=host,source=/tmp \
   --mount volume=stage,target=/tmp \
+  --volume etc-cni-net,kind=host,source=/etc/kubernetes/cni/net.d \
+  --mount volume=etc-cni-net,target=/etc/cni/net.d \
   --volume var-log,kind=host,source=/var/log \
   --mount volume=var-log,target=/var/log \
   ${CALICO_OPTS}"
@@ -89,7 +92,8 @@ ExecStartPre=/usr/bin/mkdir -p /var/log/containers
 ExecStartPre=-/usr/bin/rkt rm --uuid-file=${uuid_file}
 ExecStartPre=/usr/bin/mkdir -p /opt/cni/bin
 ExecStart=/usr/lib/coreos/kubelet-wrapper \
-  --api-servers=${CONTROLLER_ENDPOINT} \
+  --kubeconfig /etc/kubernetes/worker-kubeconfig.yaml \
+  --require-kubeconfig \
   --cni-conf-dir=/etc/kubernetes/cni/net.d \
   --network-plugin=cni \
   --container-runtime=${CONTAINER_RUNTIME} \
@@ -101,7 +105,6 @@ ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --hostname-override=${ADVERTISE_IP} \
   --cluster_dns=${DNS_SERVICE_IP} \
   --cluster_domain=cluster.local \
-  --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml \
   --tls-cert-file=/etc/kubernetes/ssl/worker.pem \
   --tls-private-key-file=/etc/kubernetes/ssl/worker-key.pem
 ExecStop=-/usr/bin/rkt stop --uuid-file=${uuid_file}
@@ -128,6 +131,34 @@ EOF
 # through the api-server. Related issue:
 # https://github.com/coreos/rkt/issues/2878
 exec nsenter -m -u -i -n -p -t 1 -- /usr/bin/rkt "\$@"
+EOF
+    fi
+
+    local TEMPLATE=/etc/kubernetes/worker-kubeconfig.yaml
+    if [ ! -f $TEMPLATE ]; then
+        echo "TEMPLATE: $TEMPLATE"
+        mkdir -p $(dirname $TEMPLATE)
+        cat << EOF > $TEMPLATE
+apiVersion: v1
+kind: Config
+preferences: {}
+current-context: vagrant-multi
+clusters:
+- cluster:
+    certificate-authority: /etc/kubernetes/ssl/ca.pem
+    server: ${CONTROLLER_ENDPOINT}
+  name: vagrant-multi-cluster
+contexts:
+- context:
+    cluster: vagrant-multi-cluster
+    namespace: default
+    user: kubelet
+  name: vagrant-multi
+users:
+- name: kubelet
+  user:
+    client-certificate: /etc/kubernetes/ssl/worker.pem
+    client-key: /etc/kubernetes/ssl/worker-key.pem
 EOF
     fi
 
@@ -168,31 +199,6 @@ RestartSec=10
 
 [Install]
 RequiredBy=kubelet.service
-EOF
-    fi
-
-    local TEMPLATE=/etc/kubernetes/worker-kubeconfig.yaml
-    if [ ! -f $TEMPLATE ]; then
-        echo "TEMPLATE: $TEMPLATE"
-        mkdir -p $(dirname $TEMPLATE)
-        cat << EOF > $TEMPLATE
-apiVersion: v1
-kind: Config
-clusters:
-- name: local
-  cluster:
-    certificate-authority: /etc/kubernetes/ssl/ca.pem
-users:
-- name: kubelet
-  user:
-    client-certificate: /etc/kubernetes/ssl/worker.pem
-    client-key: /etc/kubernetes/ssl/worker-key.pem
-contexts:
-- context:
-    cluster: local
-    user: kubelet
-  name: kubelet-context
-current-context: kubelet-context
 EOF
     fi
 
